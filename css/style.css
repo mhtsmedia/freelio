@@ -86,7 +86,6 @@ p{margin:0}
 .top.open .drawer > div{padding-bottom:10px}
 @media (max-width:900px){.mainnav,.usernav .hide-md{display:none}.menu-btn{display:inline-flex}.usernav{margin-left:auto}}
 @media (max-width:560px){.usernav .hide-sm{display:none}.logo .wm{display:none}}
-@media (min-width:901px){.drawer{display:none}}
 
 /* bunntekst */
 .foot{border-top:1px solid var(--line);margin-top:64px}
@@ -402,8 +401,15 @@ select.inp{padding-right:8px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 /* rettelser */
-.top .menu-btn{display:none}
-@media (max-width:900px){.top .menu-btn{display:inline-flex}}
+.top .menu-btn{display:inline-flex;margin-left:4px}
+@media (min-width:901px){
+  .top > .wrap{position:relative}
+  .drawer{position:absolute;right:20px;top:calc(100% + 8px);width:280px;background:var(--bg);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:0 18px;transition:grid-template-rows .35s var(--ease),opacity .25s,visibility .35s}
+  .top:not(.open) .drawer{opacity:0;visibility:hidden}
+  .top.open .drawer > div{padding-block:6px}
+  .drawer a:first-child{border-top:0}
+  .top{overflow:visible}
+}
 .foot .logo{color:var(--fg)}
 .prof-head{position:relative;z-index:2;margin-top:-44px}
 @media (max-width:600px){.cats{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.cat{padding:12px 2px;font-size:12px;gap:8px}.cat .ico{width:44px;height:44px}}

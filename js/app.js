@@ -286,7 +286,10 @@
   H.render = null;
   H.rerender = () => { if (H.render) H.render(); };
 
+  const closeMenu = () => { const t = document.querySelector('.top.open'); if (!t) return; t.classList.remove('open'); const b = t.querySelector('.menu-btn'); b.setAttribute('aria-expanded', 'false'); b.innerHTML = H.icon('menu', 20); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
   document.addEventListener('click', (e) => {
+    if (!e.target.closest('.top')) closeMenu();
     const el = e.target.closest('[data-a]');
     if (!el) return;
     const fn = H.actions[el.dataset.a];
