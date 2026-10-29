@@ -21,10 +21,25 @@
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/media.js"></script>
 <script>
 if (H.requireLogin()) {
   const o = H.orderById(H.qs('id'));
   let stars = 0, text = '', confirmDispute = false, reason = '', confirmCancel = false;
+  // Originalene kan først lastes ned når kunden har godkjent. Da kan ingen laste ned og så nekte å betale.
+  const LOCK_UNTIL_APPROVED = true;
+  let pending = [], busy = 0, note = '', lb = -1;
+  const urls = {};
+  const blobURL = async (id, kind) => { const k = id + kind; if (!urls[k]) { const r = await Media.get(id); if (!r) return ''; urls[k] = URL.createObjectURL(r[kind]); } return urls[k]; };
+  const total = (fs) => Media.size(fs.reduce((n, x) => n + x.size, 0));
+  const tile = (x, i, removable) => `<div class="mtile">
+      <button class="mthumb" ${removable ? '' : `data-a="open" data-v="${i}"`} aria-label="${removable ? '' : 'Åpne '}${H.esc(x.name)}"><img data-thumb="${x.id}" alt="" loading="lazy">${x.type === 'video' ? `<span class="mplay">${H.icon('play', 14, 2, 'currentColor')} ${Media.dur(x.duration)}</span>` : ''}</button>
+      <div class="mmeta"><span class="mname">${H.esc(x.name)}</span><span class="meta">${Media.size(x.size)}${removable ? ` · visning ${Media.size(x.psize)}` : ''}</span></div>
+      ${removable ? `<button class="ibtn" data-a="rmFile" data-v="${x.id}" aria-label="Fjern ${H.esc(x.name)}">${H.icon('close', 16, 2)}</button>` : ''}
+    </div>`;
+  async function hydrate() {
+    for (const img of document.querySelectorAll('img[data-thumb]')) { if (!img.src) img.src = await blobURL(img.dataset.thumb, 'thumb'); }
+  }
   function render() {
     const main = document.getElementById('main');
     if (!o) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke bestillingen. <a class="btn primary sm" href="mine-oppdrag.html">Til mine oppdrag</a></div></div>`; return; }
@@ -51,7 +66,20 @@ if (H.requireLogin()) {
           <div class="row">${H.avatar(f, 56)}<div class="stack grow" style="gap:2px"><h1 style="font-size:28px">${H.esc(o.title)}</h1><span class="muted">${H.esc(f.name)} · ${H.esc(o.date)}${o.place ? ' · ' + H.esc(o.place) : ''}</span></div></div>
           <div class="banner ${banner[0]}">${H.icon('shield', 20)}<span>${banner[1]}</span></div>
           <ol class="steps">${steps.map((s, i) => { const n = i + 1; const cls = st === 'dispute' && n === 3 ? 'warn' : n <= reached ? 'done' : n === reached + 1 ? 'cur' : ''; return `<li class="${cls}"><div class="rail"><span class="n">${cls === 'done' ? H.icon('check', 14, 3) : n}</span>${n < 4 ? '<span class="ln"></span>' : ''}</div><div class="t"><b>${s[0]}</b><span class="muted small">${s[1]}</span></div></li>`; }).join('')}</ol>
-          ${st === 'delivered' ? `<div class="card stack"><b>Leveranse</b><div class="gallery" style="grid-template-columns:repeat(4,minmax(0,1fr))">${[0, 1, 2, 3].map((i) => `<span class="ph" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div><span class="muted small">${H.esc(o.delivered)}</span></div>` : ''}
+          ${st === 'paid' ? `<section class="card stack" style="gap:16px"><div class="row" style="justify-content:space-between"><b style="font-size:16px">Lever jobben</b><span class="pill">Frilanserens visning (demo)</span></div>
+            <label class="drop" id="drop"><input type="file" id="files" accept="image/*,video/*" multiple class="sr">${H.icon('plus', 22, 2)}<b>Last opp bilder eller video</b><span class="meta">Dra filene hit, eller klikk for å velge. Originalene lagres i full kvalitet. Kunden ser en komprimert forhåndsvisning.</span></label>
+            ${busy ? `<div class="row small muted"><span class="spin"></span>Komprimerer ${busy} ${busy === 1 ? 'fil' : 'filer'} …</div>` : ''}
+            ${pending.length ? `<div class="mlist">${pending.map((x, i) => tile(x, i, true)).join('')}</div><span class="meta">${pending.length} ${pending.length === 1 ? 'fil' : 'filer'} · originaler ${total(pending)} · forhåndsvisninger ${Media.size(pending.reduce((n, x) => n + x.psize, 0))}</span>` : ''}
+            <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="dnote" rows="2" placeholder="F.eks. Her er de redigerte bildene. Si fra hvis du vil ha noe justert.">${H.esc(note)}</textarea></label>
+            <div class="row"><button class="btn primary" data-a="sendDelivery" ${pending.length && !busy ? '' : 'disabled'}>Send leveranse</button><button class="btn link" data-a="sampleFiles" ${busy ? 'disabled' : ''}>Bruk eksempelbilder</button></div>
+          </section>` : ''}
+          ${['delivered', 'approved', 'dispute'].includes(st) ? (o.files && o.files.length ? `<section class="card stack" style="gap:16px">
+            <div class="row" style="justify-content:space-between"><div class="stack" style="gap:0"><b style="font-size:16px">Leveranse</b><span class="meta">${o.files.length} ${o.files.length === 1 ? 'fil' : 'filer'} · ${total(o.files)} i full kvalitet</span></div>
+              ${locked() ? `<span class="pill">${H.icon('lock', 12, 2)} Låses opp når du godkjenner</span>` : `<button class="btn soft sm" data-a="dlAll">${H.icon('download', 16, 2)} Last ned alle</button>`}</div>
+            ${o.deliveryNote ? `<div class="bubble them" style="max-width:100%">${H.esc(o.deliveryNote)}</div>` : ''}
+            <div class="mgrid">${o.files.map((x, i) => tile(x, i, false)).join('')}</div>
+            <span class="meta">Visningen her er komprimert så siden laster raskt. ${locked() ? 'Originalene kan lastes ned etter godkjenning.' : 'Last ned for å få originalene i full kvalitet.'}</span></section>`
+            : `<div class="card stack"><b>Leveranse</b><div class="gallery" style="grid-template-columns:repeat(4,minmax(0,1fr))">${[0, 1, 2, 3].map((i) => `<span class="ph" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div><span class="muted small">${H.esc(o.delivered)}</span></div>`) : ''}
           ${st === 'delivered' && confirmDispute ? `<div class="card stack"><b>Hva er ikke som avtalt?</b><textarea class="inp" id="reason" rows="3" placeholder="Beskriv kort hva som mangler eller er feil">${H.esc(reason)}</textarea><div class="row"><button class="btn soft sm" data-a="cancelDispute">Avbryt</button><button class="btn dark sm" data-a="dispute">Send til ${fn}</button></div></div>` : ''}
           ${st === 'approved' && !o.reviewed ? `<div class="card stack"><h2 style="font-size:20px">Hvordan var ${fn}?</h2>
             <div class="stars" role="radiogroup" aria-label="Antall stjerner">${[1, 2, 3, 4, 5].map((k) => `<button role="radio" aria-checked="${k === stars}" aria-label="${k} stjerner" class="${k <= stars ? 'on' : ''}" data-a="stars" data-v="${k}">${H.star(24)}</button>`).join('')}</div>
@@ -62,7 +90,6 @@ if (H.requireLogin()) {
         <aside>
           <div class="card stack">
             <div class="sum"><div><span>Oppdrag</span><b>${H.kr(o.price)}</b></div><div class="muted"><span>Plattformavgift 5 %</span><span>− ${H.kr(fee)}</span></div><div class="tot"><span>${fn} får</span><span>${H.kr(o.price - fee)}</span></div></div>
-            ${st === 'paid' ? `<button class="btn soft block" style="border:1.5px dashed var(--muted)" data-a="deliver">Demo: ${fn} leverer jobben</button><p class="hint">I den ekte appen laster frilanseren opp leveransen selv.</p>` : ''}
             ${st === 'delivered' && !confirmDispute ? `<button class="btn primary block" data-a="approve">Godkjenn og betal ut</button><button class="btn ghost block" data-a="askDispute">Meld fra om feil</button>` : ''}
             ${st === 'paid' && !confirmCancel ? `<button class="btn ghost block" data-a="askCancel">Avbestill</button>` : ''}
             ${st === 'paid' && confirmCancel ? `<div class="stack small"><span>${o.refundAll ? 'Du får hele beløpet tilbake.' : 'Avbestilling nærmere enn 7 dager før gir 50 % tilbake.'} Vil du avbestille?</span><div class="row"><button class="btn soft sm grow" data-a="noCancel">Nei</button><button class="btn dark sm grow" data-a="cancel">Ja, avbestill</button></div></div>` : ''}
@@ -75,10 +102,71 @@ if (H.requireLogin()) {
       </div></div>`;
     const rt = document.getElementById('rtext'); if (rt) rt.addEventListener('input', (e) => (text = e.target.value));
     const rs = document.getElementById('reason'); if (rs) rs.addEventListener('input', (e) => (reason = e.target.value));
+    const dn = document.getElementById('dnote'); if (dn) dn.addEventListener('input', (e) => (note = e.target.value));
+    const inp = document.getElementById('files'); if (inp) inp.addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
+    const drop = document.getElementById('drop');
+    if (drop) {
+      drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+      drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); });
+    }
+    hydrate();
+    renderLightbox();
   }
+  const locked = () => LOCK_UNTIL_APPROVED && o.status !== 'approved';
+  async function addFiles(list) {
+    const files = [...list];
+    if (!Media.supported) { H.toast('Nettleseren støtter ikke lagring av filer'); return; }
+    busy += files.length; render();
+    for (const file of files) {
+      try { pending.push(await Media.add(o.id, file)); }
+      catch (e) { H.toast(file.name + ': ' + e.message); }
+      busy--; render();
+    }
+  }
+  function renderLightbox() {
+    let el = document.getElementById('lb');
+    if (lb < 0 || !o.files || !o.files[lb]) { if (el) el.remove(); document.body.style.overflow = ''; return; }
+    const x = o.files[lb];
+    if (!el) { el = document.createElement('div'); el.id = 'lb'; el.className = 'lb'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
+    document.body.style.overflow = 'hidden';
+    el.setAttribute('aria-label', x.name);
+    el.innerHTML = `<div class="lb-top"><div class="stack" style="gap:0;min-width:0"><b class="mname">${H.esc(x.name)}</b><span class="small" style="opacity:.7">${lb + 1} av ${o.files.length} · original ${Media.size(x.size)}${x.w ? ` · ${x.w}×${x.h}` : ''}</span></div>
+        <div class="row" style="flex-wrap:nowrap">${locked() ? `<span class="small" style="opacity:.7">${H.icon('lock', 14, 2)} Godkjenn for å laste ned</span>` : `<button class="btn sm lb-dl" data-a="dl" data-v="${lb}">${H.icon('download', 16, 2)} Last ned original</button>`}<button class="ibtn lb-x" data-a="closeLb" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div></div>
+      <div class="lb-stage">${x.type === 'video' ? `<video controls playsinline preload="metadata" id="lbmedia"></video>` : `<img id="lbmedia" alt="${H.esc(x.name)}">`}${locked() ? '<span class="lb-wm">Forhåndsvisning</span>' : ''}</div>
+      ${o.files.length > 1 ? `<button class="ibtn lb-nav prev" data-a="nav" data-v="-1" aria-label="Forrige">${H.icon('back', 22, 2)}</button><button class="ibtn lb-nav next" data-a="nav" data-v="1" aria-label="Neste">${H.icon('next', 22, 2)}</button>` : ''}`;
+    el.querySelector('.lb-stage').addEventListener('click', (e) => { if (e.target === e.currentTarget) { lb = -1; renderLightbox(); } });
+    const media = el.querySelector('#lbmedia');
+    (async () => {
+      if (x.type === 'video') { media.poster = await blobURL(x.id, 'preview'); media.src = await blobURL(x.id, 'original'); }
+      else media.src = await blobURL(x.id, 'preview');
+    })();
+    el.querySelector('.lb-x').focus();
+  }
+  document.addEventListener('keydown', (e) => {
+    if (lb < 0) return;
+    if (e.key === 'Escape') { lb = -1; renderLightbox(); }
+    if (e.key === 'ArrowRight') H.actions.nav(1);
+    if (e.key === 'ArrowLeft') H.actions.nav(-1);
+  });
+  async function dl(i) { const x = o.files[i]; const r = await Media.get(x.id); if (!r) { H.toast('Fant ikke filen i denne nettleseren'); return; } Media.download(r.original, x.name); }
+  const f0 = () => H.byId(o.fid);
   const upd = (msg) => { H.save(); H.mountHeader(); render(); if (msg) H.toast(msg); };
   Object.assign(H.actions, {
-    deliver: () => { o.status = 'delivered'; o.delivered = /foto|bilde|portrett|bryllup|vielse|halv dag|hel dag/i.test(o.title) ? '214 redigerte bilder i nettgalleri' : 'Ferdig arbeid med bilder og beskrivelse'; upd('Leveransen er lastet opp. Se over og godkjenn.'); },
+    sampleFiles: async () => { busy += 4; render(); const out = await Media.sample(o.id, 4, (i) => H.pal(f0().pal + i)); pending.push(...out); busy -= 4; render(); },
+    rmFile: (v) => { pending = pending.filter((x) => x.id !== v); Media.remove(v); render(); },
+    sendDelivery: () => {
+      if (!pending.length) return;
+      o.files = pending; o.deliveryNote = note.trim(); pending = []; note = '';
+      o.status = 'delivered'; o.delivered = `${o.files.length} ${o.files.length === 1 ? 'fil' : 'filer'}, ${total(o.files)}`;
+      (H.S.threads[o.fid] = H.S.threads[o.fid] || []).push({ who: 'them', text: 'Leveransen er lastet opp. ' + (o.deliveryNote || 'Si fra hvis du vil ha noe justert.'), at: Date.now() });
+      upd('Leveransen er sendt til kunden.');
+    },
+    open: (v) => { lb = +v; renderLightbox(); },
+    closeLb: () => { lb = -1; renderLightbox(); },
+    nav: (v) => { if (lb < 0) return; lb = (lb + +v + o.files.length) % o.files.length; renderLightbox(); },
+    dl: (v) => { if (locked()) return; dl(+v); },
+    dlAll: async () => { if (locked()) return; H.toast(`Laster ned ${o.files.length} filer`); for (let i = 0; i < o.files.length; i++) { await dl(i); await new Promise((r) => setTimeout(r, 350)); } },
     approve: () => { o.status = 'approved'; upd('Godkjent. Pengene er på vei til frilanseren.'); },
     askCancel: () => { const d = String(o.date).split('.'); const when = d.length === 3 ? new Date(+d[2], +d[1] - 1, +d[0]) : null; o.refundAll = !when || when - Date.now() > 7 * 864e5; confirmCancel = true; render(); },
     noCancel: () => { confirmCancel = false; render(); },

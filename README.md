@@ -50,6 +50,7 @@ css/style.css   Design, lys og mørk modus, animasjoner og skeleton
 img/            Logo (SVG) og favicon
 js/logo.js      Logoen som vektor, følger lys og mørk modus
 js/data.js      Eksempeldata: kategorier, frilansere og oppdrag
+js/media.js     Leveranser: komprimerte forhåndsvisninger, originaler i IndexedDB, nedlasting
 js/app.js       Felles kode: lagring, meny, cookies, kort, meldinger, assistent
 *.html          Én fil per side. Sidespesifikk kode ligger nederst i hver fil.
 ```
@@ -61,6 +62,7 @@ js/app.js       Felles kode: lagring, meny, cookies, kort, meldinger, assistent
 3. **Betaling med tilbakeholdt beløp.** Bruk en lisensiert leverandør med markedsplassløsning, for eksempel Stripe Connect, Adyen for Platforms eller Vipps MobilePay. Freelio skal ikke holde kundens penger selv, siden det krever konsesjon fra Finanstilsynet.
 4. **Kart.** Mapbox eller Leaflet med OpenStreetMap. Vis omtrentlig posisjon.
 5. **Assistent.** Koble til en språkmodell via en serverfunksjon, aldri direkte fra nettleseren.
-6. **Varsler.** E-post (for eksempel Postmark) og push.
-7. **Juridisk.** Vilkår, personvern og cookies er utkast og må gjennomgås av advokat. Fyll inn feltene i hakeparentes.
-8. **App.** Når nettsiden fungerer, kan den pakkes som app med React Native, Flutter eller Capacitor.
+6. **Leveranser.** Last opp originaler direkte til lagring (S3, Cloudflare R2 eller Supabase Storage) med signerte lenker. La serveren lage forhåndsvisninger: bilder i WebP og video som 720p-strøm (for eksempel Cloudflare Stream eller Mux). Originalene låses opp når kunden godkjenner.
+7. **Varsler.** E-post (for eksempel Postmark) og push.
+8. **Juridisk.** Vilkår, personvern og cookies er utkast og må gjennomgås av advokat. Fyll inn feltene i hakeparentes.
+9. **App.** Når nettsiden fungerer, kan den pakkes som app med React Native, Flutter eller Capacitor.
