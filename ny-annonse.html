@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legg ut oppdrag | Freelio</title>
+<meta name="description" content="Beskriv jobben med budsjett og område, så sender lokale frilansere deg tilbud.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="ny-annonse">
+<div id="site-header"></div>
+<main id="main">
+  <div class="wrap" style="max-width:1000px">
+    <div class="two">
+      <form class="stack" style="gap:20px" id="jform" novalidate>
+        <div class="stack" style="gap:8px"><h1>Legg ut oppdrag</h1><p class="muted">Jo mer konkret du er, jo bedre tilbud får du. Det tar rundt 2 minutter.</p></div>
+        <div class="field"><div class="row small" style="justify-content:space-between;font-weight:800"><span id="pcount"></span><span class="muted">Felt merket * er påkrevd</span></div><div class="progress"><i id="pbar"></i></div></div>
+        <fieldset style="border:0;padding:0;margin:0" class="field"><legend class="label" style="margin-bottom:6px">Kategori *</legend><div class="chips" id="cats"></div></fieldset>
+        <label class="field"><span class="label">Hva skal gjøres? *</span><input class="inp" id="title" maxlength="80" placeholder="F.eks. Bryllupsfotograf, halv dag"><span class="hint">En kort overskrift som sier hva du trenger.</span></label>
+        <label class="field"><span class="label">Beskrivelse *</span><textarea class="inp" id="desc" rows="6" placeholder="Beskriv jobben, stilen du ønsker, omfang og det som er viktig for deg."></textarea><span class="hint" id="desccount"></span></label>
+        <div class="grid2">
+          <label class="field"><span class="label">Maks budsjett *</span><input class="inp" id="budget" inputmode="numeric" placeholder="kr"><span class="hint">Frilansere svarer oftere når de ser rammen.</span></label>
+          <label class="field"><span class="label">Dato eller frist *</span><input class="inp" id="date" placeholder="F.eks. 14.11.2026 eller Fleksibel"></label>
+        </div>
+        <div class="grid2">
+          <label class="field"><span class="label">Område *</span><input class="inp" id="area" placeholder="Sted eller postnummer"></label>
+          <label class="field"><span class="label">Omfang</span><input class="inp" id="scope" placeholder="F.eks. 5 timer, 20 m², 40 produkter"></label>
+        </div>
+        <label class="field"><span class="label">Hva skal leveres?</span><input class="inp" id="delivery" placeholder="F.eks. 200 redigerte bilder i høy oppløsning"><span class="hint">Dette er det betalingen frigjøres mot. Jo tydeligere, jo tryggere for begge.</span></label>
+        <label class="field"><span class="label">Referansebilder</span><input class="inp" id="files" type="file" accept="image/*" multiple style="padding-top:10px"><span class="hint" id="filenames">Valgfritt. Vis stilen du liker.</span></label>
+        <label class="check"><input type="checkbox" id="own"> Frilanseren må ha med eget utstyr</label>
+        <div id="errors"></div>
+        <button class="btn primary" type="submit">Publiser oppdrag</button>
+      </form>
+      <aside>
+        <a class="banner acc" href="assistent.html" style="text-decoration:none"><span></span></a>
+        <div class="card stack small">
+          <b style="font-size:15px">Tips til en god annonse</b>
+          <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px" class="muted">
+            <li>Skriv dato, sted og omfang.</li><li>Beskriv hva som skal leveres, så dere er enige om når jobben er ferdig.</li><li>Sett et ærlig maks budsjett.</li><li>Legg ved bilder av stilen du liker.</li></ul>
+        </div>
+        <div class="banner acc"><span>Du betaler først når du godtar et tilbud. Pengene holdes trygt til jobben er levert.</span></div>
+      </aside>
+    </div>
+  </div>
+</main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (H.requireLogin()) {
+  const $ = (id) => document.getElementById(id);
+  const REQ = ['title', 'desc', 'budget', 'date', 'area'];
+  let cat = H.qs('kat') || 'foto';
+  let tried = false;
+  // fyll inn ikoner i statisk markup
+  const banners = document.querySelectorAll('aside .banner');
+  banners[0].innerHTML = H.icon('spark', 20) + '<span>Usikker på hva du skal skrive? <u>La assistenten hjelpe deg.</u></span>';
+  banners[1].innerHTML = H.icon('lock', 20) + '<span>Du betaler først når du godtar et tilbud. Pengene holdes trygt til jobben er levert.</span>';
+  if (H.qs('eksempel')) {
+    cat = 'foto';
+    $('title').value = 'Bryllupsfotograf, halv dag';
+    $('desc').value = 'Vi gifter oss i Haslum kirke og har middag på et hotell i Sandvika. Ønsker naturlige bilder med lite oppstilling. Rundt 60 gjester. Vi vil gjerne ha bilder fra vielsen, gruppebilder og starten av middagen.';
+    $('budget').value = '10000'; $('date').value = '14.11.2026'; $('area').value = 'Bærum'; $('scope').value = '5 timer'; $('delivery').value = '200 redigerte bilder i nettgalleri';
+  }
+  function cats() { $('cats').innerHTML = HDATA.CATS.map((c) => `<button type="button" class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${H.icon(c.icon, 16)} ${c.name}</button>`).join(''); }
+  function progress() {
+    const filled = 1 + REQ.filter((k) => $(k).value.trim()).length;
+    $('pcount').textContent = `${filled} av 6 påkrevde felt`;
+    $('pbar').style.width = Math.round(filled / 6 * 100) + '%';
+    const n = $('desc').value.trim().length;
+    $('desccount').textContent = n < 60 ? `Skriv minst 60 tegn (${n} nå). Beskrivelser med detaljer får flere tilbud.` : `${n} tegn. Bra!`;
+    if (tried) REQ.forEach((k) => $(k).classList.toggle('err', !$(k).value.trim() || (k === 'desc' && n < 60)));
+  }
+  H.actions.cat = (v) => { cat = v; cats(); };
+  $('jform').addEventListener('input', progress);
+  $('files').addEventListener('change', (e) => { const n = [...e.target.files].map((f) => f.name); $('filenames').textContent = n.length ? n.length + ' bilde(r): ' + n.join(', ') : 'Valgfritt. Vis stilen du liker.'; });
+  $('jform').addEventListener('submit', (e) => {
+    e.preventDefault(); tried = true; progress();
+    const miss = REQ.filter((k) => !$(k).value.trim());
+    const short = $('desc').value.trim().length < 60;
+    const budget = +$('budget').value.replace(/\D/g, '');
+    if (miss.length || short || !budget) {
+      $('errors').innerHTML = `<div class="banner bad">${miss.length ? 'Fyll ut feltene som er merket med rødt.' : short ? 'Beskrivelsen er for kort. Skriv minst 60 tegn.' : 'Budsjettet må være et tall i kroner.'}</div>`;
+      const first = miss[0] || (short ? 'desc' : 'budget'); $(first).focus(); return;
+    }
+    const now = Date.now();
+    const pool = H.all().filter((f) => f.cat === cat && !(H.S.profile && f.id === H.S.profile.id));
+    const cands = (pool.length ? pool : H.all()).slice(0, 3);
+    const msgs = ['Jeg er ledig og har gjort mange lignende jobber. Prisen inkluderer alt du har beskrevet.', 'Høres ut som et fint oppdrag! Jeg kan levere raskt og tar gjerne en prat på forhånd.', 'Gjerne med. Jeg kan ta et kort møte først for å avklare ønsker.'];
+    const offersList = cands.map((f, i) => ({ fid: f.id, price: Math.max(f.from, Math.min(budget, Math.round(budget * (0.82 + i * 0.07) / 100) * 100)), msg: msgs[i], at: now + [8, 25, 50][i] * 1000, seen: false }));
+    const job = { id: 'j' + now, cat, title: $('title').value.trim(), desc: $('desc').value.trim(), budget, date: $('date').value.trim(), area: $('area').value.trim(), scope: $('scope').value.trim(), delivery: $('delivery').value.trim(), ownGear: $('own').checked, status: 'open', created: now, postedTxt: H.today(), offersList };
+    H.S.myJobs.push(job); H.save();
+    H.flash('Publisert. Frilansere i nærheten har fått varsel.');
+    location.href = 'annonse.html?id=' + job.id;
+  });
+  cats(); progress();
+  H.boot();
+}
+</script>
+</body>
+</html>

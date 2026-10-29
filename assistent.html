@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Assistent | Freelio</title>
+<meta name="description" content="Få råd om hva du bør se etter, priser og hvordan du skriver en god annonse.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="assistent">
+<div id="site-header"></div>
+<main id="main"><div class="wrap" style="max-width:820px">
+  <div class="section" style="padding-bottom:16px"><h1>Assistent</h1><p class="muted">Spør om hva du bør se etter, hva ting koster eller hvordan du skriver en god annonse. Assistenten gir råd. Du bestemmer selv.</p></div>
+  <div class="card" style="padding:0;display:flex;flex-direction:column;height:min(620px,calc(100vh - 260px));min-height:440px">
+    <div class="msgs" id="msgs"></div>
+    <div class="chips scroll" id="sug" style="padding:8px 12px 0"></div>
+    <form class="composer" id="aform"><label class="sr" for="q">Spørsmål</label><input id="q" placeholder="Spør om hva som helst …" autocomplete="off"><button class="send" aria-label="Send"></button></form>
+  </div>
+  <p class="hint" style="margin-top:12px">I den ferdige appen bruker assistenten en språkmodell og data fra oppdrag på Freelio. Svarene her er forhåndsskrevne eksempler.</p>
+</div></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const S = H.S;
+let typing = false;
+if (!S.asst.length) S.asst = [{ me: false, text: 'Hei! Jeg hjelper deg å finne riktig frilanser og skrive en god annonse. Hva skal du ha gjort?' }];
+document.querySelector('#aform .send').innerHTML = H.icon('arrow', 20, 2);
+function render() {
+  document.getElementById('msgs').innerHTML = S.asst.map((m) => `<div class="bubble ${m.me ? 'me' : 'them'}">${H.esc(m.text)}${m.act ? `<div style="margin-top:10px"><a class="btn dark sm" href="${m.act[0]}">${H.esc(m.act[1])}</a></div>` : ''}</div>`).join('') + (typing ? '<div class="typing">Assistenten skriver …</div>' : '');
+  const asked = new Set(S.asst.filter((m) => m.me).map((m) => m.text));
+  document.getElementById('sug').innerHTML = Object.keys(H.ANSWERS).filter((q) => !asked.has(q)).map((q) => `<button class="chip" data-a="ask" data-v="${H.esc(q)}">${H.esc(q)}</button>`).join('');
+  const m = document.getElementById('msgs'); m.scrollTop = m.scrollHeight;
+}
+function ask(q) {
+  q = q.trim(); if (!q) return;
+  S.asst.push({ me: true, text: q }); typing = true; H.save(); render();
+  setTimeout(() => { const a = H.answer(q); S.asst.push({ me: false, text: a.text, act: a.act }); typing = false; H.save(); render(); }, 900);
+}
+H.actions.ask = (v) => ask(v);
+document.getElementById('aform').addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('q'); ask(i.value); i.value = ''; });
+H.boot(render);
+if (H.qs('q')) { ask(H.qs('q')); history.replaceState(null, '', 'assistent.html'); }
+</script>
+</body>
+</html>

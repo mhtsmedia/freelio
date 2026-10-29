@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Book | Freelio</title>
+<meta name="description" content="Book en frilanser med trygg betaling.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="book">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (H.requireLogin()) {
+  const f = H.byId(H.qs('id') || '');
+  let pk = Math.min(+(H.qs('pk') || 0), f ? f.pk.length - 1 : 0);
+  let method = 'vipps', busy = false, tried = false;
+  const form = { date: '', place: '', note: '', terms: false };
+  function render() {
+    const main = document.getElementById('main');
+    if (!f) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke frilanseren. <a class="btn primary sm" href="sok.html">Søk etter frilansere</a></div></div>`; return; }
+    const p = f.pk[pk]; const fee = Math.round(p[1] * H.FEE);
+    const miss = (k) => tried && !String(form[k]).trim();
+    main.innerHTML = `<div class="wrap narrow" style="max-width:1000px">
+      <div class="crumbs"><a href="frilanser.html?id=${f.id}">${H.esc(f.name)}</a><span>/</span><span>Book</span></div>
+      <div class="two">
+        <form class="stack" style="gap:20px" id="bform" novalidate>
+          <h1>Book ${H.esc(H.first(f.name))}</h1>
+          <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Velg pakke</legend>
+            ${f.pk.map((x, i) => `<button type="button" class="card pkg ${i === pk ? 'on' : ''}" data-a="pk" data-v="${i}" aria-pressed="${i === pk}"><span class="pkg-top"><span>${H.esc(x[0])}</span><span>${H.kr(x[1])}</span></span><span class="muted">${H.esc(x[2])}</span></button>`).join('')}</fieldset>
+          <div class="grid2">
+            <label class="field"><span class="label">Dato *</span><input class="inp ${miss('date') ? 'err' : ''}" id="date" type="date" value="${H.esc(form.date)}" min="2026-10-29"></label>
+            <label class="field"><span class="label">Sted *</span><input class="inp ${miss('place') ? 'err' : ''}" id="place" value="${H.esc(form.place)}" placeholder="Adresse eller sted"></label>
+          </div>
+          <label class="field"><span class="label">Melding til ${H.esc(H.first(f.name))}</span><textarea class="inp" id="note" rows="3" placeholder="Hva er viktig for deg? Tidspunkt, ønsker, praktisk info">${H.esc(form.note)}</textarea></label>
+          <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Betalingsmåte</legend>
+            <label class="check card" style="padding:12px 14px"><input type="radio" name="m" value="vipps" ${method === 'vipps' ? 'checked' : ''}> Vipps</label>
+            <label class="check card" style="padding:12px 14px"><input type="radio" name="m" value="kort" ${method === 'kort' ? 'checked' : ''}> Bankkort</label></fieldset>
+          <label class="check"><input type="checkbox" id="terms" ${form.terms ? 'checked' : ''}> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og avbestillingsreglene.</span></label>
+          ${tried && !form.terms ? '<span class="err-text">Du må godta vilkårene for å booke.</span>' : ''}
+          ${tried && (miss('date') || miss('place')) ? '<span class="err-text">Fyll inn dato og sted.</span>' : ''}
+        </form>
+        <aside>
+          <div class="card stack">
+            <div class="row">${H.avatar(f, 44)}<div class="stack grow" style="gap:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(p[0])}</span></div></div>
+            <div class="sum"><div><span>${H.esc(p[0])}</span><b>${H.kr(p[1])}</b></div><div class="muted"><span>Servicegebyr for deg</span><span>0 kr</span></div><div class="tot"><span>Du betaler</span><span>${H.kr(p[1])}</span></div></div>
+            <p class="hint">${H.esc(H.first(f.name))} får ${H.kr(p[1] - fee)} etter at du har godkjent leveransen. Freelio tar ${H.kr(fee)} (5 %).</p>
+            <button class="btn primary block" data-a="pay" ${busy ? 'disabled' : ''}>${busy ? (method === 'vipps' ? 'Godkjenn i Vipps …' : 'Behandler betaling …') : `Betal ${H.kr(p[1])}`}</button>
+          </div>
+          <div class="banner acc">${H.icon('lock', 20)}<span>Pengene holdes trygt til jobben er levert og godkjent. Gratis avbestilling frem til 7 dager før.</span></div>
+        </aside>
+      </div></div>`;
+    const sync = () => { form.date = document.getElementById('date').value; form.place = document.getElementById('place').value; form.note = document.getElementById('note').value; form.terms = document.getElementById('terms').checked; const m = document.querySelector('input[name=m]:checked'); method = m ? m.value : method; };
+    document.getElementById('bform').addEventListener('input', sync);
+    document.getElementById('bform').addEventListener('change', sync);
+  }
+  H.actions.pk = (v) => { pk = +v; render(); };
+  H.actions.pay = () => {
+    if (!form.terms || !form.date || !form.place.trim()) { tried = true; render(); return; }
+    busy = true; render();
+    setTimeout(() => {
+      const p = f.pk[pk];
+      const d = form.date.split('-').reverse().join('.');
+      const o = H.createOrder({ fid: f.id, title: p[0], price: p[1], date: d, place: form.place, note: form.note, method });
+      if (form.note.trim()) { (H.S.threads[f.id] = H.S.threads[f.id] || []).push({ who: 'me', text: 'Booking: ' + p[0] + ' ' + d + '. ' + form.note.trim(), at: Date.now() }); H.save(); }
+      H.flash(`Betalt. ${H.kr(p[1])} holdes trygt til jobben er levert.`);
+      location.href = 'bestilling.html?id=' + o.id;
+    }, 1500);
+  };
+  H.boot(render);
+}
+</script>
+</body>
+</html>

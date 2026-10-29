@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Min side | Freelio</title>
+<meta name="description" content="Konto, lagrede frilansere og innstillinger.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="min-side">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (H.requireLogin()) {
+  let confirmDel = false;
+  const S = H.S;
+  S.notify = S.notify || { email: true, push: true, jobs: true };
+  function render() {
+    const saved = S.saved.map(H.byId).filter(Boolean);
+    const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
+    document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:900px">
+      <div class="row"><span class="av" style="width:64px;height:64px;background:var(--accent);color:var(--on-accent);font-size:22px">${H.esc(S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span><div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
+
+      <section class="card stack"><h2 style="font-size:20px">Frilanserprofil</h2>
+        ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div><a class="btn soft sm" href="frilanser.html?id=meg">Se</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul' : 'Publiser'}</button></div>`
+        : `<p class="muted">Vil du ta oppdrag selv? Lag en gratis profil.</p><a class="btn primary sm" style="align-self:flex-start" href="bli-frilanser.html">Bli frilanser</a>`}
+      </section>
+
+      <section class="stack"><h2 style="font-size:20px">Lagrede frilansere (${saved.length})</h2>
+        ${saved.length ? `<div class="cards">${saved.map((f) => H.fCard(f)).join('')}</div>` : '<p class="muted">Trykk på hjertet på et kort for å lagre frilansere du liker.</p>'}</section>
+
+      <section class="card stack" style="gap:0"><h2 style="font-size:20px;margin-bottom:6px">Varsler</h2>
+        ${sw(S.notify.push, 'notify', 'push', 'Push-varsler', 'Nye meldinger, tilbud og leveranser.')}
+        ${sw(S.notify.email, 'notify', 'email', 'E-post', 'Kvitteringer og viktige endringer.')}
+        ${sw(S.notify.jobs, 'notify', 'jobs', 'Nye oppdrag i ditt fagfelt', 'Bare for frilansere.')}</section>
+
+      <section class="card stack" style="gap:0" id="cookies"><h2 style="font-size:20px;margin-bottom:6px">Cookies</h2>
+        ${sw(true, '', '', 'Nødvendige', 'Innlogging, sikkerhet og betaling. Kan ikke slås av.', true)}
+        ${sw(S.cookies.analyse, 'ck', 'analyse', 'Statistikk', 'Hjelper oss å forstå hvordan siden brukes.')}
+        ${sw(S.cookies.ads, 'ck', 'ads', 'Markedsføring', 'Måler effekten av annonser på andre nettsider.')}
+        <p class="hint" style="margin-top:10px">Les mer i <a href="cookies.html">cookieerklæringen</a>.</p></section>
+
+      <section class="card stack"><h2 style="font-size:20px">Dine data</h2>
+        <p class="muted">Du kan laste ned alt vi har lagret om deg, eller slette kontoen. Kontoen slettes når aktive oppdrag er avsluttet. Kvitteringer lagres i 5 år fordi bokføringsloven krever det.</p>
+        <div class="row"><button class="btn soft sm" data-a="export">Last ned mine data</button>
+        ${confirmDel ? `<span class="small">Er du sikker? Alt i denne nettleseren slettes.</span><button class="btn soft sm" data-a="noDel">Avbryt</button><button class="btn dark sm" data-a="del">Ja, slett</button>` : '<button class="btn ghost sm" data-a="askDel">Slett konto</button>'}</div></section>
+    </div>`;
+  }
+  Object.assign(H.actions, {
+    logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); location.href = 'index.html'; },
+    togglePub: () => { S.profile.published = !S.profile.published; H.save(); H.toast(S.profile.published ? 'Profilen er synlig igjen.' : 'Profilen er skjult fra søk.'); render(); },
+    notify: (v) => { S.notify[v] = !S.notify[v]; H.save(); render(); },
+    ck: (v) => { S.cookies[v] = !S.cookies[v]; S.cookie = 'custom'; H.save(); H.toast('Cookie-valget er lagret.'); render(); },
+    export: () => {
+      const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'freelio-mine-data.json'; document.body.appendChild(a); a.click(); a.remove();
+      H.toast('Filen er lastet ned.');
+    },
+    askDel: () => { confirmDel = true; render(); },
+    noDel: () => { confirmDel = false; render(); },
+    del: () => { H.reset(); H.flash('Kontoen og alle data i nettleseren er slettet.'); location.href = 'index.html'; }
+  });
+  H.boot(render);
+}
+</script>
+</body>
+</html>

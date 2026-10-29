@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bli frilanser | Freelio</title>
+<meta name="description" content="Lag en gratis frilanserprofil og få oppdrag i nærheten.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="bli-frilanser">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const next = H.qs('neste');
+const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
+function intro() {
+  document.getElementById('main').innerHTML = `<section class="hero"><div class="wrap hero-in"><div class="stack" style="gap:18px"><h1>Få oppdrag <em>i nærheten</em>, og få betalt uten å purre.</h1><p>Vis frem arbeidet ditt, motta forespørsler og send tilbud på oppdrag. Pengene er sikret før du starter.</p><div class="row"><a class="btn primary" href="logg-inn.html?neste=bli-frilanser.html">Kom i gang gratis</a><a class="btn ghost" href="slik-fungerer-det.html#priser">Se priser</a></div></div><div class="mosaic" aria-hidden="true">${[3, 7, 9, 0, 5, 11].map((i) => `<span class="ph" style="${H.phStyle(i)}"></span>`).join('')}</div></div></section>
+  <div class="wrap section"><div class="steps3">
+    <div class="card"><span class="n">1</span><h3>Lag profil</h3><p class="muted">Logg inn med BankID, legg inn arbeid, pakker og område.</p></div>
+    <div class="card"><span class="n">2</span><h3>Få forespørsler</h3><p class="muted">Kunder booker deg direkte, eller du sender tilbud på oppdrag.</p></div>
+    <div class="card"><span class="n">3</span><h3>Lever og få betalt</h3><p class="muted">Pengene er betalt inn før du starter. Utbetaling innen 2 virkedager etter godkjenning.</p></div></div></div>`;
+}
+let pkgs; const draft = {};
+function form() {
+  const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
+  pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
+  document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1000px"><div class="two">
+    <form class="stack" style="gap:20px" id="pform" novalidate>
+      <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
+      <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" value="${H.esc(p.name || S.user.name)}"></label>
+      <label class="field"><span class="label">Fagfelt *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
+      <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Snekker, Hundepasser"></label>
+      <div class="grid2"><label class="field"><span class="label">Område *</span><input class="inp" id="area" value="${H.esc(p.area || '')}" placeholder="F.eks. Sandvika"></label>
+      <label class="field"><span class="label">Hvor langt reiser du?</span><select class="inp" id="reach">${[5, 10, 25, 50].map((k) => `<option value="${k}" ${p.reach == k ? 'selected' : ''}>Inntil ${k} km</option>`).join('')}</select></label></div>
+      <label class="field"><span class="label">Om deg *</span><textarea class="inp" id="bio" rows="4" placeholder="Hva er du god på, og hva kan kunden forvente?">${H.esc(p.bio || '')}</textarea></label>
+      <label class="field"><span class="label">Stikkord</span><input class="inp" id="tags" value="${H.esc((p.tags || []).join(', '))}" placeholder="F.eks. Bryllup, Portrett, Produkt"><span class="hint">Skill med komma. Brukes i søket.</span></label>
+      <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
+        ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
+        ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
+      <label class="field"><span class="label">Porteføljebilder</span><input class="inp" type="file" accept="image/*,video/*" multiple style="padding-top:10px"><span class="hint">I demoen brukes eksempelbilder.</span></label>
+      <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
+      <div id="err"></div>
+      <div class="row"><button class="btn primary" type="submit">${S.profile ? 'Lagre endringer' : 'Publiser profil'}</button>${S.profile ? '<a class="btn soft" href="frilanser.html?id=meg">Se profilen</a>' : ''}</div>
+    </form>
+    <aside><div class="banner acc">${H.icon('shield', 20)}<span>Profilen får merket «BankID-verifisert» fordi du logget inn med ${H.esc(S.user.method)}.</span></div>
+      <div class="card stack small"><b style="font-size:15px">Utbetaling</b><span class="muted">I den ferdige appen legger du inn kontonummer hos betalingspartneren vår. Freelio ser aldri kontonummeret ditt.</span><span class="muted">Du betaler 5 % av hvert oppdrag. Ingen faste kostnader.</span></div></aside>
+  </div></div>`;
+  const pf = document.getElementById('pform');
+  pf.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal') { draft[e.target.id] = e.target.id === 'tags' ? e.target.value.split(',') : e.target.value; } });
+  pf.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') draft[e.target.id] = e.target.value; });
+  pf.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = (id) => document.getElementById(id).value.trim();
+    const pk = pkgs.filter((x) => x[0].trim() && +String(x[1]).replace(/\D/g, '')).map((x) => [x[0].trim(), +String(x[1]).replace(/\D/g, ''), x[2].trim()]);
+    const miss = ['name', 'role', 'area', 'bio'].filter((k) => !v(k));
+    let msg = '';
+    if (miss.length) msg = 'Fyll ut navn, tittel, område og om deg.';
+    else if (!pk.length) msg = 'Legg inn minst én pakke med navn og pris.';
+    else if (!document.getElementById('legal').checked) msg = 'Du må bekrefte at du driver lovlig og godta vilkårene.';
+    if (msg) { document.getElementById('err').innerHTML = `<div class="banner bad">${msg}</div>`; return; }
+    const name = v('name');
+    const ini = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+    const old = S.profile || {};
+    S.profile = Object.assign({ rating: 5.0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
+      id: 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
+      tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
+    });
+    H.save();
+    H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');
+    location.href = safeNext || 'frilanser.html?id=meg';
+  });
+}
+Object.assign(H.actions, {
+  addPk: () => { pkgs.push(['', '', '']); form(); },
+  rmPk: (v) => { pkgs.splice(+v, 1); form(); }
+});
+H.boot(() => (H.S.user ? form() : intro()));
+</script>
+</body>
+</html>

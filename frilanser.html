@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frilanser | Freelio</title>
+<meta name="description" content="Portefølje, pakker og omtaler.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="frilanser">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const id = H.qs('id') || 'ingrid';
+let tab = location.hash === '#omtaler' ? 'rv' : 'work';
+function render() {
+  const f = H.byId(id);
+  const main = document.getElementById('main');
+  if (!f) { main.innerHTML = `<div class="wrap section"><div class="empty"><b style="color:var(--fg)">Fant ikke denne frilanseren.</b><span>Profilen kan være fjernet eller lenken er feil.</span><a class="btn primary sm" href="sok.html">Søk etter frilansere</a></div></div>`; return; }
+  document.title = f.name + ' | Freelio';
+  const saved = H.S.saved.includes(f.id), inCmp = H.S.cmp.includes(f.id);
+  const dist = [[5, 0.82], [4, 0.13], [3, 0.03], [2, 0.01], [1, 0.01]];
+  const tabs = { work: 'Portefølje', pk: 'Pakker og priser', rv: `Omtaler (${f.reviews})`, about: 'Om' };
+  const body = {
+    work: `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
+    pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="color:var(--accent-ink);font-weight:800">Book denne pakken ${'→'}</span></a>`).join('')}
+      <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
+    rv: `<div class="stack" style="gap:20px"><div class="banner acc">${H.icon('spark', 20)}<span><b>Oppsummert av assistenten.</b> ${H.esc(f.sum)}</span></div>
+      <div class="grid2"><div class="stack" style="gap:2px"><span style="font-family:var(--f-display);font-size:48px;font-weight:800;line-height:1">${H.num(f.rating.toFixed(1))}</span><span class="rate" style="color:var(--star)">${H.star(18).repeat(5)}</span><span class="muted small">${f.reviews} omtaler fra kunder som har betalt via Freelio</span></div>
+      <div class="bars">${dist.map(([s, p]) => `<div><span>${s} stjerner</span><i><b style="width:${p * 100}%"></b></i><span>${Math.round(f.reviews * p)}</span></div>`).join('')}</div></div>
+      <div>${f.rv.map((r) => `<div class="rev"><div class="row" style="justify-content:space-between"><b>${H.esc(r[0])}</b><span class="rate" style="color:var(--star)">${H.star(14).repeat(r[1])}<span class="sr">${r[1]} av 5</span></span></div><span class="meta">${H.esc(r[2])}</span><span>${H.esc(r[3])}</span>${r[4] ? '<span class="pill acc" style="align-self:flex-start">Din omtale</span>' : ''}</div>`).join('')}</div></div>`,
+    about: `<div class="prose"><p>${H.esc(f.bio)}</p><ul><li>Område: ${H.esc(f.area)} og omegn</li><li>Spesialiserer seg på: ${f.tags.map(H.esc).join(', ')}</li><li>Medlem siden ${H.esc(f.joined)}</li><li>Identitet bekreftet med BankID</li></ul></div>`
+  }[tab];
+  const similar = H.all().filter((x) => x.cat === f.cat && x.id !== f.id).slice(0, 4);
+  main.innerHTML = `
+  <div class="wrap"><div class="crumbs"><a href="index.html">Forside</a><span>/</span><a href="sok.html?kat=${f.cat}">${H.cat(f.cat).name}</a><span>/</span><span>${H.esc(f.name)}</span></div></div>
+  <div class="wrap" style="margin-top:12px"><div class="ph cover" style="${H.phStyle(f.pal)};border-radius:20px"></div>
+    <div class="prof-head" style="padding-inline:20px"><span class="av" style="width:112px;height:112px;background:${f.col};font-size:38px;border:5px solid var(--bg)">${H.esc(f.ini)}</span>
+      <div class="stack grow" style="gap:4px;padding-bottom:6px"><h1>${H.esc(f.name)}</h1><span class="muted">${H.esc(f.role)} · ${H.esc(f.area)} · ${f.km} km fra deg</span></div></div>
+  </div>
+  <div class="wrap prof-grid">
+    <div class="stack" style="gap:20px">
+      <div class="row" style="gap:6px">${f.verified ? '<span class="pill acc">' + H.icon('shield', 14, 2) + ' BankID-verifisert</span>' : ''}<span class="pill">${H.icon('clock', 14, 2)} Svarer innen ${H.esc(f.resp)}</span><span class="pill">${f.jobs} fullførte oppdrag</span>${f.free ? '<span class="pill ok">Ledig kapasitet</span>' : '<span class="pill warn">Få ledige datoer</span>'}</div>
+      <div class="stats"><div><b>${H.num(f.rating.toFixed(1))}</b><span>${f.reviews} omtaler</span></div><div><b>${f.years} år</b><span>erfaring</span></div><div><b>${f.delD ? f.delD + ' d' : 'Samme dag'}</b><span>levering</span></div><div><b>${f.jobs}</b><span>oppdrag</span></div></div>
+      <div class="tabs" role="tablist">${Object.entries(tabs).map(([k, t]) => `<button role="tab" aria-selected="${tab === k}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>
+      <div role="tabpanel">${body}</div>
+    </div>
+    <aside class="prof-side">
+      <div class="card stack">
+        <span class="muted small">Pris</span><span style="font-size:26px;font-weight:800">${H.priceTxt(f)}</span>
+        <a class="btn primary block" href="book.html?id=${f.id}">Book ${H.esc(H.first(f.name))}</a>
+        <a class="btn ghost block" href="meldinger.html?med=${f.id}">${H.icon('chat', 18)} Send melding</a>
+        <div class="row" style="gap:8px"><button class="btn soft sm grow" data-a="save" data-v="${f.id}" aria-pressed="${saved}">${H.icon('heart', 16, 1.8, saved ? 'currentColor' : 'none')} ${saved ? 'Lagret' : 'Lagre'}</button><button class="btn soft sm grow" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'columns', 16, 2)} ${inCmp ? 'I sammenligning' : 'Sammenlign'}</button></div>
+        ${H.S.cmp.length >= 2 ? `<a href="sammenlign.html" class="small">Gå til sammenligning (${H.S.cmp.length})</a>` : ''}
+      </div>
+      <div class="banner acc">${H.icon('lock', 20)}<span>Trygg betaling. Pengene holdes til du har godkjent leveransen. <a href="slik-fungerer-det.html#betaling">Slik fungerer det</a></span></div>
+      <p class="hint">Hold samtalen og betalingen i Freelio. Da er du dekket hvis noe går galt.</p>
+    </aside>
+  </div>
+  ${similar.length ? `<div class="wrap section"><h2>Lignende frilansere</h2><div class="cards">${similar.map((x) => H.fCard(x)).join('')}</div></div>` : ''}`;
+}
+H.actions.tab = (v) => { tab = v; render(); };
+H.boot(render);
+</script>
+</body>
+</html>

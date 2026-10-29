@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hjelpesenter | Freelio</title>
+<meta name="description" content="Svar på vanlige spørsmål og kontakt med kundeservice.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="hjelp">
+<div id="site-header"></div>
+<main id="main">
+  <div class="wrap" style="max-width:820px">
+    <section class="section">
+      <h1>Hjelpesenter</h1>
+      <label class="sr" for="fq">Søk i hjelpesenteret</label>
+      <input class="inp" id="fq" type="search" placeholder="Søk, f.eks. avbestilling" style="height:52px">
+      <div class="faq" id="faq">
+        <h2 style="font-size:20px;margin-top:8px">Kunde</h2>
+        <details><summary>Når blir pengene trukket?</summary><p>Når du booker eller godtar et tilbud. Pengene holdes av betalingspartneren til du har godkjent leveransen.</p></details>
+        <details><summary>Hvordan avbestiller jeg?</summary><p>Åpne bestillingen under Mine oppdrag og velg Avbestill. Gratis frem til 7 dager før avtalt dato. Etter det får du 50 % tilbake.</p></details>
+        <details><summary>Hva gjør jeg hvis jobben ikke er som avtalt?</summary><p>Trykk «Meld fra om feil» før du godkjenner. Frilanseren får 3 dager på å rette opp. Blir dere ikke enige, går saken til oss.</p></details>
+        <details><summary>Kan jeg betale frilanseren direkte?</summary><p>Du kan, men da er du ikke beskyttet. Du mister retten til refusjon, og du kan ikke gi omtale.</p></details>
+        <details><summary>Hvorfor må jeg oppgi maks budsjett?</summary><p>Frilansere svarer oftere når de vet rammen. Du betaler aldri mer enn tilbudet du godtar.</p></details>
+        <h2 style="font-size:20px;margin-top:16px">Frilanser</h2>
+        <details><summary>Hva koster det å være frilanser?</summary><p>Profilen er gratis. Vi tar 5 % av hvert oppdrag du får betalt for.</p></details>
+        <details><summary>Når får jeg pengene?</summary><p>Innen 2 virkedager etter at kunden har godkjent, eller automatisk 5 dager etter levering hvis kunden ikke svarer.</p></details>
+        <details><summary>Må jeg ha enkeltpersonforetak?</summary><p>Du må rapportere inntekten. Tjener du mer enn litt ved siden av, bør du ha et enkeltpersonforetak. Over 50 000 kr på 12 måneder må du registrere deg i MVA-registeret.</p></details>
+        <details><summary>Hvordan får jeg flere oppdrag?</summary><p>Legg inn mange eksempler på arbeid, svar raskt og ha tydelige pakker med pris. Omtaler fra fornøyde kunder hjelper mest.</p></details>
+        <h2 style="font-size:20px;margin-top:16px">Konto og personvern</h2>
+        <details><summary>Hvorfor må jeg bruke Vipps eller BankID?</summary><p>Slik vet vi at alle er ekte personer over 18 år. Det gjør markedsplassen tryggere for alle.</p></details>
+        <details><summary>Hvordan sletter jeg kontoen?</summary><p>Gå til Min side og velg «Slett konto». Kontoen slettes når aktive oppdrag er avsluttet.</p></details>
+      </div>
+      <p class="muted" id="nohit" hidden>Ingen svar matcher søket. Send oss en melding under.</p>
+    </section>
+    <section class="section" style="padding-top:0">
+      <h2>Kontakt oss</h2>
+      <form class="card stack" id="cform" novalidate>
+        <div class="grid2"><label class="field"><span class="label">Navn</span><input class="inp" id="cn" autocomplete="name"></label><label class="field"><span class="label">E-post</span><input class="inp" id="ce" type="email" autocomplete="email"></label></div>
+        <label class="field"><span class="label">Gjelder det en bestilling?</span><select class="inp" id="co"><option>Nei</option></select></label>
+        <label class="field"><span class="label">Melding</span><textarea class="inp" id="cm" rows="5"></textarea></label>
+        <span class="err-text" id="cerr"></span>
+        <button class="btn primary" style="align-self:flex-start" type="submit">Send</button>
+      </form>
+      <p class="hint">Vi svarer på hverdager innen 24 timer.</p>
+    </section>
+  </div>
+</main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+$('fq').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase(); let hits = 0;
+  document.querySelectorAll('#faq details').forEach((d) => { const m = !q || d.textContent.toLowerCase().includes(q); d.hidden = !m; if (m) hits++; if (q && m) d.open = true; });
+  $('nohit').hidden = hits > 0;
+});
+$('co').innerHTML = '<option>Nei</option>' + H.S.orders.map((o) => `<option>${H.esc(o.title)} med ${H.esc(H.byId(o.fid).name)} (${H.esc(o.date)})</option>`).join('');
+if (H.S.user) $('cn').value = H.S.user.name;
+$('cform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!$('cn').value.trim() || !/^\S+@\S+\.\S+$/.test($('ce').value) || $('cm').value.trim().length < 10) { $('cerr').textContent = 'Fyll inn navn, en gyldig e-post og en melding på minst 10 tegn.'; return; }
+  e.target.innerHTML = `<div class="banner ok">${H.icon('check', 20, 2.5)}<span>Takk! Meldingen er sendt. Vi svarer til ${H.esc($('ce').value)} innen 24 timer på hverdager. (Demo: ingenting er sendt.)</span></div>`;
+});
+H.boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bestilling | Freelio</title>
+<meta name="description" content="Følg betalingen fra booking til utbetaling.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="bestilling">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (H.requireLogin()) {
+  const o = H.orderById(H.qs('id'));
+  let stars = 0, text = '', confirmDispute = false, reason = '', confirmCancel = false;
+  function render() {
+    const main = document.getElementById('main');
+    if (!o) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke bestillingen. <a class="btn primary sm" href="mine-oppdrag.html">Til mine oppdrag</a></div></div>`; return; }
+    const f = H.byId(o.fid); const fn = H.esc(H.first(f.name));
+    const st = o.status; const fee = Math.round(o.price * H.FEE);
+    const reached = { paid: 1, delivered: 2, dispute: 2, approved: 4, cancelled: 1 }[st];
+    const steps = [
+      ['Betalt og holdt trygt', `Du betalte ${H.kr(o.price)}${o.method === 'kort' ? ' med kort' : ' med Vipps'}. Pengene holdes av betalingspartneren.`],
+      ['Levert', st === 'paid' ? `${fn} laster opp leveransen her når jobben er gjort.` : `Leveranse: ${H.esc(o.delivered)}.`],
+      ['Godkjent av deg', st === 'dispute' ? `${fn} har fått beskjed og har 3 dager på å rette opp.` : 'Du har 5 dager på å se over. Svarer du ikke, godkjennes leveransen automatisk.'],
+      ['Utbetalt', `${fn} får ${H.kr(o.price - fee)} innen 2 virkedager.`]
+    ];
+    const banner = {
+      paid: ['acc', `Pengene er trygge. ${fn} får dem først når du har godkjent leveransen.`],
+      delivered: ['acc', 'Leveransen er klar. Se over og godkjenn, eller meld fra hvis noe ikke er som avtalt.'],
+      approved: ['ok', o.reviewed ? 'Fullført og vurdert. Takk for at du bruker Freelio!' : `Fullført. ${fn} har fått betalt. Gi gjerne en omtale.`],
+      dispute: ['bad', 'Saken er meldt. Pengene holdes til den er løst. Meldingene deres brukes som dokumentasjon.'],
+      cancelled: ['warn', `Avbestilt. ${H.kr(o.refund)} blir refundert til deg innen 5 virkedager.`]
+    }[st];
+    main.innerHTML = `<div class="wrap" style="max-width:1000px">
+      <div class="crumbs"><a href="mine-oppdrag.html">Mine oppdrag</a><span>/</span><span>${H.esc(o.title)}</span></div>
+      <div class="two">
+        <div class="stack" style="gap:20px">
+          <div class="row">${H.avatar(f, 56)}<div class="stack grow" style="gap:2px"><h1 style="font-size:28px">${H.esc(o.title)}</h1><span class="muted">${H.esc(f.name)} · ${H.esc(o.date)}${o.place ? ' · ' + H.esc(o.place) : ''}</span></div></div>
+          <div class="banner ${banner[0]}">${H.icon('shield', 20)}<span>${banner[1]}</span></div>
+          <ol class="steps">${steps.map((s, i) => { const n = i + 1; const cls = st === 'dispute' && n === 3 ? 'warn' : n <= reached ? 'done' : n === reached + 1 ? 'cur' : ''; return `<li class="${cls}"><div class="rail"><span class="n">${cls === 'done' ? H.icon('check', 14, 3) : n}</span>${n < 4 ? '<span class="ln"></span>' : ''}</div><div class="t"><b>${s[0]}</b><span class="muted small">${s[1]}</span></div></li>`; }).join('')}</ol>
+          ${st === 'delivered' ? `<div class="card stack"><b>Leveranse</b><div class="gallery" style="grid-template-columns:repeat(4,minmax(0,1fr))">${[0, 1, 2, 3].map((i) => `<span class="ph" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div><span class="muted small">${H.esc(o.delivered)}</span></div>` : ''}
+          ${st === 'delivered' && confirmDispute ? `<div class="card stack"><b>Hva er ikke som avtalt?</b><textarea class="inp" id="reason" rows="3" placeholder="Beskriv kort hva som mangler eller er feil">${H.esc(reason)}</textarea><div class="row"><button class="btn soft sm" data-a="cancelDispute">Avbryt</button><button class="btn dark sm" data-a="dispute">Send til ${fn}</button></div></div>` : ''}
+          ${st === 'approved' && !o.reviewed ? `<div class="card stack"><h2 style="font-size:20px">Hvordan var ${fn}?</h2>
+            <div class="stars" role="radiogroup" aria-label="Antall stjerner">${[1, 2, 3, 4, 5].map((k) => `<button role="radio" aria-checked="${k === stars}" aria-label="${k} stjerner" class="${k <= stars ? 'on' : ''}" data-a="stars" data-v="${k}">${H.star(24)}</button>`).join('')}</div>
+            <label class="field"><span class="label">Fortell andre om oppdraget</span><textarea class="inp" id="rtext" rows="4" placeholder="Hva var bra? Var noe annerledes enn avtalt?">${H.esc(text)}</textarea></label>
+            <p class="hint">Omtalen publiseres når ${fn} også har vurdert deg, eller etter 14 dager. Da kan ingen av dere svare på den andres omtale først.</p>
+            <button class="btn primary" data-a="review" ${stars ? '' : 'disabled'}>Send omtale</button></div>` : ''}
+        </div>
+        <aside>
+          <div class="card stack">
+            <div class="sum"><div><span>Oppdrag</span><b>${H.kr(o.price)}</b></div><div class="muted"><span>Plattformavgift 5 %</span><span>− ${H.kr(fee)}</span></div><div class="tot"><span>${fn} får</span><span>${H.kr(o.price - fee)}</span></div></div>
+            ${st === 'paid' ? `<button class="btn soft block" style="border:1.5px dashed var(--muted)" data-a="deliver">Demo: ${fn} leverer jobben</button><p class="hint">I den ekte appen laster frilanseren opp leveransen selv.</p>` : ''}
+            ${st === 'delivered' && !confirmDispute ? `<button class="btn primary block" data-a="approve">Godkjenn og betal ut</button><button class="btn ghost block" data-a="askDispute">Meld fra om feil</button>` : ''}
+            ${st === 'paid' && !confirmCancel ? `<button class="btn ghost block" data-a="askCancel">Avbestill</button>` : ''}
+            ${st === 'paid' && confirmCancel ? `<div class="stack small"><span>${o.refundAll ? 'Du får hele beløpet tilbake.' : 'Avbestilling nærmere enn 7 dager før gir 50 % tilbake.'} Vil du avbestille?</span><div class="row"><button class="btn soft sm grow" data-a="noCancel">Nei</button><button class="btn dark sm grow" data-a="cancel">Ja, avbestill</button></div></div>` : ''}
+            ${st === 'dispute' ? `<button class="btn soft block" style="border:1.5px dashed var(--muted)" data-a="resolve">Demo: ${fn} retter opp</button>` : ''}
+            <a class="btn soft block" href="meldinger.html?med=${f.id}">${H.icon('chat', 18)} Send melding</a>
+            <a class="btn link" href="frilanser.html?id=${f.id}">Se profilen til ${fn}</a>
+          </div>
+          ${st === 'paid' ? `<p class="hint">Avbestilling: gratis frem til 7 dager før. Etter det får du 50 % tilbake. <a href="hjelp.html">Les mer</a></p>` : ''}
+        </aside>
+      </div></div>`;
+    const rt = document.getElementById('rtext'); if (rt) rt.addEventListener('input', (e) => (text = e.target.value));
+    const rs = document.getElementById('reason'); if (rs) rs.addEventListener('input', (e) => (reason = e.target.value));
+  }
+  const upd = (msg) => { H.save(); H.mountHeader(); render(); if (msg) H.toast(msg); };
+  Object.assign(H.actions, {
+    deliver: () => { o.status = 'delivered'; o.delivered = /foto|bilde|portrett|bryllup|vielse|halv dag|hel dag/i.test(o.title) ? '214 redigerte bilder i nettgalleri' : 'Ferdig arbeid med bilder og beskrivelse'; upd('Leveransen er lastet opp. Se over og godkjenn.'); },
+    approve: () => { o.status = 'approved'; upd('Godkjent. Pengene er på vei til frilanseren.'); },
+    askCancel: () => { const d = String(o.date).split('.'); const when = d.length === 3 ? new Date(+d[2], +d[1] - 1, +d[0]) : null; o.refundAll = !when || when - Date.now() > 7 * 864e5; confirmCancel = true; render(); },
+    noCancel: () => { confirmCancel = false; render(); },
+    cancel: () => { o.status = 'cancelled'; o.refund = o.refundAll ? o.price : Math.round(o.price / 2); confirmCancel = false; upd('Bestillingen er avbestilt.'); },
+    askDispute: () => { confirmDispute = true; render(); },
+    cancelDispute: () => { confirmDispute = false; render(); },
+    dispute: () => { if (!reason.trim()) { H.toast('Skriv kort hva som er feil.'); return; } o.status = 'dispute'; confirmDispute = false; (H.S.threads[o.fid] = H.S.threads[o.fid] || []).push({ who: 'sys', text: 'Kunden har meldt fra om feil: ' + reason.trim(), at: Date.now() }); upd('Sendt. Pengene holdes til saken er løst.'); },
+    resolve: () => { o.status = 'delivered'; o.delivered += ' (rettet opp)'; upd('Frilanseren har levert på nytt.'); },
+    stars: (v) => { stars = +v; render(); },
+    review: () => {
+      (H.S.extraReviews[o.fid] = H.S.extraReviews[o.fid] || []).unshift([H.S.user.name, stars, o.title + ' · ' + H.today(), text.trim() || 'Ingen kommentar.', true]);
+      o.reviewed = true; upd('Takk! Omtalen er lagt til på profilen.');
+    }
+  });
+  H.boot(render);
+}
+</script>
+</body>
+</html>

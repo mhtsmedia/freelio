@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Logg inn | Freelio</title>
+<meta name="description" content="Logg inn med Vipps eller BankID.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="logg-inn">
+<div id="site-header"></div>
+<main id="main"><div class="wrap" style="max-width:460px"><div class="section" id="box"></div></div></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const next = H.qs('neste') || 'index.html';
+const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
+let busy = null, step = 'start', name = '';
+function render() {
+  const box = document.getElementById('box');
+  if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, verifisert med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
+  if (step === 'name') {
+    box.innerHTML = `<h1>Velkommen!</h1><p class="muted">Navnet ditt er bekreftet med ${H.esc(busy)}. Hvilket navn vil du vise til frilanserne?</p>
+      <form class="stack" id="nform"><label class="field"><span class="label">Visningsnavn</span><input class="inp" id="name" value="${H.esc(name)}" autocomplete="name"></label>
+      <label class="check"><input type="checkbox" id="terms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
+      <span class="err-text" id="err"></span><button class="btn primary" type="submit">Opprett konto</button></form>`;
+    document.getElementById('nform').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const n = document.getElementById('name').value.trim();
+      if (!n) { document.getElementById('err').textContent = 'Skriv inn et navn.'; return; }
+      if (!document.getElementById('terms').checked) { document.getElementById('err').textContent = 'Du må godta vilkårene for å fortsette.'; return; }
+      H.S.user = { name: n, method: busy, since: H.today() }; H.save();
+      H.flash(`Logget inn som ${n}.`); location.href = safeNext;
+    });
+    return;
+  }
+  box.innerHTML = `<h1>Logg inn</h1><p class="muted">Vi bruker Vipps eller BankID, så alle på Freelio har bekreftet hvem de er. Ingen passord å huske.</p>
+    <button class="btn dark" data-a="login" data-v="Vipps" ${busy ? 'disabled' : ''}>${busy === 'Vipps' ? 'Venter på godkjenning i Vipps …' : 'Fortsett med Vipps'}</button>
+    <button class="btn ghost" data-a="login" data-v="BankID" ${busy ? 'disabled' : ''}>${busy === 'BankID' ? 'Bekrefter med BankID …' : 'Fortsett med BankID'}</button>
+    <div class="banner acc">${H.icon('shield', 20)}<span>Vi får bare navnet ditt og at du er over 18 år. Personnummeret ditt lagres ikke hos oss.</span></div>
+    <p class="hint">Demo: ingen ekte innlogging. Trykk på en knapp for å fortsette.</p>`;
+}
+H.actions.login = (v) => { busy = v; render(); setTimeout(() => { name = 'Kari Nordmann'; step = 'name'; render(); }, 1300); };
+H.boot(render);
+</script>
+</body>
+</html>

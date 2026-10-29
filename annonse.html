@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oppdrag | Freelio</title>
+<meta name="description" content="Oppdrag lagt ut på Freelio.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="annonse">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const jid = H.qs('id');
+let confirmDelete = false, offerPrice = '', offerMsg = '';
+let lastCount = -1;
+function render() {
+  const S = H.S;
+  const j = H.jobById(jid);
+  const main = document.getElementById('main');
+  if (!j) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke oppdraget. Det kan være slettet. <a class="btn primary sm" href="oppdrag.html">Se andre oppdrag</a></div></div>`; return; }
+  document.title = j.title + ' | Freelio';
+  const c = H.cat(j.cat);
+  const offers = j.mine ? H.jobOffers(j) : [];
+  if (j.mine) { const raw = S.myJobs.find((x) => x.id === j.id); H.jobOffers(raw).forEach((o) => (o.seen = true)); H.save(); }
+  const sent = S.sentOffers[j.id];
+  const facts = [['Maks budsjett', H.kr(j.budget)], ['Dato', j.date], ['Område', j.area + (j.km ? ' (' + j.km + ' km)' : '')], j.scope ? ['Omfang', j.scope] : null, j.delivery ? ['Leveranse', j.delivery] : null, j.ownGear ? ['Utstyr', 'Frilanser tar med eget'] : null].filter(Boolean);
+  let side;
+  if (j.mine) {
+    side = `<div class="card stack"><b>Din annonse</b><span class="muted small">Lagt ut ${H.esc(j.postedTxt || 'nå')}. ${j.status === 'booked' ? 'Oppdraget er booket.' : 'Frilansere i nærheten har fått varsel.'}</span>
+      ${confirmDelete ? `<span class="small">Vil du slette annonsen? Tilbudene forsvinner.</span><div class="row"><button class="btn soft sm grow" data-a="noDelete">Avbryt</button><button class="btn dark sm grow" data-a="delete">Slett</button></div>` : `<button class="btn soft block" data-a="askDelete" ${j.status === 'booked' ? 'disabled' : ''}>Slett annonsen</button>`}</div>`;
+  } else if (sent) {
+    side = `<div class="card stack"><span class="pill ok" style="align-self:flex-start">${H.icon('check', 14, 3)} Tilbud sendt</span><span>Du tilbød <b>${H.kr(sent.price)}</b>.</span><span class="muted small">«${H.esc(sent.msg)}»</span><span class="muted small">Du får beskjed når ${H.esc(j.by)} svarer.</span><button class="btn soft sm" data-a="withdraw">Trekk tilbudet</button></div>`;
+  } else if (!S.user) {
+    side = `<div class="card stack"><b>Vil du ta oppdraget?</b><span class="muted small">Logg inn og lag en frilanserprofil for å sende tilbud.</span><a class="btn primary block" href="logg-inn.html?neste=${encodeURIComponent('annonse.html?id=' + j.id)}">Logg inn</a></div>`;
+  } else if (!S.profile) {
+    side = `<div class="card stack"><b>Vil du ta oppdraget?</b><span class="muted small">Du trenger en frilanserprofil for å sende tilbud. Det tar rundt 3 minutter.</span><a class="btn primary block" href="bli-frilanser.html?neste=${encodeURIComponent('annonse.html?id=' + j.id)}">Lag frilanserprofil</a></div>`;
+  } else {
+    side = `<form class="card stack" id="oform" novalidate><b>Gi et tilbud</b>
+      <label class="field"><span class="label">Din pris</span><input class="inp" id="oprice" inputmode="numeric" placeholder="Maks ${H.kr(j.budget)}" value="${H.esc(offerPrice)}"></label>
+      <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="omsg" rows="4" placeholder="Hvorfor passer du til jobben? Hva er inkludert?">${H.esc(offerMsg)}</textarea></label>
+      <p class="hint">Du får ${offerPrice ? H.kr(+offerPrice.replace(/\D/g, '') * 0.95) : 'prisen minus 5 %'} utbetalt når kunden har godkjent leveransen.</p>
+      <button class="btn primary block" type="submit">Send tilbud</button></form>`;
+  }
+  main.innerHTML = `<div class="wrap" style="max-width:1100px">
+    <div class="crumbs"><a href="oppdrag.html">Oppdrag</a><span>/</span><a href="oppdrag.html?kat=${c.id}">${c.name}</a><span>/</span><span>${H.esc(j.title)}</span></div>
+    <div class="two">
+      <div class="stack" style="gap:20px">
+        <div class="row" style="gap:6px"><span class="pill">${H.icon(c.icon, 14)} ${c.name}</span>${j.status === 'booked' ? '<span class="pill ok">Booket</span>' : '<span class="pill acc">Åpen for tilbud</span>'}</div>
+        <h1>${H.esc(j.title)}</h1>
+        <p style="font-size:16px;white-space:pre-line">${H.esc(j.desc)}</p>
+        <dl class="sum" style="margin:0">${facts.map(([k, v]) => `<div><dt class="muted">${k}</dt><dd style="margin:0;font-weight:800;text-align:right">${H.esc(v)}</dd></div>`).join('')}</dl>
+        <span class="meta">Lagt ut av ${H.esc(j.by)} · ${H.esc(j.posted)} · ${j.mine ? offers.length : j.offers + (sent ? 1 : 0)} tilbud</span>
+        ${j.mine ? `<section class="stack" aria-live="polite"><h2>Tilbud (${offers.length})</h2>
+          ${offers.length ? offers.map((o, i) => { const f = H.byId(o.fid); return `<div class="card stack"><div class="row">${H.avatar(f, 48)}<div class="grow stack" style="gap:0"><a href="frilanser.html?id=${f.id}" style="font-weight:800;color:var(--fg)">${H.esc(f.name)}</a><span class="meta">${H.star(12)} ${H.num(f.rating.toFixed(1))} · ${f.reviews} omtaler · ${f.km} km · svarer innen ${H.esc(f.resp)}</span></div><b style="font-size:18px">${H.kr(o.price)}</b></div>
+            <p>${H.esc(o.msg)}</p>
+            ${j.status === 'open' ? `<div class="row"><a class="btn ghost sm" href="meldinger.html?med=${f.id}">Still spørsmål</a><a class="btn soft sm" href="frilanser.html?id=${f.id}">Se profil</a><button class="btn primary sm" data-a="accept" data-v="${i}" style="margin-left:auto">Godta og betal ${H.kr(o.price)}</button></div>` : (j.acceptedFid === o.fid ? `<a class="pill ok" style="align-self:flex-start;text-decoration:none" href="bestilling.html?id=${j.orderId}">Godtatt. Se bestillingen</a>` : '')}</div>`; }).join('')
+          : `<div class="empty">Frilansere i nærheten har fått varsel. Tilbudene dukker opp her, vanligvis innen en time.<span class="small">I demoen kommer de første tilbudene etter noen sekunder.</span></div>`}
+          ${offers.length >= 2 && j.status === 'open' ? `<button class="btn soft" data-a="compareOffers">${H.icon('columns', 18)} Sammenlign frilanserne som har gitt tilbud</button>` : ''}</section>` : ''}
+      </div>
+      <aside>${side}<div class="banner acc">${H.icon('lock', 20)}<span>Betaling skjer i Freelio. Pengene holdes til jobben er levert og godkjent.</span></div></aside>
+    </div></div>`;
+  const of = document.getElementById('oform');
+  if (of) {
+    of.addEventListener('input', () => { offerPrice = document.getElementById('oprice').value; offerMsg = document.getElementById('omsg').value; const h = of.querySelector('.hint'); const p = +offerPrice.replace(/\D/g, ''); h.textContent = `Du får ${p ? H.kr(p * 0.95) : 'prisen minus 5 %'} utbetalt når kunden har godkjent leveransen.`; });
+    of.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const p = +offerPrice.replace(/\D/g, '');
+      if (!p) { H.toast('Skriv inn en pris.'); return; }
+      if (!offerMsg.trim()) { H.toast('Skriv en kort melding til kunden.'); return; }
+      H.S.sentOffers[j.id] = { price: p, msg: offerMsg.trim(), at: Date.now() }; H.save();
+      H.toast('Tilbudet er sendt.'); render();
+    });
+  }
+  if (j.mine && offers.length !== lastCount) { if (lastCount >= 0 && offers.length > lastCount) H.toast('Nytt tilbud fra ' + H.byId(offers[offers.length - 1].fid).name); lastCount = offers.length; H.mountHeader(); }
+}
+Object.assign(H.actions, {
+  accept: (v) => {
+    if (!H.S.user) { location.href = 'logg-inn.html'; return; }
+    const j = H.S.myJobs.find((x) => x.id === jid); const o = H.jobOffers(j)[+v];
+    const order = H.createOrder({ fid: o.fid, title: j.title, price: o.price, date: j.date, place: j.area, jobId: j.id });
+    j.status = 'booked'; j.acceptedFid = o.fid; j.orderId = order.id; H.save();
+    H.flash(`Tilbudet er godtatt. ${H.kr(o.price)} er betalt og holdes trygt.`);
+    location.href = 'bestilling.html?id=' + order.id;
+  },
+  compareOffers: () => { const j = H.S.myJobs.find((x) => x.id === jid); H.S.cmp = H.jobOffers(j).slice(0, 3).map((o) => o.fid); H.save(); location.href = 'sammenlign.html'; },
+  askDelete: () => { confirmDelete = true; render(); },
+  noDelete: () => { confirmDelete = false; render(); },
+  delete: () => { H.S.myJobs = H.S.myJobs.filter((x) => x.id !== jid); H.save(); H.flash('Annonsen er slettet.'); location.href = 'mine-oppdrag.html?fane=annonser'; },
+  withdraw: () => { delete H.S.sentOffers[jid]; H.save(); H.toast('Tilbudet er trukket.'); render(); }
+});
+H.boot(render);
+setInterval(() => { const j = H.jobById(jid); if (j && j.mine && j.status === 'open' && H.jobOffers(j).length !== lastCount) render(); }, 2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finn frilanser | Freelio</title>
+<meta name="description" content="Søk blant lokale frilansere. Filtrer på fagfelt, avstand, pris og vurdering.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="sok">
+<div id="site-header"></div>
+<main id="main">
+  <div class="wrap">
+    <div class="crumbs"><a href="index.html">Forside</a><span>/</span><span>Finn frilanser</span></div>
+    <form class="searchbox" id="sform" role="search" style="margin-top:16px;box-shadow:none;border:1px solid var(--line)">
+      <label class="sr" for="q">Hva trenger du?</label><input class="inp" id="q" name="q" placeholder="Fotograf, snekker, logo …" autocomplete="off">
+      <label class="sr" for="sted">Hvor?</label><input class="inp" id="sted" name="sted" placeholder="Sted">
+      <button class="btn primary" type="submit">Søk</button>
+    </form>
+    <div class="with-side">
+      <aside class="side" id="side" aria-label="Filtre">
+        <fieldset><legend>Fagfelt</legend><div id="fcat" class="stack" style="gap:0"></div></fieldset>
+        <fieldset><legend>Avstand fra Sandvika</legend>
+          <select class="inp" id="dist"><option value="5">Innen 5 km</option><option value="10">Innen 10 km</option><option value="25" selected>Innen 25 km</option><option value="999">Hele landet</option></select></fieldset>
+        <fieldset><legend>Maks startpris</legend><input class="inp" id="maxp" inputmode="numeric" placeholder="kr"></fieldset>
+        <fieldset><legend>Vurdering</legend>
+          <label class="check"><input type="radio" name="minr" value="0" checked> Alle</label>
+          <label class="check"><input type="radio" name="minr" value="4.5"> 4,5 og over</label>
+          <label class="check"><input type="radio" name="minr" value="4.8"> 4,8 og over</label></fieldset>
+        <fieldset><legend>Annet</legend>
+          <label class="check"><input type="checkbox" id="free"> Har ledig kapasitet</label>
+          <label class="check"><input type="checkbox" id="fast"> Svarer innen 2 timer</label></fieldset>
+        <button class="btn soft" type="button" id="clear">Nullstill filtre</button>
+      </aside>
+      <section aria-labelledby="rh">
+        <div class="results-head">
+          <h1 id="rh" style="font-size:24px"></h1>
+          <div class="row">
+            <button class="btn soft sm filters-toggle" type="button" id="ftoggle" aria-expanded="false">Filtre</button>
+            <label class="row small" style="gap:6px">Sorter <select class="inp" id="sort" style="height:38px;width:auto;font-size:14px"><option value="rating">Best vurdert</option><option value="near">Nærmest</option><option value="price">Lavest pris</option><option value="fast">Raskest svar</option><option value="jobs">Flest oppdrag</option></select></label>
+            <div class="seg"><a href="sok.html" aria-current="page">Liste</a><a id="maplink" href="kart.html">Kart</a></div>
+          </div>
+        </div>
+        <div class="cards" id="results"></div>
+      </section>
+    </div>
+  </div>
+  <div class="cmpbar" id="cmpbar" hidden></div>
+</main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+const F = { q: H.qs('q') || '', sted: H.qs('sted') || '', kat: H.qs('kat') || 'alle' };
+const $ = (id) => document.getElementById(id);
+$('q').value = F.q; $('sted').value = F.sted;
+$('fcat').innerHTML = [{ id: 'alle', name: 'Alle fagfelt' }].concat(HDATA.CATS).map((c) => `<label class="check"><input type="radio" name="kat" value="${c.id}" ${F.kat === c.id ? 'checked' : ''}> ${c.name}</label>`).join('');
+
+function render() {
+  const all = H.all();
+  const q = $('q').value.trim().toLowerCase();
+  const kat = (document.querySelector('input[name=kat]:checked') || {}).value || 'alle';
+  const dist = +$('dist').value;
+  const maxp = +$('maxp').value.replace(/\D/g, '') || Infinity;
+  const minr = +document.querySelector('input[name=minr]:checked').value;
+  const words = q.split(/\s+/).filter(Boolean);
+  let list = all.filter((f) => (kat === 'alle' || f.cat === kat) && f.km <= dist && f.from <= maxp && f.rating >= minr
+    && (!$('free').checked || f.free) && (!$('fast').checked || f.respH <= 2)
+    && words.every((w) => (f.name + ' ' + f.role + ' ' + f.tags.join(' ') + ' ' + H.cat(f.cat).name + ' ' + f.area).toLowerCase().includes(w.replace(/er$|en$/, ''))));
+  const s = $('sort').value;
+  const sorters = { rating: (a, b) => b.rating - a.rating || b.reviews - a.reviews, near: (a, b) => a.km - b.km, price: (a, b) => a.from - b.from, fast: (a, b) => a.respH - b.respH, jobs: (a, b) => b.jobs - a.jobs };
+  list.sort(sorters[s]);
+  const catName = kat === 'alle' ? 'frilansere' : H.cat(kat).name.toLowerCase();
+  $('rh').textContent = `${list.length} ${list.length === 1 ? 'treff' : 'treff'} på ${q ? '«' + $('q').value.trim() + '»' : catName}`;
+  $('maplink').href = 'kart.html' + (kat !== 'alle' ? '?kat=' + kat : '');
+  $('results').innerHTML = list.length ? list.map((f) => H.fCard(f, { cmp: true })).join('')
+    : `<div class="empty" style="grid-column:1/-1"><b style="color:var(--fg)">Ingen treff med disse filtrene.</b><span>Prøv et annet ord, øk avstanden eller legg ut et oppdrag, så kommer frilanserne til deg.</span><a class="btn primary sm" href="ny-annonse.html">Legg ut oppdrag</a></div>`;
+  const bar = $('cmpbar');
+  const sel = H.S.cmp.map(H.byId).filter(Boolean);
+  bar.hidden = !sel.length;
+  bar.innerHTML = `<div class="wrap"><b>${sel.length} valgt</b><span class="row" style="gap:6px">${sel.map((f) => H.avatar(f, 32)).join('')}</span><span class="grow meta">${sel.length < 2 ? 'Velg minst én til for å sammenligne.' : 'Se pris, omtaler og leveringstid side om side.'}</span>
+    <button class="btn link" data-a="clearCmp">Fjern alle</button><a class="btn primary sm" href="sammenlign.html" ${sel.length < 2 ? 'aria-disabled="true" tabindex="-1" onclick="return false"' : ''}>Sammenlign</a></div>`;
+  const u = new URLSearchParams(); if ($('q').value.trim()) u.set('q', $('q').value.trim()); if ($('sted').value.trim()) u.set('sted', $('sted').value.trim()); if (kat !== 'alle') u.set('kat', kat);
+  history.replaceState(null, '', 'sok.html' + (u.toString() ? '?' + u : ''));
+}
+H.actions.clearCmp = () => { H.S.cmp = []; H.save(); render(); };
+$('side').addEventListener('change', render);
+$('maxp').addEventListener('input', render);
+$('sort').addEventListener('change', render);
+$('sform').addEventListener('submit', (e) => { e.preventDefault(); render(); });
+$('q').addEventListener('input', render);
+$('clear').addEventListener('click', () => { document.querySelector('input[name=kat][value=alle]').checked = true; $('dist').value = '25'; $('maxp').value = ''; document.querySelector('input[name=minr][value="0"]').checked = true; $('free').checked = false; $('fast').checked = false; $('q').value = ''; render(); });
+$('ftoggle').addEventListener('click', (e) => { const o = $('side').classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); });
+H.boot(render);
+</script>
+</body>
+</html>

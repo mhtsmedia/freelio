@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kart | Freelio</title>
+<meta name="description" content="Se frilansere i nærområdet på kart.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="kart">
+<div id="site-header"></div>
+<main id="main"><div class="mapwrap">
+  <div class="maplist"><h1 style="font-size:24px">Frilansere nær Sandvika</h1><div class="chips scroll" id="chips"></div><p class="hint">Posisjonene er omtrentlige for å beskytte hjemmeadressen til frilanserne.</p><div class="stack" id="list" style="gap:8px"></div></div>
+  <div class="map" id="map" role="region" aria-label="Kart">
+    <i style="left:-20%;top:68%;width:140%;height:28%;background:var(--map-water);transform:rotate(-8deg)"></i>
+    <i style="left:6%;top:10%;width:22%;height:16%;background:var(--map-park);border-radius:28px"></i>
+    <i style="left:62%;top:56%;width:26%;height:12%;background:var(--map-park);border-radius:28px"></i>
+    <i style="left:0;top:34%;width:100%;height:10px;background:var(--map-road)"></i>
+    <i style="left:42%;top:0;width:10px;height:100%;background:var(--map-road)"></i>
+    <i style="left:-10%;top:54%;width:120%;height:8px;background:var(--map-road);transform:rotate(12deg)"></i>
+    <i style="left:72%;top:-5%;width:7px;height:75%;background:var(--map-road);transform:rotate(18deg)"></i>
+    <span class="me-dot" title="Du er her"></span>
+    <div id="pins"></div>
+    <div id="mcard"></div>
+  </div>
+</div></main>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+let cat = H.qs('kat') || 'alle', sel = null;
+function render() {
+  const list = H.all().filter((f) => cat === 'alle' || f.cat === cat).sort((a, b) => a.km - b.km);
+  if (!list.find((f) => f.id === sel)) sel = list[0] ? list[0].id : null;
+  document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'Alle' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
+  document.getElementById('list').innerHTML = list.length ? list.map((f) => `<button class="li ${f.id === sel ? 'on' : ''}" data-a="sel" data-v="${f.id}"><span class="ph" style="${H.phStyle(f.pal)}"></span><span class="stack grow" style="gap:2px"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${f.km} km</span><span class="small">${H.star(12)} ${H.num(f.rating.toFixed(1))} · ${H.priceTxt(f)}</span></span></button>`).join('') : '<div class="empty">Ingen i denne kategorien i nærheten.</div>';
+  document.getElementById('pins').innerHTML = list.map((f) => `<button class="pin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${H.kr(f.from).replace(' kr', '')}${f.unit ? '<span class="sr">' + f.unit + '</span>' : ''}</button>`).join('');
+  const f = sel && H.byId(sel);
+  document.getElementById('mcard').innerHTML = f ? `<div class="mapcard"><span class="ph" style="${H.phStyle(f.pal)}"></span><div class="stack grow" style="gap:2px;min-width:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small"><b>${H.num(f.rating.toFixed(1))}</b> · ${H.priceTxt(f)}</span></div><a class="btn dark sm" href="frilanser.html?id=${f.id}">Se profil</a></div>` : '';
+}
+H.actions.cat = (v) => { cat = v; render(); };
+H.actions.sel = (v) => { sel = v; render(); };
+H.boot(render);
+</script>
+</body>
+</html>

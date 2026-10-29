@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meldinger | Freelio</title>
+<meta name="description" content="Meldinger med frilansere.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="meldinger">
+<div id="site-header"></div>
+<main id="main"><div class="wrap"><div class="inbox" id="inbox"></div></div></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (H.requireLogin()) {
+  let cur = H.qs('med');
+  let typing = false;
+  if (cur && !H.byId(cur)) cur = null;
+  function render() {
+    const S = H.S;
+    if (cur && !S.threads[cur]) S.threads[cur] = [];
+    const ids = Object.keys(S.threads).filter((id) => H.byId(id)).sort((a, b) => { const la = S.threads[a].slice(-1)[0], lb = S.threads[b].slice(-1)[0]; return (lb ? lb.at : 0) - (la ? la.at : 0); });
+    if (cur) { S.readThreads[cur] = S.threads[cur].length; H.save(); }
+    const box = document.getElementById('inbox');
+    box.classList.toggle('has-thread', !!cur);
+    const list = ids.length ? ids.map((id) => { const f = H.byId(id); const t = S.threads[id]; const last = t.slice(-1)[0]; const unread = last && last.who === 'them' && (S.readThreads[id] || 0) < t.length;
+      return `<button class="thread-btn" data-a="open" data-v="${id}" aria-current="${id === cur}">${H.avatar(f, 44)}<span class="stack grow" style="gap:0;min-width:0"><b>${H.esc(f.name)}${unread ? ' <span class="count">1</span>' : ''}</b><span class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last ? H.esc((last.who === 'me' ? 'Du: ' : '') + last.text) : 'Ny samtale'}</span></span></button>`; }).join('')
+      : `<div class="empty" style="border:0">Ingen samtaler ennå. Åpne en profil og trykk «Send melding».</div>`;
+    let convo = `<div class="empty" style="border:0;margin:auto">Velg en samtale.</div>`;
+    if (cur) {
+      const f = H.byId(cur); const t = S.threads[cur];
+      convo = `<div class="convo-h"><button class="ibtn plain" data-a="close" aria-label="Tilbake til samtaler">${H.icon('back', 20, 2)}</button>${H.avatar(f, 38)}<div class="grow stack" style="gap:0"><a href="frilanser.html?id=${f.id}" style="color:var(--fg);font-weight:800">${H.esc(f.name)}</a><span class="meta">Svarer vanligvis innen ${H.esc(f.resp)}</span></div><a class="btn dark sm" href="book.html?id=${f.id}">Book</a></div>
+        <div class="msgs" id="msgs"><div class="bubble sys" style="background:var(--surface);color:var(--muted)">Hold samtalen her. Da er avtalen og betalingen beskyttet.</div>
+        ${t.length ? '' : `<div class="empty" style="border:0">Skriv hva du trenger, når og hvor. ${H.esc(H.first(f.name))} svarer med pris og ledighet.</div>`}
+        ${t.map((m) => `<div class="bubble ${m.who}">${H.esc(m.text)}</div>`).join('')}${typing ? `<div class="typing">${H.esc(H.first(f.name))} skriver …</div>` : ''}</div>
+        <div class="chips scroll" style="padding:8px 12px 0">${['Er du ledig 14.11?', 'Hva koster det?', 'Kan vi ta en prat på telefon?'].map((q) => `<button class="chip" data-a="quick" data-v="${q}">${q}</button>`).join('')}</div>
+        <form class="composer" id="cform"><label class="sr" for="msg">Melding</label><input id="msg" placeholder="Skriv en melding …" autocomplete="off"><button class="send" aria-label="Send">${H.icon('arrow', 20, 2)}</button></form>`;
+    }
+    box.innerHTML = `<div class="threads">${list}</div><div class="convo">${convo}</div>`;
+    const m = document.getElementById('msgs'); if (m) m.scrollTop = m.scrollHeight;
+    const form = document.getElementById('cform');
+    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('msg'); send(i.value); });
+  }
+  function send(text) {
+    if (!text.trim()) return;
+    H.sendMessage(cur, text, (s) => { typing = s === 'typing'; render(); const i = document.getElementById('msg'); if (i) i.focus(); });
+  }
+  Object.assign(H.actions, {
+    open: (v) => { cur = v; history.replaceState(null, '', '?med=' + v); render(); H.mountHeader(); },
+    close: () => { cur = null; history.replaceState(null, '', 'meldinger.html'); render(); },
+    quick: (v) => send(v)
+  });
+  H.boot(render);
+}
+</script>
+</body>
+</html>

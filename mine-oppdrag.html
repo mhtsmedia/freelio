@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mine oppdrag | Freelio</title>
+<meta name="description" content="Bestillinger, annonser og tilbud.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="mine-oppdrag">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (H.requireLogin()) {
+  let tab = H.qs('fane') || 'bestillinger';
+  const pill = (o) => ({ paid: '<span class="pill acc">Venter på levering</span>', delivered: '<span class="pill warn">Levert, se over</span>', approved: o.reviewed ? '<span class="pill ok">Fullført</span>' : '<span class="pill warn">Gi omtale</span>', dispute: '<span class="pill bad">Meldt feil</span>', cancelled: '<span class="pill">Avbestilt</span>' }[o.status]);
+  function render() {
+    const S = H.S;
+    const orders = S.orders.slice().sort((a, b) => b.created - a.created);
+    const jobs = S.myJobs.slice().reverse();
+    const sent = Object.keys(S.sentOffers).map((id) => Object.assign({ job: H.jobById(id) }, S.sentOffers[id])).filter((x) => x.job);
+    const tabs = [['bestillinger', `Bestillinger (${orders.length})`], ['annonser', `Mine annonser (${jobs.length})`], ['tilbud', `Tilbud jeg har sendt (${sent.length})`]];
+    let body = '';
+    if (tab === 'bestillinger') body = orders.length ? orders.map((o) => { const f = H.byId(o.fid); return `<a class="jrow" href="bestilling.html?id=${o.id}">${H.avatar(f, 52)}<div class="grow stack" style="gap:4px"><b style="font-size:16px">${H.esc(o.title)}</b><span class="meta">${H.esc(f.name)} · ${H.esc(o.date)}</span><span>${pill(o)}</span></div><span class="budget">${H.kr(o.price)}</span></a>`; }).join('')
+      : `<div class="empty">Du har ingen bestillinger ennå.<a class="btn primary sm" href="sok.html">Finn en frilanser</a></div>`;
+    if (tab === 'annonser') body = jobs.length ? jobs.map((j) => H.jobRow(Object.assign({ mine: true, posted: j.postedTxt || 'nå' }, j))).join('')
+      : `<div class="empty">Du har ingen annonser. Beskriv jobben, så kommer frilanserne til deg.<a class="btn primary sm" href="ny-annonse.html">Legg ut oppdrag</a></div>`;
+    if (tab === 'tilbud') body = sent.length ? sent.map((x) => `<a class="jrow" href="annonse.html?id=${x.job.id}"><span class="ico">${H.icon(H.cat(x.job.cat).icon, 24)}</span><div class="grow stack" style="gap:4px"><b>${H.esc(x.job.title)}</b><span class="meta">${H.esc(x.job.area)} · ${H.esc(x.job.date)}</span><span class="pill acc" style="align-self:flex-start">Venter på svar fra kunden</span></div><span class="budget">${H.kr(x.price)}</span></a>`).join('')
+      : `<div class="empty">Du har ikke sendt noen tilbud.${S.profile ? '<a class="btn primary sm" href="oppdrag.html">Se ledige oppdrag</a>' : '<span>Lag en frilanserprofil for å sende tilbud på oppdrag.</span><a class="btn primary sm" href="bli-frilanser.html">Bli frilanser</a>'}</div>`;
+    document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:900px">
+      <div class="section-head"><h1>Mine oppdrag</h1><a class="btn primary sm" href="ny-annonse.html">${H.icon('plus', 18, 2.2)} Ny annonse</a></div>
+      <div class="tabs" role="tablist">${tabs.map(([k, t]) => `<button role="tab" aria-selected="${tab === k}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>
+      <div class="stack">${body}</div></div>`;
+  }
+  H.actions.tab = (v) => { tab = v; history.replaceState(null, '', '?fane=' + v); render(); };
+  H.boot(render);
+  setInterval(() => { render(); H.mountHeader(); }, 5000);
+}
+</script>
+</body>
+</html>
