@@ -2,6 +2,8 @@
 
 Markedsplass der folk finner, sammenligner og leier lokale frilansere. Pengene holdes trygt til jobben er levert og godkjent. Freelio tar 5 % av hvert oppdrag.
 
+Live: https://mhtsmedia.github.io/freelio/
+
 Dette er en fungerende prototype av nettsiden. Alt kjører i nettleseren uten server, så du kan åpne den rett fra GitHub Pages. Innlogging, betaling og meldinger er simulert, og data lagres i `localStorage`.
 
 ## Kjør lokalt
