@@ -5,15 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kart | Freelio</title>
 <meta name="description" content="Se frilansere i nærområdet på kart.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="kart">
 <div id="site-header"></div>
 <main id="main"><div class="mapwrap">
-  <div class="maplist"><h1 style="font-size:24px">Frilansere nær Sandvika</h1><div class="chips scroll" id="chips"></div><p class="hint">Posisjonene er omtrentlige for å beskytte hjemmeadressen til frilanserne.</p><div class="stack" id="list" style="gap:8px"></div></div>
+  <div class="maplist"><h1 style="font-size:24px">Frilansere nær Sandvika</h1><div class="chips scroll" id="chips"></div><p class="hint">Posisjonene er omtrentlige for å beskytte hjemmeadressen til frilanserne.</p><div class="stack" id="list" style="gap:4px" data-skel="list:5"></div></div>
   <div class="map" id="map" role="region" aria-label="Kart">
     <i style="left:-20%;top:68%;width:140%;height:28%;background:var(--map-water);transform:rotate(-8deg)"></i>
     <i style="left:6%;top:10%;width:22%;height:16%;background:var(--map-park);border-radius:28px"></i>
@@ -27,6 +31,7 @@
     <div id="mcard"></div>
   </div>
 </div></main>
+<script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <script>

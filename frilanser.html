@@ -5,15 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Frilanser | Freelio</title>
 <meta name="description" content="Portefølje, pakker og omtaler.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="frilanser">
 <div id="site-header"></div>
-<main id="main"></main>
+<main id="main" data-skel="profile"></main>
 <div id="site-footer"></div>
+<script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <script>
@@ -29,7 +34,7 @@ function render() {
   const tabs = { work: 'Portefølje', pk: 'Pakker og priser', rv: `Omtaler (${f.reviews})`, about: 'Om' };
   const body = {
     work: `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
-    pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="color:var(--accent-ink);font-weight:800">Book denne pakken ${'→'}</span></a>`).join('')}
+    pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}
       <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
     rv: `<div class="stack" style="gap:20px"><div class="banner acc">${H.icon('spark', 20)}<span><b>Oppsummert av assistenten.</b> ${H.esc(f.sum)}</span></div>
       <div class="grid2"><div class="stack" style="gap:2px"><span style="font-family:var(--f-display);font-size:48px;font-weight:800;line-height:1">${H.num(f.rating.toFixed(1))}</span><span class="rate" style="color:var(--star)">${H.star(18).repeat(5)}</span><span class="muted small">${f.reviews} omtaler fra kunder som har betalt via Freelio</span></div>
@@ -41,12 +46,12 @@ function render() {
   main.innerHTML = `
   <div class="wrap"><div class="crumbs"><a href="index.html">Forside</a><span>/</span><a href="sok.html?kat=${f.cat}">${H.cat(f.cat).name}</a><span>/</span><span>${H.esc(f.name)}</span></div></div>
   <div class="wrap" style="margin-top:12px"><div class="ph cover" style="${H.phStyle(f.pal)};border-radius:20px"></div>
-    <div class="prof-head" style="padding-inline:20px"><span class="av" style="width:112px;height:112px;background:${f.col};font-size:38px;border:5px solid var(--bg)">${H.esc(f.ini)}</span>
+    <div class="prof-head" style="padding-inline:20px"><span class="av" style="width:104px;height:104px;background:${f.col};font-size:34px;box-shadow:0 0 0 5px var(--bg)">${H.esc(f.ini)}</span>
       <div class="stack grow" style="gap:4px;padding-bottom:6px"><h1>${H.esc(f.name)}</h1><span class="muted">${H.esc(f.role)} · ${H.esc(f.area)} · ${f.km} km fra deg</span></div></div>
   </div>
   <div class="wrap prof-grid">
     <div class="stack" style="gap:20px">
-      <div class="row" style="gap:6px">${f.verified ? '<span class="pill acc">' + H.icon('shield', 14, 2) + ' BankID-verifisert</span>' : ''}<span class="pill">${H.icon('clock', 14, 2)} Svarer innen ${H.esc(f.resp)}</span><span class="pill">${f.jobs} fullførte oppdrag</span>${f.free ? '<span class="pill ok">Ledig kapasitet</span>' : '<span class="pill warn">Få ledige datoer</span>'}</div>
+      <div class="row small muted" style="gap:16px">${f.verified ? '<span class="row" style="gap:6px">' + H.icon('shield', 15, 2) + ' BankID-verifisert</span>' : ''}<span class="row" style="gap:6px">${H.icon('clock', 15, 2)} Svarer innen ${H.esc(f.resp)}</span><span class="row" style="gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:${f.free ? 'var(--ok)' : 'var(--warn)'}"></span>${f.free ? 'Ledig kapasitet' : 'Få ledige datoer'}</span></div>
       <div class="stats"><div><b>${H.num(f.rating.toFixed(1))}</b><span>${f.reviews} omtaler</span></div><div><b>${f.years} år</b><span>erfaring</span></div><div><b>${f.delD ? f.delD + ' d' : 'Samme dag'}</b><span>levering</span></div><div><b>${f.jobs}</b><span>oppdrag</span></div></div>
       <div class="tabs" role="tablist">${Object.entries(tabs).map(([k, t]) => `<button role="tab" aria-selected="${tab === k}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>
       <div role="tabpanel">${body}</div>

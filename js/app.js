@@ -38,7 +38,9 @@
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     columns: '<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
-    logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>'
+    logout: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
   };
   H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
   H.star = (s = 14) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor">${ICON.star}</svg>`;
@@ -86,18 +88,17 @@
   H.byId = (id) => H.all().find((f) => f.id === id);
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col};font-size:${Math.round(s * 0.36)}px">${H.esc(f.ini)}</span>`;
-  H.verified = (f) => (f.verified ? `<span style="color:var(--accent-ink);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 16, 2)}</span>` : '');
+  H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
 
   H.fCard = (f, opts = {}) => {
     const saved = S.saved.includes(f.id);
     const inCmp = S.cmp.includes(f.id);
     return `<article class="fcard">
-      <a href="frilanser.html?id=${f.id}" class="ph" style="${H.phStyle(f.pal)};aspect-ratio:4/3;border-radius:var(--radius)" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"></a>
-      <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'inherit'}">${H.icon('heart', 20, 1.8, saved ? 'currentColor' : 'none')}</button>
-      ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'columns', 14, 2.2)} Sammenlign</button>` : ''}
-      <div class="row" style="justify-content:space-between"><span class="meta">${H.esc(f.area)} · ${f.km} km</span><span class="rate">${H.star()} ${H.num(f.rating.toFixed(1))} <span class="meta" style="font-weight:600">(${f.reviews})</span></span></div>
-      <a href="frilanser.html?id=${f.id}" class="t" style="color:var(--fg);text-decoration:none">${H.esc(f.name)} ${H.verified(f)}</a>
-      <span class="meta" style="margin-top:-6px">${H.esc(f.role)}</span>
+      <a href="frilanser.html?id=${f.id}" class="ph" style="${H.phStyle(f.pal)}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"></a>
+      <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
+      ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
+      <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.num(f.rating.toFixed(1))}</span></div>
+      <span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span>
       <span class="price">${H.priceTxt(f)}</span>
     </article>`;
   };
@@ -109,10 +110,10 @@
   H.jobRow = (j) => {
     const c = H.cat(j.cat);
     const n = j.mine ? H.jobOffers(j).length : j.offers + (S.sentOffers[j.id] ? 1 : 0);
-    return `<a class="jrow" href="annonse.html?id=${j.id}"><span class="ico">${H.icon(c.icon, 24)}</span>
-      <div class="grow stack" style="gap:4px"><span class="row" style="gap:6px"><span class="pill">${c.name}</span>${j.mine ? '<span class="pill acc">Din annonse</span>' : ''}${S.sentOffers[j.id] ? '<span class="pill ok">Tilbud sendt</span>' : ''}${j.status === 'booked' ? '<span class="pill ok">Booket</span>' : ''}</span>
-        <b style="font-size:16px">${H.esc(j.title)}</b><span class="meta">${H.esc(j.area)}${j.km ? ' · ' + j.km + ' km' : ''} · ${H.esc(j.date)} · lagt ut ${H.esc(j.posted)} · ${n} tilbud</span></div>
-      <span class="budget">maks ${H.kr(j.budget)}</span></a>`;
+    const tags = (j.mine ? '<span class="pill acc">Din annonse</span>' : '') + (S.sentOffers[j.id] ? '<span class="pill ok">Tilbud sendt</span>' : '') + (j.status === 'booked' ? '<span class="pill ok">Booket</span>' : '');
+    return `<a class="jrow" href="annonse.html?id=${j.id}"><span class="ico">${H.icon(c.icon, 20)}</span>
+      <div class="grow stack" style="gap:2px"><b style="font-size:15px;font-weight:700">${H.esc(j.title)}</b><span class="meta">${c.name} · ${H.esc(j.area)} · ${H.esc(j.date)} · ${n} tilbud</span>${tags ? `<span class="row" style="gap:6px;margin-top:4px">${tags}</span>` : ''}</div>
+      <span class="budget">${H.kr(j.budget)}</span></a>`;
   };
 
   /* ---------- bestillinger ---------- */
@@ -174,80 +175,114 @@
   let tt;
   H.toast = (msg) => {
     let el = document.getElementById('toast');
-    if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
-    el.textContent = msg; el.hidden = false;
-    clearTimeout(tt); tt = setTimeout(() => (el.hidden = true), 3600);
+    if (el) el.remove();
+    el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el);
+    el.textContent = msg;
+    clearTimeout(tt); tt = setTimeout(() => el.remove(), 3600);
   };
   H.flash = (msg) => { try { sessionStorage.setItem('freelio:flash', msg); } catch (e) {} };
+
+  /* ---------- tema ---------- */
+  H.isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+  H.setTheme = (t) => {
+    const r = document.documentElement;
+    r.classList.add('theme-anim'); r.dataset.theme = t;
+    try { localStorage.setItem('freelio:theme', t); } catch (e) {}
+    setTimeout(() => r.classList.remove('theme-anim'), 450);
+    H.mountHeader();
+  };
+
+  /* ---------- logo ---------- */
+  H.logo = (word = true) => {
+    const L = window.FREELIO_LOGO;
+    if (!L) return '<b>freelio</b>';
+    return `<svg class="mk" viewBox="${L.mark.vb}" aria-hidden="true"><path fill-rule="evenodd" d="${L.mark.d}"/></svg>${word ? `<svg class="wm" viewBox="${L.word.vb}" aria-hidden="true"><path fill-rule="evenodd" d="${L.word.d}"/></svg>` : ''}`;
+  };
+
+  /* ---------- skeleton ---------- */
+  H.skel = (spec) => {
+    const [kind, nStr] = String(spec).split(':'); const n = +nStr || 4;
+    const rep = (h) => Array.from({ length: n }, () => h).join('');
+    if (kind === 'cards') return `<div class="cards" style="grid-column:1/-1">${rep('<div><div class="sk sk-img"></div><div class="sk sk-line w60"></div><div class="sk sk-line w40"></div></div>')}</div>`;
+    if (kind === 'list') return rep('<div class="sk-row"><div class="sk sk-av" style="border-radius:12px"></div><div class="grow"><div class="sk sk-line w60" style="margin:0"></div><div class="sk sk-line w40"></div></div><div class="sk sk-line w30" style="width:70px;margin:0"></div></div>');
+    if (kind === 'feed') return rep('<div class="stack"><div class="row"><div class="sk sk-av"></div><div class="grow"><div class="sk sk-line w40" style="margin:0"></div><div class="sk sk-line w30"></div></div></div><div class="sk" style="aspect-ratio:4/5;border-radius:18px"></div></div>');
+    if (kind === 'profile') return `<div class="wrap" style="padding-top:20px"><div class="sk cover"></div><div class="row" style="margin-top:-40px;padding-inline:20px;align-items:flex-end"><div class="sk" style="width:104px;height:104px;border-radius:50%;box-shadow:0 0 0 5px var(--bg)"></div><div class="grow"><div class="sk sk-line lg w40"></div><div class="sk sk-line w30"></div></div></div><div class="prof-grid"><div><div class="sk sk-line w100"></div><div class="sk sk-line w80"></div><div class="gallery" style="margin-top:24px">${'<div class="sk" style="aspect-ratio:1/1;border-radius:10px"></div>'.repeat(6)}</div></div><div class="sk" style="height:220px;border-radius:14px"></div></div></div>`;
+    return `<div class="wrap" style="max-width:1000px;padding-block:36px"><div class="sk sk-line w30"></div><div class="sk sk-line lg w60" style="height:34px;margin-top:20px"></div><div class="two" style="padding:24px 0"><div><div class="sk sk-line w100"></div><div class="sk sk-line w80"></div><div class="sk sk-line w60"></div><div class="sk" style="height:180px;border-radius:14px;margin-top:24px"></div></div><div class="sk" style="height:240px;border-radius:14px"></div></div></div>`;
+  };
 
   /* ---------- toppmeny og bunntekst ---------- */
   const page = document.body.dataset.page || '';
   H.mountHeader = () => {
     const el = document.getElementById('site-header'); if (!el) return;
-    const nav = [['utforsk.html', 'Utforsk'], ['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart']];
+    const nav = [['utforsk.html', 'Utforsk'], ['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag']];
     const cur = (href) => (href.replace('.html', '') === page ? 'aria-current="page"' : '');
     const unread = H.unread(); const act = H.actionCount();
     const wasOpen = el.querySelector('.top.open');
-    el.innerHTML = `<div class="demo-note">Demo. Ingen ekte innlogging eller betaling. Data lagres bare i nettleseren din.</div>
-    <header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
+    const dark = H.isDark();
+    el.innerHTML = `<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
       <div class="top-in">
-        <a class="logo" href="index.html" aria-label="Freelio, til forsiden"><span class="logo-mark">${H.icon('check', 18, 3)}</span>Freelio</a>
+        <a class="logo" href="index.html" aria-label="Freelio, til forsiden">${H.logo()}</a>
         <nav class="mainnav" aria-label="Hovedmeny">${nav.map(([h, t]) => `<a href="${h}" ${cur(h)}>${t}</a>`).join('')}</nav>
         <div class="usernav">
-          <a class="hide-md" href="assistent.html" ${cur('assistent.html')}>${H.icon('spark', 18)} Assistent</a>
-          <a class="hide-sm" href="meldinger.html" ${cur('meldinger.html')} aria-label="Meldinger${unread ? ', ' + unread + ' uleste' : ''}">${H.icon('chat', 20)}<span class="hide-md">Meldinger</span>${unread ? `<span class="count">${unread}</span>` : ''}</a>
-          <a class="hide-sm" href="mine-oppdrag.html" ${cur('mine-oppdrag.html')} aria-label="Mine oppdrag${act ? ', ' + act + ' venter på deg' : ''}">${H.icon('bag', 20)}<span class="hide-md">Mine oppdrag</span>${act ? `<span class="count">${act}</span>` : ''}</a>
-          ${S.user ? `<a href="min-side.html" ${cur('min-side.html')} aria-label="Min side">${H.icon('user', 20)}<span class="hide-md">${H.esc(H.first(S.user.name))}</span></a>` : `<a href="logg-inn.html" ${cur('logg-inn.html')}>${H.icon('user', 20)}<span class="hide-sm">Logg inn</span></a>`}
-          <a class="btn primary sm hide-sm" href="ny-annonse.html" style="color:var(--on-accent);margin-left:6px">${H.icon('plus', 18, 2.2)} Ny annonse</a>
+          <button class="ibtn theme-btn" data-a="theme" aria-label="${dark ? 'Bytt til lys modus' : 'Bytt til mørk modus'}" title="${dark ? 'Lys modus' : 'Mørk modus'}">${H.icon(dark ? 'sun' : 'moon', 19)}</button>
+          <a class="ibtn hide-md" href="assistent.html" aria-label="Assistent" title="Assistent">${H.icon('spark', 19)}</a>
+          <a class="ibtn hide-sm" href="meldinger.html" aria-label="Meldinger${unread ? ', ' + unread + ' uleste' : ''}" title="Meldinger">${H.icon('chat', 19)}${unread ? '<span class="dot"></span>' : ''}</a>
+          <a class="ibtn hide-sm" href="mine-oppdrag.html" aria-label="Mine oppdrag${act ? ', ' + act + ' venter på deg' : ''}" title="Mine oppdrag">${H.icon('bag', 19)}${act ? '<span class="dot"></span>' : ''}</a>
+          <a class="ibtn" href="${S.user ? 'min-side.html' : 'logg-inn.html'}" aria-label="${S.user ? 'Min side' : 'Logg inn'}" title="${S.user ? 'Min side' : 'Logg inn'}">${H.icon('user', 19)}</a>
+          <a class="btn primary sm hide-sm" href="ny-annonse.html" style="margin-left:8px">Legg ut oppdrag</a>
         </div>
-        <button class="ibtn menu-btn" data-a="menu" aria-expanded="${!!wasOpen}" aria-label="Meny">${H.icon('menu', 22)}</button>
+        <button class="ibtn menu-btn" data-a="menu" aria-expanded="${!!wasOpen}" aria-label="Meny">${H.icon(wasOpen ? 'close' : 'menu', 20)}</button>
       </div>
-      <nav class="drawer" aria-label="Meny for mobil">
-        <a href="ny-annonse.html">Legg ut oppdrag</a>${nav.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}
+      <nav class="drawer" aria-label="Meny for mobil"><div>
+        <a href="ny-annonse.html">Legg ut oppdrag</a>${nav.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="kart.html">Kart</a>
         <a href="assistent.html">Assistent</a><a href="meldinger.html">Meldinger${unread ? ` (${unread})` : ''}</a><a href="mine-oppdrag.html">Mine oppdrag${act ? ` (${act})` : ''}</a>
-        <a href="${S.user ? 'min-side.html' : 'logg-inn.html'}">${S.user ? 'Min side' : 'Logg inn'}</a><a href="bli-frilanser.html">Bli frilanser</a>
-      </nav>
+        <a href="${S.user ? 'min-side.html' : 'logg-inn.html'}">${S.user ? 'Min side' : 'Logg inn'}</a>
+      </div></nav>
     </div></header>`;
   };
   H.mountFooter = () => {
     const el = document.getElementById('site-footer'); if (!el) return;
+    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp'], ['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['personvern.html', 'Personvern'], ['cookies.html', 'Cookies']];
     el.innerHTML = `<footer class="foot"><div class="wrap">
-      <div class="foot-grid">
-        <div class="stack" style="gap:10px"><a class="logo" href="index.html"><span class="logo-mark">${H.icon('check', 18, 3)}</span>Freelio</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
-        <div><h3>For kunder</h3><ul><li><a href="sok.html">Finn frilanser</a></li><li><a href="ny-annonse.html">Legg ut oppdrag</a></li><li><a href="sammenlign.html">Sammenlign</a></li><li><a href="assistent.html">Assistent</a></li></ul></div>
-        <div><h3>For frilansere</h3><ul><li><a href="bli-frilanser.html">Bli frilanser</a></li><li><a href="oppdrag.html">Ledige oppdrag</a></li><li><a href="slik-fungerer-det.html#priser">Priser og avgift</a></li></ul></div>
-        <div><h3>Hjelp</h3><ul><li><a href="slik-fungerer-det.html">Slik fungerer det</a></li><li><a href="slik-fungerer-det.html#betaling">Trygg betaling</a></li><li><a href="hjelp.html">Hjelpesenter</a></li><li><a href="om.html">Om Freelio</a></li></ul></div>
-        <div><h3>Personvern og vilkår</h3><ul><li><a href="vilkar.html">Brukervilkår</a></li><li><a href="personvern.html">Personvern</a></li><li><a href="cookies.html">Cookies</a></li><li><a href="#" data-a="cookieSettings">Endre cookie-valg</a></li></ul></div>
+      <div class="foot-in">
+        <div class="stack" style="gap:14px;max-width:300px"><a class="logo" href="index.html" aria-label="Freelio">${H.logo()}</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
+        <nav aria-label="Bunnmeny">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="#" data-a="cookieSettings">Cookie-valg</a></nav>
       </div>
-      <div class="foot-bottom"><span>© 2026 Freelio</span><span>Betaling gjennom lisensiert betalingspartner. Innlogging med Vipps og BankID.</span></div>
+      <div class="foot-bottom"><span>© 2026 Freelio</span><span>Demo: ingen ekte innlogging eller betaling. Data lagres bare i nettleseren din.</span></div>
     </div></footer>`;
   };
   H.mountCookie = (force) => {
     if (S.cookie && !force) return;
     let el = document.getElementById('cookie');
     if (!el) { el = document.createElement('div'); el.id = 'cookie'; el.className = 'cookie'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cookies'); document.body.appendChild(el); }
-    el.innerHTML = `<b>Vi bruker cookies</b><p class="small muted">Nødvendige cookies holder deg innlogget og betalingen trygg. Med ditt samtykke bruker vi også cookies til statistikk og markedsføring. <a href="cookies.html">Les mer</a></p>
-      <div class="row"><button class="btn soft" data-a="cookie" data-v="no">Kun nødvendige</button><button class="btn soft" data-a="cookie" data-v="yes">Godta alle</button></div>`;
+    el.innerHTML = `<b style="font-size:15px">Cookies</b><p class="small muted">Vi bruker nødvendige cookies for innlogging og betaling. Statistikk og markedsføring bare hvis du sier ja. <a href="cookies.html">Les mer</a></p>
+      <div class="row"><button class="btn soft sm" data-a="cookie" data-v="no">Kun nødvendige</button><button class="btn primary sm" data-a="cookie" data-v="yes">Godta alle</button></div>`;
   };
 
   /* ---------- felles handlinger ---------- */
+  const popIn = (sel) => requestAnimationFrame(() => { const n = document.querySelector(sel); if (n) n.classList.add('pop'); });
   H.actions = {
-    menu: (v, el) => { const top = el.closest('.top'); top.classList.toggle('open'); el.setAttribute('aria-expanded', top.classList.contains('open')); },
-    cookie: (v) => { S.cookie = v; S.cookies = { analyse: v === 'yes', ads: v === 'yes' }; H.save(); const c = document.getElementById('cookie'); if (c) c.remove(); H.toast(v === 'yes' ? 'Takk. Du kan endre valget under Min side.' : 'Vi bruker bare nødvendige cookies.'); },
+    menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
+    theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
+    cookie: (v) => {
+      S.cookie = v; S.cookies = { analyse: v === 'yes', ads: v === 'yes' }; H.save();
+      const c = document.getElementById('cookie'); if (c) { c.classList.add('out'); setTimeout(() => c.remove(), 300); }
+    },
     cookieSettings: () => H.mountCookie(true),
     save: (v) => {
       const i = S.saved.indexOf(v);
-      if (i > -1) { S.saved.splice(i, 1); H.toast('Fjernet fra lagrede.'); } else { S.saved.push(v); H.toast('Lagret. Du finner lagrede på Min side.'); }
-      H.save(); H.rerender();
+      if (i > -1) { S.saved.splice(i, 1); H.toast('Fjernet fra lagrede'); } else { S.saved.push(v); H.toast('Lagret'); }
+      H.save(); H.rerender(); popIn(`[data-a="save"][data-v="${v}"] svg`);
     },
     cmp: (v) => {
       const i = S.cmp.indexOf(v);
       if (i > -1) S.cmp.splice(i, 1);
-      else if (S.cmp.length >= 3) { H.toast('Du kan sammenligne opptil 3 om gangen.'); return; }
+      else if (S.cmp.length >= 3) { H.toast('Du kan sammenligne opptil 3 om gangen'); return; }
       else S.cmp.push(v);
       H.save(); H.rerender();
     }
   };
+  H.popIn = popIn;
   H.render = null;
   H.rerender = () => { if (H.render) H.render(); };
 
@@ -260,10 +295,20 @@
     fn(el.dataset.v, el, e);
   });
 
+  // Simulert lastetid, så skeleton vises slik den vil gjøre mot en ekte server
+  H.LOAD_MS = 450;
   H.boot = (render) => {
     H.render = render || null;
     H.mountHeader(); H.mountFooter(); H.mountCookie();
-    if (render) render();
-    try { const f = sessionStorage.getItem('freelio:flash'); if (f) { sessionStorage.removeItem('freelio:flash'); H.toast(f); } } catch (e) {}
+    const sk = render ? [...document.querySelectorAll('[data-skel]')] : [];
+    const go = () => {
+      document.body.classList.add('reveal');
+      sk.forEach((n) => n.removeAttribute('aria-busy'));
+      if (render) render();
+      setTimeout(() => document.body.classList.remove('reveal'), 1000);
+      try { const f = sessionStorage.getItem('freelio:flash'); if (f) { sessionStorage.removeItem('freelio:flash'); H.toast(f); } } catch (e) {}
+    };
+    if (sk.length) { sk.forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); }); setTimeout(go, H.LOAD_MS); }
+    else go();
   };
 })();

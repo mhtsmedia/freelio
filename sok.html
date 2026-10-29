@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Finn frilanser | Freelio</title>
 <meta name="description" content="Søk blant lokale frilansere. Filtrer på fagfelt, avstand, pris og vurdering.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="sok">
@@ -44,13 +48,14 @@
             <div class="seg"><a href="sok.html" aria-current="page">Liste</a><a id="maplink" href="kart.html">Kart</a></div>
           </div>
         </div>
-        <div class="cards" id="results"></div>
+        <div class="cards" id="results" data-skel="cards:6"></div>
       </section>
     </div>
   </div>
   <div class="cmpbar" id="cmpbar" hidden></div>
 </main>
 <div id="site-footer"></div>
+<script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <script>

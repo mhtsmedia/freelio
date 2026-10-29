@@ -46,7 +46,9 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 ## Struktur
 
 ```
-css/style.css   Design, lys og mørk modus
+css/style.css   Design, lys og mørk modus, animasjoner og skeleton
+img/            Logo (SVG) og favicon
+js/logo.js      Logoen som vektor, følger lys og mørk modus
 js/data.js      Eksempeldata: kategorier, frilansere og oppdrag
 js/app.js       Felles kode: lagring, meny, cookies, kort, meldinger, assistent
 *.html          Én fil per side. Sidespesifikk kode ligger nederst i hver fil.

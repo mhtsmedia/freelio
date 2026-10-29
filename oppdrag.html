@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ledige oppdrag | Freelio</title>
 <meta name="description" content="Oppdrag lagt ut av kunder i nærheten. Send tilbud som frilanser.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="oppdrag">
@@ -27,12 +31,13 @@
         <div class="results-head"><b id="count" style="font-size:18px"></b>
           <div class="row"><button class="btn soft sm filters-toggle" type="button" id="ftoggle" aria-expanded="false">Filtre</button>
           <label class="row small" style="gap:6px">Sorter <select class="inp" id="sort" style="height:38px;width:auto;font-size:14px"><option value="new">Nyeste</option><option value="budget">Høyest budsjett</option><option value="near">Nærmest</option><option value="few">Færrest tilbud</option></select></label></div></div>
-        <div class="stack" id="list"></div>
+        <div class="stack list" id="list" data-skel="list:6"></div>
       </section>
     </div>
   </div>
 </main>
 <div id="site-footer"></div>
+<script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <script>

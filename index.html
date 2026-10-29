@@ -5,77 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Freelio | Lokale frilansere med trygg betaling</title>
 <meta name="description" content="Finn, sammenlign og lei lokale frilansere innen foto, video, design, håndverk og mer. Pengene utbetales først når jobben er levert.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="index">
 <div id="site-header"></div>
 <main id="main">
   <section class="hero"><div class="wrap hero-in">
-    <div class="stack" style="gap:20px">
-      <h1>Finn folk <em>i nærheten</em> som kan jobben.</h1>
-      <p>Se arbeidet deres, les omtaler og sammenlign side om side. Du betaler trygt, og frilanseren får pengene først når jobben er levert.</p>
-      <form class="searchbox" action="sok.html" role="search">
-        <label class="sr" for="q">Hva trenger du?</label>
-        <input class="inp" id="q" name="q" placeholder="Fotograf, snekker, logo …" autocomplete="off">
-        <label class="sr" for="sted">Hvor?</label>
-        <input class="inp" id="sted" name="sted" placeholder="Sted, f.eks. Sandvika">
-        <button class="btn primary" type="submit">Søk</button>
-      </form>
-      <div class="row small muted" id="popular"></div>
-    </div>
-    <div class="mosaic" aria-hidden="true" id="mosaic"></div>
+    <h1>Finn folk i nærheten <em>som kan jobben.</em></h1>
+    <p>Se arbeidet, sammenlign og book. Pengene utbetales først når jobben er levert.</p>
+    <form class="searchbox" action="sok.html" role="search">
+      <label class="sr" for="q">Hva trenger du?</label>
+      <input class="inp" id="q" name="q" placeholder="Hva trenger du hjelp til?" autocomplete="off">
+      <label class="sr" for="sted">Hvor?</label>
+      <input class="inp" id="sted" name="sted" placeholder="Hvor?">
+      <button class="btn primary" type="submit">Søk</button>
+    </form>
+    <div class="chips" id="popular" style="justify-content:center"></div>
   </div></section>
 
   <div class="wrap">
-    <section class="section">
-      <div class="section-head"><h2>Hva trenger du hjelp til?</h2><a href="ny-annonse.html">Finner du ikke kategorien? Legg ut et oppdrag</a></div>
+    <section class="section" style="padding-top:24px">
       <div class="cats" id="cats"></div>
     </section>
 
     <section class="section">
-      <div class="section-head"><h2>Populære i nærheten av Sandvika</h2><a href="sok.html">Se alle frilansere</a></div>
-      <div class="cards" id="popularF"></div>
+      <div class="section-head"><h2>Populære i nærheten</h2><a href="sok.html">Se alle</a></div>
+      <div class="cards" id="popularF" data-skel="cards:4"></div>
     </section>
 
     <section class="section">
-      <div class="section-head"><h2>Nye oppdrag</h2><a href="oppdrag.html">Se alle oppdrag</a></div>
-      <div class="stack" id="jobs"></div>
+      <div class="section-head"><h2>Nye oppdrag</h2><a href="oppdrag.html">Se alle</a></div>
+      <div class="stack list" id="jobs" data-skel="list:3"></div>
     </section>
 
     <section class="section">
       <h2>Slik fungerer det</h2>
       <div class="steps3">
-        <div class="card"><span class="n">1</span><h3>Finn eller legg ut</h3><p class="muted">Søk blant lokale frilansere, eller beskriv jobben med budsjett og område. Da kommer tilbudene til deg.</p></div>
-        <div class="card"><span class="n">2</span><h3>Sammenlign og book</h3><p class="muted">Se pris, omtaler, svartid og leveringstid side om side. Betal med Vipps eller kort når du booker.</p></div>
-        <div class="card"><span class="n">3</span><h3>Godkjenn og betal ut</h3><p class="muted">Pengene holdes trygt til jobben er levert. Du godkjenner, frilanseren får betalt og dere gir hverandre omtale.</p></div>
+        <div class="card"><span class="n">1</span><h3>Finn eller legg ut</h3><p class="muted">Søk blant lokale frilansere, eller beskriv jobben og få tilbud.</p></div>
+        <div class="card"><span class="n">2</span><h3>Sammenlign og book</h3><p class="muted">Pris, omtaler og leveringstid side om side. Betal med Vipps eller kort.</p></div>
+        <div class="card"><span class="n">3</span><h3>Godkjenn og betal ut</h3><p class="muted">Pengene holdes trygt til du har godkjent leveransen.</p></div>
       </div>
     </section>
 
     <section class="section">
       <div class="band">
-        <div class="stack"><h2>Er du frilanser?</h2><p>Lag en profil med arbeidet ditt, få oppdrag i nærheten og få betalt uten å purre. Gratis å starte. Vi tar 5 % når du får et oppdrag.</p></div>
+        <div class="stack" style="gap:8px"><h2>Er du frilanser?</h2><p>Vis frem arbeidet ditt og få oppdrag i nærheten. Gratis å starte, 5 % når du får betalt.</p></div>
         <a class="btn primary" href="bli-frilanser.html">Bli frilanser</a>
       </div>
     </section>
   </div>
 </main>
 <div id="site-footer"></div>
+<script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <script>
 H.boot(() => {
-  const D = HDATA;
-  document.getElementById('mosaic').innerHTML = [0, 9, 6, 3, 4, 11].map((i) => `<span class="ph" style="${H.phStyle(i)}"></span>`).join('');
-  document.getElementById('popular').innerHTML = 'Populært: ' + ['Bryllupsfotograf', 'Snekker', 'Logo', 'Hundepasser'].map((t) => `<a href="sok.html?q=${encodeURIComponent(t)}">${t}</a>`).join(' · ');
+  document.getElementById('popular').innerHTML = ['Bryllupsfotograf', 'Snekker', 'Logo', 'Hundepasser'].map((t) => `<a class="chip" href="sok.html?q=${encodeURIComponent(t)}">${t}</a>`).join('');
   const all = H.all();
-  document.getElementById('cats').innerHTML = D.CATS.map((c) => {
-    return `<a class="cat" href="sok.html?kat=${c.id}"><span class="ico">${H.icon(c.icon, 24)}</span>${c.name}<small>${c.desc}</small></a>`;
-  }).join('');
-  document.getElementById('popularF').innerHTML = all.slice().sort((a, b) => b.rating * Math.log(b.reviews + 1) - a.rating * Math.log(a.reviews + 1)).slice(0, 8).map((f) => H.fCard(f)).join('');
-  document.getElementById('jobs').innerHTML = H.allJobs().slice(0, 4).map(H.jobRow).join('');
+  document.getElementById('cats').innerHTML = HDATA.CATS.map((c) => `<a class="cat" href="sok.html?kat=${c.id}"><span class="ico">${H.icon(c.icon, 22, 1.6)}</span>${c.name}</a>`).join('');
+  document.getElementById('popularF').innerHTML = all.slice().sort((a, b) => b.rating * Math.log(b.reviews + 1) - a.rating * Math.log(a.reviews + 1)).slice(0, 4).map((f) => H.fCard(f)).join('');
+  document.getElementById('jobs').innerHTML = H.allJobs().slice(0, 3).map(H.jobRow).join('');
 });
 </script>
 </body>

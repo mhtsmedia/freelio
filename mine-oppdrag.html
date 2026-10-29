@@ -5,15 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mine oppdrag | Freelio</title>
 <meta name="description" content="Bestillinger, annonser og tilbud.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="mine-oppdrag">
 <div id="site-header"></div>
-<main id="main"></main>
+<main id="main" data-skel="page"></main>
 <div id="site-footer"></div>
+<script src="js/logo.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <script>
@@ -36,7 +41,7 @@ if (H.requireLogin()) {
     document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:900px">
       <div class="section-head"><h1>Mine oppdrag</h1><a class="btn primary sm" href="ny-annonse.html">${H.icon('plus', 18, 2.2)} Ny annonse</a></div>
       <div class="tabs" role="tablist">${tabs.map(([k, t]) => `<button role="tab" aria-selected="${tab === k}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>
-      <div class="stack">${body}</div></div>`;
+      <div class="stack list">${body}</div></div>`;
   }
   H.actions.tab = (v) => { tab = v; history.replaceState(null, '', '?fane=' + v); render(); };
   H.boot(render);
