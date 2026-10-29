@@ -214,7 +214,7 @@
   const page = document.body.dataset.page || '';
   H.mountHeader = () => {
     const el = document.getElementById('site-header'); if (!el) return;
-    const nav = [['utforsk.html', 'Utforsk'], ['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag']];
+    const nav = [['index.html', 'Hjem'], ['utforsk.html', 'Utforsk'], ['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag']];
     const cur = (href) => (href.replace('.html', '') === page ? 'aria-current="page"' : '');
     const unread = H.unread(); const act = H.actionCount();
     const wasOpen = el.querySelector('.top.open');
