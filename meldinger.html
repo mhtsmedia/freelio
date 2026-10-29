@@ -28,17 +28,17 @@ if (H.requireLogin()) {
   if (cur && !H.byId(cur)) cur = null;
   function render() {
     const S = H.S;
-    if (cur && !S.threads[cur]) S.threads[cur] = [];
-    const ids = Object.keys(S.threads).filter((id) => H.byId(id)).sort((a, b) => { const la = S.threads[a].slice(-1)[0], lb = S.threads[b].slice(-1)[0]; return (lb ? lb.at : 0) - (la ? la.at : 0); });
-    if (cur) { S.readThreads[cur] = S.threads[cur].length; H.save(); }
+    const ids = Object.keys(S.threads).filter((id) => H.byId(id) && (S.threads[id].length || id === cur)).sort((a, b) => { const la = S.threads[a].slice(-1)[0], lb = S.threads[b].slice(-1)[0]; return (lb ? lb.at : 0) - (la ? la.at : 0); });
+    if (cur && !ids.includes(cur)) ids.unshift(cur);
+    if (cur) { S.readThreads[cur] = (S.threads[cur] || []).length; H.save(); }
     const box = document.getElementById('inbox');
     box.classList.toggle('has-thread', !!cur);
-    const list = ids.length ? ids.map((id) => { const f = H.byId(id); const t = S.threads[id]; const last = t.slice(-1)[0]; const unread = last && last.who === 'them' && (S.readThreads[id] || 0) < t.length;
+    const list = ids.length ? ids.map((id) => { const f = H.byId(id); const t = S.threads[id] || []; const last = t.slice(-1)[0]; const unread = last && last.who === 'them' && (S.readThreads[id] || 0) < t.length;
       return `<button class="thread-btn" data-a="open" data-v="${id}" aria-current="${id === cur}">${H.avatar(f, 44)}<span class="stack grow" style="gap:0;min-width:0"><b>${H.esc(f.name)}${unread ? ' <span class="count">1</span>' : ''}</b><span class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last ? H.esc((last.who === 'me' ? 'Du: ' : '') + last.text) : 'Ny samtale'}</span></span></button>`; }).join('')
       : `<div class="empty" style="border:0">Ingen samtaler ennå. Åpne en profil og trykk «Send melding».</div>`;
     let convo = `<div class="empty" style="border:0;margin:auto">Velg en samtale.</div>`;
     if (cur) {
-      const f = H.byId(cur); const t = S.threads[cur];
+      const f = H.byId(cur); const t = S.threads[cur] || [];
       convo = `<div class="convo-h"><button class="ibtn plain" data-a="close" aria-label="Tilbake til samtaler">${H.icon('back', 20, 2)}</button>${H.avatar(f, 38)}<div class="grow stack" style="gap:0"><a href="frilanser.html?id=${f.id}" style="color:var(--fg);font-weight:800">${H.esc(f.name)}</a><span class="meta">Svarer vanligvis innen ${H.esc(f.resp)}</span></div><a class="btn dark sm" href="book.html?id=${f.id}">Book</a></div>
         <div class="msgs" id="msgs"><div class="bubble sys" style="background:var(--surface);color:var(--muted)">Hold samtalen her. Da er avtalen og betalingen beskyttet.</div>
         ${t.length ? '' : `<div class="empty" style="border:0">Skriv hva du trenger, når og hvor. ${H.esc(H.first(f.name))} svarer med pris og ledighet.</div>`}

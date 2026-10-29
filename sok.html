@@ -27,7 +27,7 @@
     <div class="with-side">
       <aside class="side" id="side" aria-label="Filtre">
         <fieldset><legend>Fagfelt</legend><div id="fcat" class="stack" style="gap:0"></div></fieldset>
-        <fieldset><legend>Avstand fra Sandvika</legend>
+        <fieldset><legend id="distlabel">Avstand fra Sandvika</legend>
           <select class="inp" id="dist"><option value="5">Innen 5 km</option><option value="10">Innen 10 km</option><option value="25" selected>Innen 25 km</option><option value="999">Hele landet</option></select></fieldset>
         <fieldset><legend>Maks startpris</legend><input class="inp" id="maxp" inputmode="numeric" placeholder="kr"></fieldset>
         <fieldset><legend>Vurdering</legend>
@@ -62,6 +62,8 @@
 const F = { q: H.qs('q') || '', sted: H.qs('sted') || '', kat: H.qs('kat') || 'alle' };
 const $ = (id) => document.getElementById(id);
 $('q').value = F.q; $('sted').value = F.sted;
+const stedLabel = () => { const v = $('sted').value.trim(); $('distlabel').textContent = 'Avstand fra ' + (v ? v.charAt(0).toUpperCase() + v.slice(1) : 'Sandvika'); };
+stedLabel(); $('sted').addEventListener('input', stedLabel);
 $('fcat').innerHTML = [{ id: 'alle', name: 'Alle fagfelt' }].concat(HDATA.CATS).map((c) => `<label class="check"><input type="radio" name="kat" value="${c.id}" ${F.kat === c.id ? 'checked' : ''}> ${c.name}</label>`).join('');
 
 function render() {
