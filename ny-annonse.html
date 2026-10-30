@@ -59,14 +59,14 @@
 if (H.requireLogin()) {
   const $ = (id) => document.getElementById(id);
   const REQ = ['title', 'desc', 'budget', 'date', 'area'];
-  let cat = H.qs('kat') || 'foto';
+  let cat = H.qs('kat') || 'bryllup';
   let tried = false;
   // fyll inn ikoner i statisk markup
   const banners = document.querySelectorAll('aside .banner');
   banners[0].innerHTML = H.icon('spark', 20) + '<span>Usikker på hva du skal skrive? <u>La assistenten hjelpe deg.</u></span>';
   banners[1].innerHTML = H.icon('lock', 20) + '<span>Du betaler først når du godtar et tilbud. Pengene holdes trygt til jobben er levert.</span>';
   if (H.qs('eksempel')) {
-    cat = 'foto';
+    cat = 'bryllup';
     $('title').value = 'Bryllupsfotograf, halv dag';
     $('desc').value = 'Vi gifter oss i Haslum kirke og har middag på et hotell i Sandvika. Ønsker naturlige bilder med lite oppstilling. Rundt 60 gjester. Vi vil gjerne ha bilder fra vielsen, gruppebilder og starten av middagen.';
     $('budget').value = '10000'; $('date').value = '14.11.2026'; $('area').value = 'Bærum'; $('scope').value = '5 timer'; $('delivery').value = '200 redigerte bilder i nettgalleri';
@@ -93,7 +93,7 @@ if (H.requireLogin()) {
       const first = miss[0] || (short ? 'desc' : 'budget'); $(first).focus(); return;
     }
     const now = Date.now();
-    const pool = H.all().filter((f) => f.cat === cat && !(H.S.profile && f.id === H.S.profile.id));
+    const pool = H.all().filter((f) => H.inCat(f, cat) && !(H.S.profile && f.id === H.S.profile.id));
     const cands = (pool.length ? pool : H.all()).slice(0, 3);
     const msgs = ['Jeg er ledig og har gjort mange lignende jobber. Prisen inkluderer alt du har beskrevet.', 'Høres ut som et fint oppdrag! Jeg kan levere raskt og tar gjerne en prat på forhånd.', 'Gjerne med. Jeg kan ta et kort møte først for å avklare ønsker.'];
     const offersList = cands.map((f, i) => ({ fid: f.id, price: Math.max(f.from, Math.min(budget, Math.round(budget * (0.82 + i * 0.07) / 100) * 100)), msg: msgs[i], at: now + [8, 25, 50][i] * 1000, seen: false }));

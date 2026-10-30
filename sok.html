@@ -20,7 +20,7 @@
   <div class="wrap">
     <div class="crumbs"><a href="index.html">Forside</a><span>/</span><span>Finn frilanser</span></div>
     <form class="searchbox" id="sform" role="search" style="margin-top:16px;box-shadow:none;border:1px solid var(--line)">
-      <label class="sr" for="q">Hva trenger du?</label><input class="inp" id="q" name="q" placeholder="Fotograf, snekker, logo …" autocomplete="off">
+      <label class="sr" for="q">Hva trenger du?</label><input class="inp" id="q" name="q" placeholder="Bryllup, drone, produktbilder …" autocomplete="off">
       <label class="sr" for="sted">Hvor?</label><input class="inp" id="sted" name="sted" placeholder="Sted">
       <button class="btn primary" type="submit">Søk</button>
     </form>
@@ -74,9 +74,9 @@ function render() {
   const maxp = +$('maxp').value.replace(/\D/g, '') || Infinity;
   const minr = +document.querySelector('input[name=minr]:checked').value;
   const words = q.split(/\s+/).filter(Boolean);
-  let list = all.filter((f) => (kat === 'alle' || f.cat === kat) && f.km <= dist && f.from <= maxp && f.rating >= minr
+  let list = all.filter((f) => H.inCat(f, kat) && f.km <= dist && f.from <= maxp && f.rating >= minr
     && (!$('free').checked || f.free) && (!$('fast').checked || f.respH <= 2)
-    && words.every((w) => (f.name + ' ' + f.role + ' ' + f.tags.join(' ') + ' ' + H.cat(f.cat).name + ' ' + f.area).toLowerCase().includes(w.replace(/er$|en$/, ''))));
+    && words.every((w) => (f.name + ' ' + f.role + ' ' + f.tags.join(' ') + ' ' + (f.niches || [f.cat]).map((n) => H.cat(n).name).join(' ') + ' ' + f.area).toLowerCase().includes(w.replace(/er$|en$/, ''))));
   const s = $('sort').value;
   const sorters = { rating: (a, b) => b.rating - a.rating || b.reviews - a.reviews, near: (a, b) => a.km - b.km, price: (a, b) => a.from - b.from, fast: (a, b) => a.respH - b.respH, jobs: (a, b) => b.jobs - a.jobs };
   list.sort(sorters[s]);

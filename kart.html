@@ -37,7 +37,7 @@
 <script>
 let cat = H.qs('kat') || 'alle', sel = null;
 function render() {
-  const list = H.all().filter((f) => cat === 'alle' || f.cat === cat).sort((a, b) => a.km - b.km);
+  const list = H.all().filter((f) => H.inCat(f, cat)).sort((a, b) => a.km - b.km);
   if (!list.find((f) => f.id === sel)) sel = list[0] ? list[0].id : null;
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'Alle' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
   document.getElementById('list').innerHTML = list.length ? list.map((f) => `<button class="li ${f.id === sel ? 'on' : ''}" data-a="sel" data-v="${f.id}"><span class="ph" style="${H.phStyle(f.pal)}"></span><span class="stack grow" style="gap:2px"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${f.km} km</span><span class="small">${H.star(12)} ${H.num(f.rating.toFixed(1))} · ${H.priceTxt(f)}</span></span></button>`).join('') : '<div class="empty">Ingen i denne kategorien i nærheten.</div>';

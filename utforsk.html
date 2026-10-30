@@ -28,10 +28,10 @@
 <script src="js/app.js"></script>
 <script>
 let cat = 'alle';
-const CAPS = { foto: ['Kveldslys ved fjorden', 'Portrett i studio', 'Detaljer fra vielsen'], video: ['Bak kamera', 'Dronebilder fra Kalvøya'], design: ['Skisser til ny logo', 'Meny til kafé'], handverk: ['Før og etter', 'Ferdig kjøkken'], musikk: ['Lydsjekk før vielse'], dyr: ['Dagens tur'], it: ['Ny nettside lansert'], undervisning: ['Eksamensuke'] };
+const CAPS = { bryllup: ['Detaljer fra vielsen', 'Første dans'], portrett: ['Portrett i studio'], event: ['Taler og stemning'], produkt: ['Nye produkter i studio'], eiendom: ['Kveldslys over fjorden'], drone: ['Dronebilder fra Kalvøya'], reklamefilm: ['Bak kamera'], some: ['Ny reel for kafé'] };
 function render() {
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'For deg' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
-  const fl = H.all().filter((f) => cat === 'alle' || f.cat === cat);
+  const fl = H.all().filter((f) => H.inCat(f, cat));
   const posts = [];
   fl.forEach((f, i) => { posts.push({ f, cap: f.cap, pal: f.pal, ago: (i % 5) + 1 + ' t' }); (CAPS[f.cat] || []).slice(0, 1).forEach((c, k) => posts.push({ f, cap: c, pal: f.pal + 3 + k, ago: (i % 3) + 1 + ' d' })); });
   posts.sort((a, b) => (a.f.id + a.cap).length % 7 - (b.f.id + b.cap).length % 7);

@@ -42,7 +42,7 @@ function render() {
       <div>${f.rv.map((r) => `<div class="rev"><div class="row" style="justify-content:space-between"><b>${H.esc(r[0])}</b><span class="rate" style="color:var(--star)">${H.star(14).repeat(r[1])}<span class="sr">${r[1]} av 5</span></span></div><span class="meta">${H.esc(r[2])}</span><span>${H.esc(r[3])}</span>${r[4] ? '<span class="pill acc" style="align-self:flex-start">Din omtale</span>' : ''}</div>`).join('')}</div></div>`,
     about: `<div class="prose"><p>${H.esc(f.bio)}</p><ul><li>Område: ${H.esc(f.area)} og omegn</li><li>Spesialiserer seg på: ${f.tags.map(H.esc).join(', ')}</li><li>Medlem siden ${H.esc(f.joined)}</li><li>Identitet bekreftet med BankID</li></ul></div>`
   }[tab];
-  const similar = H.all().filter((x) => x.cat === f.cat && x.id !== f.id).slice(0, 4);
+  const similar = H.all().filter((x) => x.id !== f.id && (f.niches || [f.cat]).some((n) => H.inCat(x, n))).slice(0, 4);
   main.innerHTML = `
   <div class="wrap"><div class="crumbs"><a href="index.html">Forside</a><span>/</span><a href="sok.html?kat=${f.cat}">${H.cat(f.cat).name}</a><span>/</span><span>${H.esc(f.name)}</span></div></div>
   <div class="wrap" style="margin-top:12px"><div class="ph cover" style="${H.phStyle(f.pal)};border-radius:20px"></div>

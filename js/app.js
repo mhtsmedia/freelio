@@ -42,6 +42,8 @@
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     play: '<path d="M7 4v16l13-8z"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    drone: '<circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7 8l3 3M17 8l-3 3M7 16l3-3M17 16l-3-3"/><rect x="10" y="10" width="4" height="4" rx="1"/>',
+    phone: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
   };
   H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
@@ -54,6 +56,7 @@
   H.qs = (k) => new URLSearchParams(location.search).get(k);
   H.pal = (i) => D.PAL[((i % D.PAL.length) + D.PAL.length) % D.PAL.length];
   H.phStyle = (i) => { const p = H.pal(i); return `--a:${p[0]};--b:${p[1]};--s:${p[2]}`; };
+  H.inCat = (f, kat) => kat === 'alle' || f.cat === kat || (f.niches || []).includes(kat);
   H.cat = (id) => D.CATS.find((c) => c.id === id) || { id, name: id, icon: 'grid' };
   H.first = (name) => String(name).split(' ')[0];
   H.FEE = 0.05;
@@ -88,6 +91,16 @@
     return list;
   };
   H.byId = (id) => H.all().find((f) => f.id === id);
+  // Rydd bort data som peker til frilansere som ikke finnes lenger (for eksempel fra en eldre versjon)
+  (function prune() {
+    const ok = (id) => !!H.byId(id);
+    S.orders = S.orders.filter((o) => ok(o.fid));
+    Object.keys(S.threads).forEach((id) => { if (!ok(id)) delete S.threads[id]; });
+    S.saved = S.saved.filter(ok); S.cmp = S.cmp.filter(ok);
+    S.myJobs.forEach((j) => { j.offersList = (j.offersList || []).filter((o) => ok(o.fid)); });
+    Object.keys(S.extraReviews).forEach((id) => { if (!ok(id)) delete S.extraReviews[id]; });
+    if (S.profile && !D.CATS.some((c) => c.id === S.profile.cat)) S.profile.cat = D.CATS[0].id;
+  })();
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col};font-size:${Math.round(s * 0.36)}px">${H.esc(f.ini)}</span>`;
   H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
@@ -140,7 +153,7 @@
       reply = 'Vi tar gjerne alt her i appen, så er vi begge trygge.';
     } else if (/pris|koster|kost|tilbud/.test(t)) reply = f.pk.map((p) => p[0] + ': ' + H.kr(p[1])).join('\n') + '\n\nDu kan booke en pakke direkte fra profilen min.';
     else if (/ledig|dato|når/.test(t)) reply = f.free ? 'Jeg har ledige datoer i november og desember. Hvilken dato tenker du på?' : 'Jeg er ganske booket fremover, men har ledig fra midten av desember.';
-    else reply = `Takk for meldingen! Fortell gjerne litt mer om ${f.cat === 'dyr' ? 'hunden din' : 'oppdraget'}, så kommer jeg med et forslag.`;
+    else reply = `Takk for meldingen! Fortell gjerne litt mer om oppdraget, så kommer jeg med et forslag.`;
     H.save(); onChange && onChange('typing');
     setTimeout(() => { S.threads[fid].push({ who: 'them', text: reply, at: Date.now() }); H.save(); onChange && onChange('reply'); H.mountHeader(); }, 1300);
   };
@@ -148,7 +161,7 @@
   /* ---------- assistent ---------- */
   H.ANSWERS = {
     'Hva bør jeg se etter i en fotograf?': { text: 'Se etter dette:\n\n1. Hele serier, ikke bare de beste bildene. Be om et fullt galleri fra en lignende jobb.\n2. Bilder i samme lys som ditt oppdrag. Vinterstid betyr lite dagslys.\n3. Lik stil i redigeringen gjennom hele serien.\n4. Hvor mye du får levert, og når.\n5. Hvem som eier rettighetene til bildene.\n\nI Sammenlign ser du leveringstid, svartid og pris side om side.', act: ['sammenlign.html', 'Åpne sammenligning'] },
-    'Hva er en vanlig pris?': { text: 'Blant frilanserne på Freelio i Bærum og Asker:\n\nFotograf, halv dag: 8 000 til 9 500 kr\nKort reklamefilm: rundt 12 000 kr\nLogo: rundt 6 000 kr\nSnekker: rundt 650 kr per time\nHundelufting: rundt 250 kr per tur\n\nSett maks budsjett litt over det du helst vil betale. Da får du flere tilbud å velge mellom.' },
+    'Hva er en vanlig pris?': { text: 'Blant frilanserne på Freelio i Bærum og Asker:\n\nBryllupsfotograf, halv dag: 8 000 til 9 500 kr\nBryllupsfilm, halv dag: rundt 18 000 kr\nPortrett i studio: rundt 2 500 kr\nBoligbilder: 2 900 til 4 200 kr\nKort reklamefilm: rundt 12 000 kr\n\nSett maks budsjett litt over det du helst vil betale. Da får du flere tilbud å velge mellom.' },
     'Hva bør jeg spørre om før jeg booker?': { text: 'Gode spørsmål:\n\n· Har du reserveutstyr?\n· Hva skjer hvis du blir syk?\n· Kan jeg se en hel jobb du har gjort?\n· Er reise inkludert?\n· Hvor mange runder med endringer får jeg?' },
     'Hvordan fungerer trygg betaling?': { text: 'Du betaler når du booker. Pengene holdes av betalingspartneren vår, og frilanseren får dem først når du har godkjent leveransen.\n\nDu har 5 dager på å se over. Er noe feil, melder du fra, og pengene holdes til saken er løst. Svarer du ikke, godkjennes leveransen automatisk.\n\nFreelio tar 5 % av beløpet fra frilanseren.', act: ['slik-fungerer-det.html#betaling', 'Les mer om betaling'] },
     'Skriv annonsen for meg': { text: 'Her er et forslag for et bryllup i Bærum. Du kan endre alt før du publiserer.', act: ['ny-annonse.html?eksempel=1', 'Åpne utfylt annonse'] }
@@ -159,10 +172,10 @@
     if (/pris|koste|budsjett|dyrt/.test(t)) return H.ANSWERS['Hva er en vanlig pris?'];
     if (/betal|penger|depositum|trygg|refus/.test(t)) return H.ANSWERS['Hvordan fungerer trygg betaling?'];
     if (/annonse|skriv/.test(t)) return H.ANSWERS['Skriv annonsen for meg'];
-    if (/fotograf|foto|bilde|video/.test(t)) return H.ANSWERS['Hva bør jeg se etter i en fotograf?'];
-    if (/snekker|håndverk|kjøkken|terrasse/.test(t)) return { text: 'For snekker: be om befaring før pris, spør om materialer er med, og sjekk at firmaet er registrert i Brønnøysundregistrene. Erik Lunde i Bærum har gratis befaring.', act: ['frilanser.html?id=erik', 'Se Erik Lunde'] };
-    if (/hund|dyr|katt/.test(t)) return { text: 'For hundepasser: spør om erfaring med din rase, hvor mange hunder de går med samtidig og om de har politiattest. Leo Karlsen i Sandvika har politiattest og 54 omtaler.', act: ['frilanser.html?id=leo', 'Se Leo Karlsen'] };
-    if (/nettside|web|app|it/.test(t)) return { text: 'For nettside: spør om du kan oppdatere innholdet selv, hvem som eier domenet og hva drift koster per måned.', act: ['sok.html?kat=it', 'Se utviklere'] };
+    if (/fotograf|foto|bilde/.test(t)) return H.ANSWERS['Hva bør jeg se etter i en fotograf?'];
+    if (/drone|luft/.test(t)) return { text: 'For dronefoto: spør om piloten har sertifikat (A1/A3 eller A2), om de har forsikring, og om området tillater flyging. Sjekk også at været er tatt med i avtalen.', act: ['sok.html?kat=drone', 'Se dronepiloter'] };
+    if (/bolig|eiendom|leilighet|hytte/.test(t)) return { text: 'For boligbilder: spør om leveringstid (48 timer er vanlig), antall bilder, og om dronebilder og kveldsbilder er med.', act: ['sok.html?kat=eiendom', 'Se eiendomsfotografer'] };
+    if (/film|video|reklame|reels|tiktok/.test(t)) return { text: 'For video: spør om lengde, format (16:9 eller 9:16), hvem som velger musikk, hvor mange runder med endringer du får, og om du får råfilene.', act: ['sok.html?kat=reklamefilm', 'Se videografer'] };
     return { text: 'Fortell meg hva slags jobb det gjelder, når og hvor, så hjelper jeg deg å finne riktig person og skrive en tydelig annonse.' };
   };
 

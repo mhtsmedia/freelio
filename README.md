@@ -1,6 +1,6 @@
 # Freelio
 
-Markedsplass der folk finner, sammenligner og leier lokale frilansere. Pengene holdes trygt til jobben er levert og godkjent. Freelio tar 5 % av hvert oppdrag.
+Markedsplass der folk finner, sammenligner og leier lokale fotografer og videografer. Flere fagfelt kommer senere. Pengene holdes trygt til jobben er levert og godkjent. Freelio tar 5 % av hvert oppdrag.
 
 Live: https://mhtsmedia.github.io/freelio/
 

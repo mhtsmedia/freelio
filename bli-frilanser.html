@@ -39,8 +39,8 @@ function form() {
     <form class="stack" style="gap:20px" id="pform" novalidate>
       <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
       <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" value="${H.esc(p.name || S.user.name)}"></label>
-      <label class="field"><span class="label">Fagfelt *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
-      <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Snekker, Hundepasser"></label>
+      <label class="field"><span class="label">Hovedområde *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
+      <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
       <div class="grid2"><label class="field"><span class="label">Område *</span><input class="inp" id="area" value="${H.esc(p.area || '')}" placeholder="F.eks. Sandvika"></label>
       <label class="field"><span class="label">Hvor langt reiser du?</span><select class="inp" id="reach">${[5, 10, 25, 50].map((k) => `<option value="${k}" ${p.reach == k ? 'selected' : ''}>Inntil ${k} km</option>`).join('')}</select></label></div>
       <label class="field"><span class="label">Om deg *</span><textarea class="inp" id="bio" rows="4" placeholder="Hva er du god på, og hva kan kunden forvente?">${H.esc(p.bio || '')}</textarea></label>

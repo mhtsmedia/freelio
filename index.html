@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Freelio | Lokale frilansere med trygg betaling</title>
-<meta name="description" content="Finn, sammenlign og lei lokale frilansere innen foto, video, design, håndverk og mer. Pengene utbetales først når jobben er levert.">
+<title>Freelio | Lokale fotografer og videografer</title>
+<meta name="description" content="Finn, sammenlign og lei lokale frilansere innen foto og video: bryllup, portrett, event, produkt, eiendom, drone og reklamefilm. Pengene utbetales først når jobben er levert.">
 <script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
@@ -18,11 +18,11 @@
 <div id="site-header"></div>
 <main id="main">
   <section class="hero"><div class="wrap hero-in">
-    <h1>Finn folk i nærheten <em>som kan jobben.</em></h1>
-    <p>Se arbeidet, sammenlign og book. Pengene utbetales først når jobben er levert.</p>
+    <h1>Finn fotografen <em>eller videografen du trenger.</em></h1>
+    <p>Lokale fotografer og videografer. Se arbeidet, sammenlign og book. Pengene utbetales først når jobben er levert.</p>
     <form class="searchbox" action="sok.html" role="search">
       <label class="sr" for="q">Hva trenger du?</label>
-      <input class="inp" id="q" name="q" placeholder="Hva trenger du hjelp til?" autocomplete="off">
+      <input class="inp" id="q" name="q" placeholder="Bryllup, portrett, drone …" autocomplete="off">
       <label class="sr" for="sted">Hvor?</label>
       <input class="inp" id="sted" name="sted" placeholder="Hvor?">
       <button class="btn primary" type="submit">Søk</button>
@@ -68,7 +68,7 @@
 <script src="js/app.js"></script>
 <script>
 H.boot(() => {
-  document.getElementById('popular').innerHTML = ['Bryllupsfotograf', 'Snekker', 'Logo', 'Hundepasser'].map((t) => `<a class="chip" href="sok.html?q=${encodeURIComponent(t)}">${t}</a>`).join('');
+  document.getElementById('popular').innerHTML = ['Bryllupsfotograf', 'Dronefilm', 'Produktbilder', 'Reklamefilm'].map((t) => `<a class="chip" href="sok.html?q=${encodeURIComponent(t)}">${t}</a>`).join('');
   const all = H.all();
   document.getElementById('cats').innerHTML = HDATA.CATS.map((c) => `<a class="cat" href="sok.html?kat=${c.id}"><span class="ico">${H.icon(c.icon, 22, 1.6)}</span>${c.name}</a>`).join('');
   document.getElementById('popularF').innerHTML = all.slice().sort((a, b) => b.rating * Math.log(b.reviews + 1) - a.rating * Math.log(a.reviews + 1)).slice(0, 4).map((f) => H.fCard(f)).join('');
