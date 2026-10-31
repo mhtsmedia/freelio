@@ -44,6 +44,7 @@
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     drone: '<circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7 8l3 3M17 8l-3 3M7 16l3-3M17 16l-3-3"/><rect x="10" y="10" width="4" height="4" rx="1"/>',
     phone: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
+    rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
   };
   H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
@@ -138,6 +139,86 @@
   // Lagrer et bilde og gir tilbake en adresse. I demo-modus blir det en data-URL. cloud.js bytter til Supabase Storage.
   H.storeImage = (kind, blob) => new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
   H.dropImage = async () => {};
+  // Redigering av profilbilde: dra for å flytte, zoom med glidebryter, hjul eller to fingre, roter 90 grader.
+  // Gir tilbake et kvadratisk bilde (512 x 512) eller null hvis brukeren avbryter.
+  H.cropImage = (file) => new Promise((resolve) => {
+    const OUT = 512;
+    const finish = (val) => { document.removeEventListener('keydown', onKey); wrap.classList.add('out'); setTimeout(() => wrap.remove(), 200); document.body.style.overflow = ''; if (lastFocus) lastFocus.focus(); resolve(val); };
+    const lastFocus = document.activeElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'crop-wrap'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Juster profilbildet');
+    wrap.innerHTML = `<div class="crop-box">
+        <div class="row" style="justify-content:space-between"><b style="font-size:17px">Juster profilbildet</b><button type="button" class="ibtn" data-c="cancel" aria-label="Avbryt">${H.icon('close', 18, 2)}</button></div>
+        <p class="hint">Dra bildet for å flytte det. Zoom slik at ansiktet ditt fyller sirkelen.</p>
+        <div class="crop-view" tabindex="0" aria-label="Bildeutsnitt. Bruk piltastene for å flytte og pluss eller minus for å zoome."><img alt="" draggable="false"></div>
+        <div class="row" style="gap:12px;flex-wrap:nowrap"><span aria-hidden="true">${H.icon('search', 16)}</span><label class="sr" for="cropZoom">Zoom</label><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" class="crop-range"><button type="button" class="ibtn" data-c="rotate" aria-label="Roter 90 grader" title="Roter">${H.icon('rotate', 18)}</button></div>
+        <div class="row" style="justify-content:flex-end"><button type="button" class="btn soft" data-c="cancel">Avbryt</button><button type="button" class="btn primary" data-c="save">Bruk bildet</button></div>
+      </div>`;
+    document.body.appendChild(wrap); document.body.style.overflow = 'hidden';
+    const view = wrap.querySelector('.crop-view'), img = view.querySelector('img'), zoomEl = wrap.querySelector('#cropZoom');
+    let src = null, iw = 0, ih = 0, V = 0, base = 1, zoom = 1, x = 0, y = 0;
+    const clamp = () => {
+      const s = base * zoom, mx = Math.max(0, (iw * s - V) / 2), my = Math.max(0, (ih * s - V) / 2);
+      x = Math.min(mx, Math.max(-mx, x)); y = Math.min(my, Math.max(-my, y));
+    };
+    const draw = () => {
+      clamp(); const s = base * zoom;
+      img.style.width = iw + 'px'; img.style.height = ih + 'px';
+      img.style.transform = `translate(${x - (iw * s) / 2}px, ${y - (ih * s) / 2}px) scale(${s})`;
+      zoomEl.value = zoom;
+    };
+    const setSource = (canvasOrImg) => {
+      src = canvasOrImg; iw = src.width || src.naturalWidth; ih = src.height || src.naturalHeight;
+      V = view.clientWidth; base = V / Math.min(iw, ih); zoom = 1; x = 0; y = 0;
+      img.src = src.toDataURL ? src.toDataURL('image/jpeg', 0.92) : src.src;
+      draw();
+    };
+    const load = new Image();
+    load.onload = () => setSource(load);
+    load.onerror = () => { H.toast('Kunne ikke lese bildet. Prøv JPG eller PNG.'); finish(null); };
+    load.src = URL.createObjectURL(file);
+    const setZoom = (z, cx = 0, cy = 0) => {
+      const nz = Math.min(4, Math.max(1, z)), k = nz / zoom;
+      x = cx + (x - cx) * k; y = cy + (y - cy) * k; zoom = nz; draw();
+    };
+    // Dra og klyp
+    const pts = new Map(); let pinch = 0;
+    view.addEventListener('pointerdown', (e) => { view.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+    view.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return;
+      const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) setZoom(zoom * (d / pinch)); pinch = d; return; }
+      x += e.clientX - prev[0]; y += e.clientY - prev[1]; draw();
+    });
+    const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
+    view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+    view.addEventListener('wheel', (e) => { e.preventDefault(); const r = view.getBoundingClientRect(); setZoom(zoom * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left - V / 2, e.clientY - r.top - V / 2); }, { passive: false });
+    view.addEventListener('keydown', (e) => {
+      const m = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key];
+      if (m) { e.preventDefault(); x += m[0]; y += m[1]; draw(); }
+      if (e.key === '+' || e.key === '=') setZoom(zoom + 0.1);
+      if (e.key === '-') setZoom(zoom - 0.1);
+    });
+    zoomEl.addEventListener('input', () => setZoom(+zoomEl.value));
+    const onKey = (e) => { if (e.key === 'Escape') finish(null); };
+    document.addEventListener('keydown', onKey);
+    wrap.addEventListener('click', (e) => {
+      const c = e.target.closest('[data-c]'); if (!c) { if (e.target === wrap) finish(null); return; }
+      if (c.dataset.c === 'cancel') finish(null);
+      if (c.dataset.c === 'rotate' && src) {
+        const cv = document.createElement('canvas'); cv.width = ih; cv.height = iw;
+        const g = cv.getContext('2d'); g.translate(ih, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0); setSource(cv);
+      }
+      if (c.dataset.c === 'save' && src) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = OUT;
+        const g = cv.getContext('2d'), k = OUT / V, s = base * zoom * k;
+        g.fillStyle = '#fff'; g.fillRect(0, 0, OUT, OUT);
+        g.translate(OUT / 2 + x * k, OUT / 2 + y * k); g.scale(s, s); g.drawImage(src, -iw / 2, -ih / 2);
+        cv.toBlob((b) => (b && b.type === 'image/webp' ? finish(b) : cv.toBlob(finish, 'image/jpeg', 0.88)), 'image/webp', 0.88);
+      }
+    });
+    setTimeout(() => view.focus(), 50);
+  });
   H.photoNote = 'Profilbildet skal være et tydelig bilde av deg selv, der ansiktet ditt synes. Ikke bruk logo, tegning, kjæledyr eller bilder av arbeid du har gjort. Da vet kundene hvem de møter.';
   H.photoPicker = (who) => `<div class="photo-pick">
       ${H.avatar(who, 88)}
@@ -156,9 +237,13 @@
     inp.addEventListener('change', async () => {
       const file = inp.files[0]; inp.value = ''; if (!file) return;
       if (!document.getElementById('photoOk').checked) { err('Kryss av for at bildet er av deg før du laster opp.'); return; }
-      const btn = document.getElementById('photoBtn'); btn.textContent = 'Laster opp …';
+      const btn = document.getElementById('photoBtn');
       try {
-        const { blob } = await H.resizeImage(file, 512, true);
+        if (!/^image\//.test(file.type)) throw new Error('Velg en bildefil (JPG, PNG eller WebP).');
+        btn.textContent = 'Juster bildet …';
+        const blob = await H.cropImage(file);
+        if (!blob) { btn.textContent = S.user && S.user.photo ? 'Bytt bilde' : 'Last opp bilde'; return; }
+        btn.textContent = 'Laster opp …';
         const url = await H.storeImage('avatar', blob);
         const old = S.user && S.user.photo;
         if (S.user) S.user.photo = url;
