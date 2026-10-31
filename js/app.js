@@ -162,18 +162,51 @@
   H.videoPoster = (file) => {
     return new Promise((res, rej) => {
       const v = document.createElement('video'), u = URL.createObjectURL(file);
+      const stop = setTimeout(() => { URL.revokeObjectURL(u); rej(new Error('Nettleseren kan ikke lese denne videoen. Prøv MP4.')); }, 15000);
       v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = u;
-      v.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Nettleseren kan ikke lese denne videoen. Prøv MP4.')); };
+      v.onerror = () => { clearTimeout(stop); URL.revokeObjectURL(u); rej(new Error('Nettleseren kan ikke lese denne videoen. Prøv MP4.')); };
       v.onloadedmetadata = () => { v.currentTime = Math.min(1, (v.duration || 2) / 3); };
       v.onseeked = () => {
         const k = Math.min(1, 900 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');
         c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
         c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
-        c.toBlob((b) => { URL.revokeObjectURL(u); b ? res({ blob: b, w: v.videoWidth, h: v.videoHeight, dur: Math.round(v.duration) }) : rej(new Error('Kunne ikke lage forhåndsvisning.')); }, 'image/jpeg', 0.82);
+        c.toBlob((b) => { clearTimeout(stop); URL.revokeObjectURL(u); b ? res({ blob: b, w: v.videoWidth, h: v.videoHeight, dur: Math.round(v.duration) }) : rej(new Error('Kunne ikke lage forhåndsvisning.')); }, 'image/jpeg', 0.82);
       };
     });
   };
   H.VID_MB = () => (window.Cloud && Cloud.on ? 50 : 3);
+  // Komprimerer en video i nettleseren til den er under grensen. Bruker Mediabunny (WebCodecs).
+  // Lastes bare inn når noen faktisk laster opp en video som er for stor.
+  H.fitVideo = async (file, onProgress) => {
+    const max = H.VID_MB() * 1048576;
+    if (file.size <= max) return file;
+    if (!window.VideoEncoder) throw new Error('Videoen er over ' + H.VID_MB() + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
+    const MB = await import(new URL('js/vendor/mediabunny-1.61.4.min.mjs', document.baseURI).href);
+    const input = new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) });
+    const vt = await input.getPrimaryVideoTrack();
+    if (!vt) throw new Error('Fant ingen video i filen.');
+    const dur = await input.computeDuration();
+    const audioBr = 96000, dw = vt.displayWidth, dh = vt.displayHeight;
+    // Sikter på 88 % av grensen. Blir filen likevel for stor, prøver den igjen med lavere kvalitet.
+    let vbr = Math.min(6e6, Math.floor((max * 0.88 * 8) / Math.max(1, dur) - audioBr));
+    if (vbr < 350000) throw new Error(`Videoen er for lang til å bli under ${H.VID_MB()} MB i god kvalitet. Korte den ned til under ${Math.floor((max * 0.88 * 8) / 450000 / 60)} minutter.`);
+    for (let round = 0; round < 3; round++) {
+      const long = vbr > 3.5e6 ? 1920 : vbr > 1.6e6 ? 1280 : vbr > 800000 ? 960 : 640;
+      const k = Math.min(1, long / Math.max(dw, dh));
+      const width = Math.round((dw * k) / 2) * 2, height = Math.round((dh * k) / 2) * 2;
+      const src = round ? new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) }) : input;
+      const output = new MB.Output({ format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new MB.BufferTarget() });
+      const conv = await MB.Conversion.init({ input: src, output, video: { width, height, fit: 'fill', bitrate: vbr }, audio: { bitrate: audioBr }, showWarnings: false });
+      if (!conv.isValid) throw new Error('Nettleseren kan ikke komprimere denne videoen. Prøv å eksportere den som MP4 og last opp igjen.');
+      if (onProgress) conv.onProgress = (p) => onProgress(Math.min(99, Math.round((round * 100 + p * 100) / (round + 1))));
+      await conv.execute();
+      const out = new Blob([output.target.buffer], { type: 'video/mp4' });
+      if (out.size <= max) { if (onProgress) onProgress(100); return out; }
+      vbr = Math.floor(vbr * ((max * 0.8) / out.size));
+      if (vbr < 250000) break;
+    }
+    throw new Error(`Klarte ikke å få videoen under ${H.VID_MB()} MB. Korte den ned og prøv igjen.`);
+  };
   // Innlegg på Utforsk. Uten database lagres de bare i nettleseren. cloud.js bytter til Supabase.
   H.addPost = async (p) => { S.posts = S.posts || []; S.posts.unshift(Object.assign({}, p, { id: H.uid(), fid: S.profile.id, at: Date.now() })); H.save(); };
   H.removePost = async (id) => { S.posts = (S.posts || []).filter((x) => x.id !== id); H.save(); };

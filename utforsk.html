@@ -69,11 +69,10 @@ async function pick(input) {
   const file = input.files[0]; input.value = ''; if (!file) return;
   try {
     if (/^video\//.test(file.type)) {
-      const mb = H.VID_MB();
-      if (file.size > mb * 1048576) throw new Error(`Videoen er over ${mb} MB. Korte den ned eller eksporter i lavere kvalitet.`);
       busy = 'Leser video …'; render();
-      const poster = await H.videoPoster(file);
-      draft = { type: 'video', file, poster, preview: URL.createObjectURL(file) };
+      const vid = await H.fitVideo(file, (pc) => { const el = document.getElementById('postStatus'); if (el) el.textContent = `Gjør videoen mindre … ${pc} %`; });
+      const poster = await H.videoPoster(file).catch(() => H.videoPoster(vid));
+      draft = { type: 'video', file: vid, poster, preview: URL.createObjectURL(vid) };
     } else {
       const blob = await H.cropImage(file, { aspect: 4 / 5, outW: 1080, title: 'Juster innlegget', hint: 'Alle innlegg vises i samme format. Dra bildet for å flytte det, og zoom for å velge utsnittet.' });
       if (!blob) return;
