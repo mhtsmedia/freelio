@@ -296,21 +296,24 @@
   };
   H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
 
-  // Bla gjennom porteføljen rett fra kortet. Bakgrunnsbildet først, så porteføljen.
-  H.carousel = (f) => {
-    const imgs = [].concat(f.coverImg ? [f.coverImg] : [], f.portfolio || []).slice(0, 8);
-    if (imgs.length < 2) return '';
+  // Bla gjennom porteføljen rett fra kortet. Med et fagfelt valgt vises bare bilder fra det fagfeltet.
+  // Ellers bakgrunnsbildet først, så hele porteføljen.
+  H.carousel = (f, cat) => {
+    const pfl = f.portfolio || [];
+    const inCat = cat && cat !== 'alle' ? pfl.filter((x) => (x.cat || f.cat) === cat) : [];
+    const imgs = (inCat.length ? inCat : [].concat(f.coverImg ? [f.coverImg] : [], pfl)).slice(0, 8);
+    if (!imgs.length || (imgs.length < 2 && !inCat.length)) return '';
     return `<div class="fc-car">
-      <a class="fc-track" href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}. ${imgs.length} bilder">${imgs.map((x) => `<span class="fc-slide"><img src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy" draggable="false">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</span>`).join('')}</a>
-      <button class="fc-nav prev" data-a="car" data-v="-1" aria-label="Forrige bilde" hidden>${H.icon('back', 16, 2.2)}</button>
+      <a class="fc-track" href="frilanser.html?id=${f.id}${inCat.length ? '&kat=' + cat : ''}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}. ${imgs.length} bilder">${imgs.map((x) => `<span class="fc-slide"><img src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy" draggable="false">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</span>`).join('')}</a>
+      ${imgs.length > 1 ? `<button class="fc-nav prev" data-a="car" data-v="-1" aria-label="Forrige bilde" hidden>${H.icon('back', 16, 2.2)}</button>
       <button class="fc-nav next" data-a="car" data-v="1" aria-label="Neste bilde">${H.icon('back', 16, 2.2)}</button>
-      <span class="fc-dots" aria-hidden="true">${imgs.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</span></div>`;
+      <span class="fc-dots" aria-hidden="true">${imgs.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</span>` : ''}</div>`;
   };
   H.fCard = (f, opts = {}) => {
     const saved = S.saved.includes(f.id);
     const inCmp = S.cmp.includes(f.id);
     return `<article class="fcard">
-      ${H.carousel(f) || H.ph(f, 'cover', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
+      ${H.carousel(f, opts.cat) || H.ph(f, 'cover', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
       <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>

@@ -519,3 +519,5 @@ button.ph{border:0;padding:0;cursor:pointer;display:block;width:100%}
 .fc-dots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.55);transition:width .2s,background .2s}
 .fc-dots i.on{width:14px;background:#fff}
 .mainnav a[aria-current="page"]{color:var(--accent-ink);background:var(--accent-soft)}
+.niche-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 16px}
+.pf-cat{position:absolute;left:6px;right:6px;bottom:6px;height:28px;border-radius:8px;border:0;background:var(--bg);color:var(--fg);font:600 12px var(--f-body);padding:0 6px}

@@ -27,6 +27,7 @@
 <script type="text/freelio">
 const id = H.qs('id');
 let tab = location.hash === '#omtaler' ? 'rv' : 'work';
+let pcat = H.qs('kat') || 'alle';
 function render() {
   const f = H.byId(id);
   const main = document.getElementById('main');
@@ -40,9 +41,11 @@ function render() {
     const share = { 5: 0.82, 4: 0.13, 3: 0.03, 2: 0.01, 1: 0.01 }[s];
     return [s, real + (f.demo === false ? 0 : Math.round(baseN * share))];
   });
+  const pcats = [...new Set((f.portfolio || []).map((x) => x.cat || f.cat))];
+  const pc = pcats.includes(pcat) ? pcat : 'alle';
   const tabs = { work: 'Portefølje', pk: 'Pakker og priser', rv: `Omtaler (${f.reviews})`, about: 'Om' };
   const body = {
-    work: (f.portfolio && f.portfolio.length) ? `<div class="gallery">${f.portfolio.map((x, i) => x.type === 'video' ? `<button class="ph has-img" data-a="playVid" data-v="${i}" aria-label="Spill av video ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb)}" alt="" loading="lazy"><span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span></button>` : `<a class="ph has-img" href="${H.esc(x.url)}" target="_blank" rel="noopener" aria-label="Åpne bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join('')}</div>`
+    work: (f.portfolio && f.portfolio.length) ? `${pcats.length > 1 ? `<div class="chips scroll" style="margin-bottom:14px">${['alle'].concat(pcats).map((c) => `<button class="chip" data-a="pcat" data-v="${c}" aria-pressed="${pc === c}">${c === 'alle' ? 'Alle' : H.cat(c).name}</button>`).join('')}</div>` : ''}<div class="gallery">${f.portfolio.map((x, i) => pc !== 'alle' && (x.cat || f.cat) !== pc ? '' : x.type === 'video' ? `<button class="ph has-img" data-a="playVid" data-v="${i}" aria-label="Spill av video ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb)}" alt="" loading="lazy"><span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span></button>` : `<a class="ph has-img" href="${H.esc(x.url)}" target="_blank" rel="noopener" aria-label="Åpne bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join('')}</div>`
       : f.demo === false ? `<div class="empty">${H.esc(H.first(f.name))} har ikke lastet opp bilder ennå.</div>` : `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
     pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}
       <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
@@ -82,6 +85,7 @@ function render() {
   ${similar.length ? `<div class="wrap section"><h2>Lignende frilansere</h2><div class="cards">${similar.map((x) => H.fCard(x)).join('')}</div></div>` : ''}`;
 }
 H.actions.tab = (v) => { tab = v; render(); };
+H.actions.pcat = (v) => { pcat = v; render(); };
 // Spiller av video i fullskjerm-visning. Lukk med Esc, krysset eller klikk utenfor.
 H.actions.playVid = (v) => {
   const x = (H.byId(id).portfolio || [])[+v]; if (!x) return;

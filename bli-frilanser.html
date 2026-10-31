@@ -34,7 +34,7 @@ function intro() {
     <div class="card"><span class="n">2</span><h3>Få forespørsler</h3><p class="muted">Kunder booker deg direkte, eller du sender tilbud på oppdrag.</p></div>
     <div class="card"><span class="n">3</span><h3>Lever og få betalt</h3><p class="muted">Pengene er betalt inn før du starter. Utbetaling innen 2 virkedager etter godkjenning.</p></div></div></div>`;
 }
-let pkgs, pf, cover; const draft = {};
+let pkgs, pf, cover, niches, upCat; const draft = {};
 const RESP = [[1, '1 time'], [3, '3 timer'], [6, '6 timer'], [24, '1 dag'], [48, '2 dager']];
 const DEL = [[0, 'Samme dag'], [1, '1 dag'], [2, '2 dager'], [3, '3 dager'], [5, '5 dager'], [7, '7 dager'], [14, '14 dager'], [21, '21 dager'], [30, '30 dager']];
 const CLOUD = !!(window.Cloud && Cloud.on);
@@ -46,6 +46,14 @@ function form() {
   pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
   pf = pf || (p.portfolio || []).slice();
   if (cover === undefined) cover = p.coverImg || null;
+  // Fagfelt: hovedområdet er alltid med. Hvert bilde i porteføljen hører til ett av dem.
+  const mainCat = p.cat || HDATA.CATS[0].id;
+  niches = niches || ((p.niches && p.niches.length) ? p.niches.slice() : [mainCat]);
+  if (!niches.includes(mainCat)) niches.unshift(mainCat);
+  const offered = HDATA.CATS.filter((c) => niches.includes(c.id));
+  if (!upCat || !niches.includes(upCat)) upCat = mainCat;
+  pf.forEach((x) => { if (!x.cat || !niches.includes(x.cat)) x.cat = mainCat; });
+  const catOpts = (sel) => offered.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
   document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1000px"><div class="two">
     <form class="stack" style="gap:20px" id="pform" novalidate>
       <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
@@ -64,14 +72,16 @@ function form() {
       <div class="grid2"><label class="field"><span class="label">Vanlig leveringstid</span><select class="inp" id="delD">${DEL.map(([d, t]) => `<option value="${d}" ${(p.delD != null ? p.delD : 7) == d ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
       <label class="field"><span class="label">Hvor ledig er du?</span><select class="inp" id="free"><option value="1" ${p.free === false || p.free === '0' ? '' : 'selected'}>Ledig kapasitet</option><option value="0" ${p.free === false || p.free === '0' ? 'selected' : ''}>Få ledige datoer</option></select></label></div>
       <label class="field"><span class="label">Om deg *</span><textarea class="inp" id="bio" rows="4" placeholder="Hva er du god på, og hva kan kunden forvente?">${H.esc(p.bio || '')}</textarea></label>
-      <label class="field"><span class="label">Stikkord</span><input class="inp" id="tags" value="${H.esc((p.tags || []).join(', '))}" placeholder="F.eks. Bryllup, Portrett, Produkt"><span class="hint">Skill med komma. Brukes i søket.</span></label>
+      <fieldset style="border:0;padding:0;margin:0" class="field"><legend class="label" style="margin-bottom:6px">Fagfelt du tilbyr *</legend>
+        <div class="niche-grid">${HDATA.CATS.map((c) => `<label class="check"><input type="checkbox" data-niche="${c.id}" ${niches.includes(c.id) ? 'checked' : ''} ${c.id === mainCat ? 'disabled' : ''}> ${c.name}</label>`).join('')}</div>
+        <span class="hint">Kryss av alt du tar oppdrag innen. Hovedområdet er alltid med. Du vises i søket for hvert fagfelt du krysser av.</span></fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
         ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
-        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Videoer kan være opptil ${VID_MB} MB, helst MP4.</p>
-        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button></div>`).join('')}</div>` : ''}
-        <div class="row">${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
+        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Videoer kan være opptil ${VID_MB} MB, helst MP4.${offered.length > 1 ? ' Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.' : ''}</p>
+        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${offered.length > 1 ? `<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>` : ''}</div>`).join('')}</div>` : ''}
+        <div class="row">${pf.length < PF_MAX && offered.length > 1 ? `<label class="row small" style="gap:6px"><span class="muted">Last opp til</span><select class="inp sm" id="upCat" style="width:auto;height:36px;padding:0 10px">${catOpts(upCat)}</select></label>` : ''}${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
       </fieldset>
       <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
       <div id="err"></div>
@@ -92,10 +102,10 @@ function form() {
           if (files[i].size > VID_MB * 1048576) throw new Error(`Videoen er over ${VID_MB} MB. Korte den ned eller eksporter i lavere kvalitet.`);
           const poster = await H.videoPoster(files[i]);
           const thumb = await H.storeImage('thumb', poster.blob);
-          pf.push({ type: 'video', url: await H.storeImage('video', files[i]), thumb, w: poster.w, h: poster.h, dur: poster.dur });
+          pf.push({ type: 'video', url: await H.storeImage('video', files[i]), thumb, w: poster.w, h: poster.h, dur: poster.dur, cat: upCat });
         } else {
           const a = await H.resizeImage(files[i], big), b = await H.resizeImage(files[i], small);
-          pf.push({ url: await H.storeImage('portfolio', a.blob), thumb: await H.storeImage('thumb', b.blob), w: a.w, h: a.h });
+          pf.push({ url: await H.storeImage('portfolio', a.blob), thumb: await H.storeImage('thumb', b.blob), w: a.w, h: a.h, cat: upCat });
         }
       } catch (e) { H.toast(files[i].name + ': ' + (e.message || 'kunne ikke lastes opp')); }
     }
@@ -116,8 +126,20 @@ function form() {
     coverBusy = ''; form();
   });
   const pf_ = document.getElementById('pform');
-  pf_.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal') { draft[e.target.id] = e.target.id === 'tags' ? e.target.value.split(',') : e.target.value; } });
-  pf_.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') draft[e.target.id] = e.target.value; });
+  pf_.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal' && e.target.tagName !== 'SELECT' && e.target.type !== 'file') { draft[e.target.id] = e.target.value; } });
+  pf_.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.dataset.niche) { const id = t.dataset.niche; niches = t.checked ? niches.concat(id) : niches.filter((n) => n !== id); form(); return; }
+    if (t.dataset.pfcat) { pf[+t.dataset.pfcat].cat = t.value; return; }
+    if (t.id === 'upCat') { upCat = t.value; return; }
+    if (t.id === 'cat') {
+      // Bytter hovedområde: det gamle fjernes fra listen, det nye legges til
+      const prev = draft.cat || (H.S.profile && H.S.profile.cat) || HDATA.CATS[0].id;
+      niches = niches.filter((n) => n !== prev); draft.cat = t.value;
+      pf.forEach((x) => { if (x.cat === prev) x.cat = t.value; }); form(); return;
+    }
+    if (t.tagName === 'SELECT') draft[t.id] = t.value;
+  });
   pf_.addEventListener('submit', (e) => {
     e.preventDefault();
     const v = (id) => document.getElementById(id).value.trim();
@@ -131,11 +153,14 @@ function form() {
     else if (!document.getElementById('legal').checked) msg = 'Du må bekrefte at du driver lovlig og godta vilkårene.';
     if (msg) { document.getElementById('err').innerHTML = `<div class="banner bad">${msg}</div>`; return; }
     const name = v('name');
+    const mc = document.getElementById('cat').value;
+    const nich = [mc].concat(niches.filter((n) => n !== mc && HDATA.CATS.some((c) => c.id === n)));
+    pf.forEach((x) => { if (!nich.includes(x.cat)) x.cat = mc; });
     const ini = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
     const old = S.profile || {};
     S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
       id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
-      tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, portfolio: pf, coverImg: cover, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
+      niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();
     H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');

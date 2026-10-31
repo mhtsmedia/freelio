@@ -86,7 +86,7 @@ function render() {
   const catName = kat === 'alle' ? 'frilansere' : H.cat(kat).name.toLowerCase();
   $('rh').textContent = `${list.length} ${list.length === 1 ? 'treff' : 'treff'} på ${q ? '«' + $('q').value.trim() + '»' : catName}`;
   $('maplink').href = 'kart.html' + (kat !== 'alle' ? '?kat=' + kat : '');
-  $('results').innerHTML = list.length ? list.map((f) => H.fCard(f, { cmp: true })).join('')
+  $('results').innerHTML = list.length ? list.map((f) => H.fCard(f, { cmp: true, cat: kat })).join('')
     : `<div class="empty" style="grid-column:1/-1"><b style="color:var(--fg)">Ingen treff med disse filtrene.</b><span>Prøv et annet ord, øk avstanden eller legg ut et oppdrag, så kommer frilanserne til deg.</span><a class="btn primary sm" href="ny-annonse.html">Legg ut oppdrag</a></div>`;
   const bar = $('cmpbar');
   const sel = H.S.cmp.map(H.byId).filter(Boolean);
