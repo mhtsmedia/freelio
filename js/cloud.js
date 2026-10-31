@@ -59,12 +59,16 @@
     const { data: { session } } = await sb.auth.getSession();
     C.uid = session ? session.user.id : null;
 
-    const [fr, rv, jobs] = await Promise.all([
+    const [fr, rv, jobs, posts] = await Promise.all([
       sb.from('freelancers').select('id,user_id,demo,published,data').order('created_at'),
       sb.from('reviews').select('*').order('created_at', { ascending: false }),
-      sb.from('jobs').select('id,owner_id,demo,status,data,created_at').order('created_at', { ascending: false })
+      sb.from('jobs').select('id,owner_id,demo,status,data,created_at').order('created_at', { ascending: false }),
+      sb.from('posts').select('id,freelancer_id,data,created_at').order('created_at', { ascending: false }).limit(300)
     ]);
     const frRows = must(fr), rvRows = must(rv), jobRows = must(jobs);
+    // Innlegg. Mangler tabellen, er Utforsk bare tom til database/innlegg.sql er kjørt.
+    C.postsReady = !posts.error;
+    S.posts = posts.error ? [] : posts.data.map((r) => Object.assign({}, r.data, { id: r.id, fid: r.freelancer_id, at: Date.parse(r.created_at) }));
 
     // Frilansere og omtaler
     S.extraReviews = {};
@@ -228,6 +232,20 @@
     if (r.error) throw new Error(/bucket not found/i.test(r.error.message) ? 'Bildelagringen er ikke satt opp. Kjør database/bilder.sql i Supabase.'
       : /mime|size|exceeded|too large/i.test(r.error.message) && /^video/.test(blob.type) ? 'Videolagring er ikke slått på ennå. Kjør database/video.sql i Supabase.' : r.error.message);
     return sb.storage.from('profiles').getPublicUrl(path).data.publicUrl;
+  };
+  H.addPost = async (p) => {
+    if (!C.postsReady) throw new Error('Innlegg er ikke slått på ennå. Kjør database/innlegg.sql i Supabase.');
+    const { id, fid, at, ...data } = p;
+    const r = await sb.from('posts').insert({ freelancer_id: S.profile.id, data }).select('id,created_at').single();
+    if (r.error) throw new Error(errText(r.error));
+    S.posts.unshift(Object.assign({}, p, { id: r.data.id, fid: S.profile.id, at: Date.parse(r.data.created_at) })); H.saveLocal();
+  };
+  H.removePost = async (id) => {
+    const p = S.posts.find((x) => x.id === id); if (!p) return;
+    const r = await sb.from('posts').delete().eq('id', id);
+    if (r.error) throw new Error(errText(r.error));
+    S.posts = S.posts.filter((x) => x.id !== id); H.saveLocal();
+    H.dropImage(p.url); H.dropImage(p.thumb);
   };
   H.dropImage = async (url) => {
     const m = String(url || '').match(/\/object\/public\/profiles\/(.+)$/);

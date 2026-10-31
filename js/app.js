@@ -78,7 +78,7 @@
     user: null, saved: [], liked: [], cmp: [],
     orders: [],
     myJobs: [], threads: {}, readThreads: {}, cookie: null, cookies: { analyse: false, ads: false },
-    extraReviews: {}, profile: null, sentOffers: {}, asst: []
+    extraReviews: {}, profile: null, sentOffers: {}, asst: [], posts: []
   });
   let mem = null;
   H.load = (force) => {
@@ -158,26 +158,48 @@
   // Lagrer et bilde og gir tilbake en adresse. I demo-modus blir det en data-URL. cloud.js bytter til Supabase Storage.
   H.storeImage = (kind, blob) => new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
   H.dropImage = async () => {};
+  // Lager et stillbilde fra videoen som brukes i rutenettet
+  H.videoPoster = (file) => {
+    return new Promise((res, rej) => {
+      const v = document.createElement('video'), u = URL.createObjectURL(file);
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = u;
+      v.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Nettleseren kan ikke lese denne videoen. Prøv MP4.')); };
+      v.onloadedmetadata = () => { v.currentTime = Math.min(1, (v.duration || 2) / 3); };
+      v.onseeked = () => {
+        const k = Math.min(1, 900 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');
+        c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        c.toBlob((b) => { URL.revokeObjectURL(u); b ? res({ blob: b, w: v.videoWidth, h: v.videoHeight, dur: Math.round(v.duration) }) : rej(new Error('Kunne ikke lage forhåndsvisning.')); }, 'image/jpeg', 0.82);
+      };
+    });
+  };
+  H.VID_MB = () => (window.Cloud && Cloud.on ? 50 : 3);
+  // Innlegg på Utforsk. Uten database lagres de bare i nettleseren. cloud.js bytter til Supabase.
+  H.addPost = async (p) => { S.posts = S.posts || []; S.posts.unshift(Object.assign({}, p, { id: H.uid(), fid: S.profile.id, at: Date.now() })); H.save(); };
+  H.removePost = async (id) => { S.posts = (S.posts || []).filter((x) => x.id !== id); H.save(); };
   // Redigering av profilbilde: dra for å flytte, zoom med glidebryter, hjul eller to fingre, roter 90 grader.
   // Gir tilbake et kvadratisk bilde (512 x 512) eller null hvis brukeren avbryter.
-  H.cropImage = (file) => new Promise((resolve) => {
-    const OUT = 512;
+  // Beskjær et bilde. o.aspect er bredde/høyde (1 = kvadrat), o.round viser sirkel (profilbilde).
+  H.cropImage = (file, o = {}) => new Promise((resolve) => {
+    const A = o.aspect || 1, ROUND = o.round !== false && A === 1 && !o.aspect;
+    const OUTW = o.outW || 512, OUTH = Math.round(OUTW / A);
+    const TITLE = o.title || 'Juster profilbildet';
     const finish = (val) => { document.removeEventListener('keydown', onKey); wrap.classList.add('out'); setTimeout(() => wrap.remove(), 200); document.body.style.overflow = ''; if (lastFocus) lastFocus.focus(); resolve(val); };
     const lastFocus = document.activeElement;
     const wrap = document.createElement('div');
-    wrap.className = 'crop-wrap'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Juster profilbildet');
-    wrap.innerHTML = `<div class="crop-box">
-        <div class="row" style="justify-content:space-between"><b style="font-size:17px">Juster profilbildet</b><button type="button" class="ibtn" data-c="cancel" aria-label="Avbryt">${H.icon('close', 18, 2)}</button></div>
-        <p class="hint">Dra bildet for å flytte det. Zoom slik at ansiktet ditt fyller sirkelen.</p>
-        <div class="crop-view" tabindex="0" aria-label="Bildeutsnitt. Bruk piltastene for å flytte og pluss eller minus for å zoome."><img alt="" draggable="false"></div>
+    wrap.className = 'crop-wrap'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', TITLE);
+    wrap.innerHTML = `<div class="crop-box"${A > 1 ? ' style="width:min(680px,100%)"' : ''}>
+        <div class="row" style="justify-content:space-between"><b style="font-size:17px">${H.esc(TITLE)}</b><button type="button" class="ibtn" data-c="cancel" aria-label="Avbryt">${H.icon('close', 18, 2)}</button></div>
+        <p class="hint">${H.esc(o.hint || 'Dra bildet for å flytte det. Zoom slik at ansiktet ditt fyller sirkelen.')}</p>
+        <div class="crop-view${ROUND ? ' round' : ''}" style="aspect-ratio:${A}" tabindex="0" aria-label="Bildeutsnitt. Bruk piltastene for å flytte og pluss eller minus for å zoome."><img alt="" draggable="false"></div>
         <div class="row" style="gap:12px;flex-wrap:nowrap"><span aria-hidden="true">${H.icon('search', 16)}</span><label class="sr" for="cropZoom">Zoom</label><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" class="crop-range"><button type="button" class="ibtn" data-c="rotate" aria-label="Roter 90 grader" title="Roter">${H.icon('rotate', 18)}</button></div>
         <div class="row" style="justify-content:flex-end"><button type="button" class="btn soft" data-c="cancel">Avbryt</button><button type="button" class="btn primary" data-c="save">Bruk bildet</button></div>
       </div>`;
     document.body.appendChild(wrap); document.body.style.overflow = 'hidden';
     const view = wrap.querySelector('.crop-view'), img = view.querySelector('img'), zoomEl = wrap.querySelector('#cropZoom');
-    let src = null, iw = 0, ih = 0, V = 0, base = 1, zoom = 1, x = 0, y = 0;
+    let src = null, iw = 0, ih = 0, V = 0, VH = 0, base = 1, zoom = 1, x = 0, y = 0;
     const clamp = () => {
-      const s = base * zoom, mx = Math.max(0, (iw * s - V) / 2), my = Math.max(0, (ih * s - V) / 2);
+      const s = base * zoom, mx = Math.max(0, (iw * s - V) / 2), my = Math.max(0, (ih * s - VH) / 2);
       x = Math.min(mx, Math.max(-mx, x)); y = Math.min(my, Math.max(-my, y));
     };
     const draw = () => {
@@ -188,7 +210,7 @@
     };
     const setSource = (canvasOrImg) => {
       src = canvasOrImg; iw = src.width || src.naturalWidth; ih = src.height || src.naturalHeight;
-      V = view.clientWidth; base = V / Math.min(iw, ih); zoom = 1; x = 0; y = 0;
+      V = view.clientWidth; VH = view.clientHeight; base = Math.max(V / iw, VH / ih); zoom = 1; x = 0; y = 0;
       img.src = src.toDataURL ? src.toDataURL('image/jpeg', 0.92) : src.src;
       draw();
     };
@@ -211,7 +233,7 @@
     });
     const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
     view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
-    view.addEventListener('wheel', (e) => { e.preventDefault(); const r = view.getBoundingClientRect(); setZoom(zoom * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left - V / 2, e.clientY - r.top - V / 2); }, { passive: false });
+    view.addEventListener('wheel', (e) => { e.preventDefault(); const r = view.getBoundingClientRect(); setZoom(zoom * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left - V / 2, e.clientY - r.top - VH / 2); }, { passive: false });
     view.addEventListener('keydown', (e) => {
       const m = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key];
       if (m) { e.preventDefault(); x += m[0]; y += m[1]; draw(); }
@@ -229,10 +251,10 @@
         const g = cv.getContext('2d'); g.translate(ih, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0); setSource(cv);
       }
       if (c.dataset.c === 'save' && src) {
-        const cv = document.createElement('canvas'); cv.width = cv.height = OUT;
-        const g = cv.getContext('2d'), k = OUT / V, s = base * zoom * k;
-        g.fillStyle = '#fff'; g.fillRect(0, 0, OUT, OUT);
-        g.translate(OUT / 2 + x * k, OUT / 2 + y * k); g.scale(s, s); g.drawImage(src, -iw / 2, -ih / 2);
+        const cv = document.createElement('canvas'); cv.width = OUTW; cv.height = OUTH;
+        const g = cv.getContext('2d'), k = OUTW / V, s = base * zoom * k;
+        g.fillStyle = '#fff'; g.fillRect(0, 0, OUTW, OUTH);
+        g.translate(OUTW / 2 + x * k, OUTH / 2 + y * k); g.scale(s, s); g.drawImage(src, -iw / 2, -ih / 2);
         cv.toBlob((b) => (b && b.type === 'image/webp' ? finish(b) : cv.toBlob(finish, 'image/jpeg', 0.88)), 'image/webp', 0.88);
       }
     });
@@ -274,11 +296,21 @@
   };
   H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
 
+  // Bla gjennom porteføljen rett fra kortet. Bakgrunnsbildet først, så porteføljen.
+  H.carousel = (f) => {
+    const imgs = [].concat(f.coverImg ? [f.coverImg] : [], f.portfolio || []).slice(0, 8);
+    if (imgs.length < 2) return '';
+    return `<div class="fc-car">
+      <a class="fc-track" href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}. ${imgs.length} bilder">${imgs.map((x) => `<span class="fc-slide"><img src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy" draggable="false">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</span>`).join('')}</a>
+      <button class="fc-nav prev" data-a="car" data-v="-1" aria-label="Forrige bilde" hidden>${H.icon('back', 16, 2.2)}</button>
+      <button class="fc-nav next" data-a="car" data-v="1" aria-label="Neste bilde">${H.icon('back', 16, 2.2)}</button>
+      <span class="fc-dots" aria-hidden="true">${imgs.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</span></div>`;
+  };
   H.fCard = (f, opts = {}) => {
     const saved = S.saved.includes(f.id);
     const inCmp = S.cmp.includes(f.id);
     return `<article class="fcard">
-      ${H.ph(f, 'cover', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
+      ${H.carousel(f) || H.ph(f, 'cover', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
       <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>
@@ -476,6 +508,13 @@
 
   const closeMenu = () => { const t = document.querySelector('.top.open'); if (!t) return; t.classList.remove('open'); const b = t.querySelector('.menu-btn'); b.setAttribute('aria-expanded', 'false'); b.innerHTML = H.icon('menu', 20); };
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+  H.actions.car = (v, el) => { const t = el.closest('.fc-car').querySelector('.fc-track'); t.scrollBy({ left: +v * t.clientWidth, behavior: 'smooth' }); };
+  document.addEventListener('scroll', (e) => {
+    const t = e.target; if (!t.classList || !t.classList.contains('fc-track')) return;
+    const n = t.children.length, i = Math.round(t.scrollLeft / t.clientWidth), car = t.parentElement;
+    car.querySelectorAll('.fc-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+    car.querySelector('.prev').hidden = i <= 0; car.querySelector('.next').hidden = i >= n - 1;
+  }, true);
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.top')) closeMenu();
     const el = e.target.closest('[data-a]');

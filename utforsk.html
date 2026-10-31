@@ -18,7 +18,7 @@
 <div id="site-header"></div>
 <main id="main">
   <div class="wrap">
-    <div class="feed" style="padding-bottom:0"><h1>Utforsk</h1><p class="muted">Nytt arbeid fra frilansere i nærheten. Trykk på et innlegg for å se hele profilen.</p><div class="chips scroll" id="chips" role="group" aria-label="Fagfelt"></div></div>
+    <div class="feed" style="padding-bottom:0"><h1>Utforsk</h1><p class="muted">Nytt arbeid som frilansere har delt. Trykk på et innlegg for å se hele profilen.</p><div class="chips scroll" id="chips" role="group" aria-label="Fagfelt"></div><div class="stack" id="compose" style="gap:12px"></div></div>
     <div class="feed" id="feed" data-skel="feed:2"></div>
   </div>
 </main>
@@ -31,32 +31,82 @@
 <script src="js/cloud.js"></script>
 <script type="text/freelio">
 let cat = 'alle';
-const CAPS = { bryllup: ['Detaljer fra vielsen', 'Første dans'], portrett: ['Portrett i studio'], event: ['Taler og stemning'], produkt: ['Nye produkter i studio'], eiendom: ['Kveldslys over fjorden'], drone: ['Dronebilder fra Kalvøya'], reklamefilm: ['Bak kamera'], some: ['Ny reel for kafé'] };
+let draft = null, busy = '', caption = '';
+const ago = (t) => { const m = Math.max(1, Math.round((Date.now() - t) / 60000)); return m < 60 ? m + ' min' : m < 1440 ? Math.round(m / 60) + ' t' : Math.round(m / 1440) + ' d'; };
+function composer() {
+  const S = H.S;
+  if (!S.user) return '';
+  if (!S.profile) return `<div class="card row small" style="justify-content:space-between"><span class="muted">Bare frilansere kan legge ut innlegg her.</span><a class="btn soft sm" href="bli-frilanser.html">Bli frilanser</a></div>`;
+  if (!draft) return `<div class="card row" style="gap:12px">${H.avatar(S.profile, 40)}<span class="grow muted">Del noe du har laget nylig</span><label class="btn primary sm" for="postFile">${H.icon('plus', 16, 2.2)} Nytt innlegg</label><input type="file" id="postFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="sr"></div><span class="hint" id="postStatus" style="margin-top:-10px">${H.esc(busy)}</span>`;
+  return `<div class="card stack" style="gap:12px"><b>Nytt innlegg</b>
+    <div class="post-media" style="max-width:320px">${draft.type === 'video' ? `<video src="${draft.preview}" muted playsinline controls></video>` : `<img src="${draft.preview}" alt="Forhåndsvisning">`}</div>
+    <label class="field"><span class="label">Tekst</span><textarea class="inp" id="postCap" rows="3" maxlength="600" placeholder="Fortell kort om jobben, for eksempel sted, kunde eller utstyr.">${H.esc(caption)}</textarea></label>
+    <div class="row"><button class="btn primary" data-a="publish" ${busy ? 'disabled' : ''}>${busy ? H.esc(busy) : 'Publiser'}</button><button class="btn soft" data-a="cancelPost" ${busy ? 'disabled' : ''}>Avbryt</button></div></div>`;
+}
 function render() {
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'For deg' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
-  const fl = H.all().filter((f) => H.inCat(f, cat));
-  const posts = [];
-  fl.forEach((f, i) => {
-    if (f.portfolio && f.portfolio.length) { f.portfolio.slice(0, 3).forEach((x, k) => posts.push({ f, img: k, cap: k === 0 ? (f.cap || f.role) : f.role, ago: (k + 1) + ' d' })); return; }
-    posts.push({ f, cap: f.cap, pal: f.pal, ago: (i % 5) + 1 + ' t' }); (CAPS[f.cat] || []).slice(0, 1).forEach((c, k) => posts.push({ f, cap: c, pal: f.pal + 3 + k, ago: (i % 3) + 1 + ' d' }));
-  });
-  posts.sort((a, b) => (a.f.id + a.cap).length % 7 - (b.f.id + b.cap).length % 7);
-  document.getElementById('feed').innerHTML = posts.length ? posts.map((p, n) => {
-    const f = p.f; const key = f.id + ':' + n; const liked = H.S.liked.includes(key); const saved = H.S.saved.includes(f.id);
+  document.getElementById('compose').innerHTML = composer();
+  const fIn = document.getElementById('postFile'); if (fIn) fIn.addEventListener('change', () => pick(fIn));
+  const cap = document.getElementById('postCap'); if (cap) cap.addEventListener('input', () => (caption = cap.value));
+  const posts = (H.S.posts || []).map((p) => ({ p, f: H.byId(p.fid) })).filter((x) => x.f && H.inCat(x.f, cat)).sort((a, b) => b.p.at - a.p.at);
+  const mineId = H.S.profile && H.S.profile.id;
+  document.getElementById('feed').innerHTML = posts.length ? posts.map(({ p, f }) => {
+    const key = 'p:' + p.id; const liked = H.S.liked.includes(key); const saved = H.S.saved.includes(f.id);
     return `<article class="post">
-      <a class="post-h" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${p.ago}</span></span><span class="rate">${H.star()} ${H.ratingTxt(f)}</span></a>
-      ${p.img != null ? H.ph(f, p.img, '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"`, `<span class="cap">${H.esc(p.cap)}</span>`, true) : `<a class="ph" href="frilanser.html?id=${f.id}" style="${H.phStyle(p.pal)}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"><span class="cap">${H.esc(p.cap)}</span></a>`}
+      <div class="row" style="flex-wrap:nowrap;gap:8px"><a class="post-h grow" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${ago(p.at)}</span></span></a>${p.fid === mineId ? `<button class="btn link small" data-a="delPost" data-v="${p.id}">Slett</button>` : `<span class="rate">${H.star()} ${H.ratingTxt(f)}</span>`}</div>
+      <div class="post-media">${p.type === 'video' ? `<video src="${H.esc(p.url)}" poster="${H.esc(p.thumb)}" controls playsinline preload="none"></video>` : `<a href="frilanser.html?id=${f.id}" aria-label="Se profilen til ${H.esc(f.name)}"><img src="${H.esc(p.url)}" alt="${H.esc(p.cap || 'Arbeid fra ' + f.name)}" loading="lazy"></a>`}</div>
       <div class="row" style="gap:2px">
         <button class="ibtn plain" data-a="like" data-v="${key}" aria-pressed="${liked}" aria-label="Lik" style="color:${liked ? 'var(--like)' : 'inherit'}">${H.icon('heart', 24, 1.8, liked ? 'currentColor' : 'none')}</button>
         <button class="ibtn plain" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="Lagre ${H.esc(f.name)}">${H.icon('save', 22, 1.8, saved ? 'currentColor' : 'none')}</button>
         <a class="ibtn plain" href="meldinger.html?med=${f.id}" aria-label="Send melding til ${H.esc(f.name)}">${H.icon('chat', 22)}</a>
         <span class="grow meta" style="padding-left:8px">${H.priceTxt(f)}</span>
         <a class="btn dark sm" href="book.html?id=${f.id}">Book</a>
-      </div></article>`;
-  }).join('') : `<div class="empty">Ingen innlegg i denne kategorien ennå.</div>`;
+      </div>
+      ${p.cap ? `<p style="margin:0"><b>${H.esc(f.name)}</b> ${H.esc(p.cap)}</p>` : ''}</article>`;
+  }).join('') : `<div class="empty"><b style="color:var(--fg)">Ingen innlegg ${cat === 'alle' ? 'ennå' : 'i denne kategorien ennå'}</b><span>Frilansere legger selv ut arbeid her.</span></div>`;
+}
+async function pick(input) {
+  const file = input.files[0]; input.value = ''; if (!file) return;
+  try {
+    if (/^video\//.test(file.type)) {
+      const mb = H.VID_MB();
+      if (file.size > mb * 1048576) throw new Error(`Videoen er over ${mb} MB. Korte den ned eller eksporter i lavere kvalitet.`);
+      busy = 'Leser video …'; render();
+      const poster = await H.videoPoster(file);
+      draft = { type: 'video', file, poster, preview: URL.createObjectURL(file) };
+    } else {
+      const blob = await H.cropImage(file, { aspect: 4 / 5, outW: 1080, title: 'Juster innlegget', hint: 'Alle innlegg vises i samme format. Dra bildet for å flytte det, og zoom for å velge utsnittet.' });
+      if (!blob) return;
+      draft = { type: 'image', blob, preview: URL.createObjectURL(blob) };
+    }
+  } catch (e) { H.toast(e.message || 'Filen kunne ikke leses'); }
+  busy = ''; render();
 }
 H.actions.cat = (v) => { cat = v; render(); };
 H.actions.like = (v) => { const i = H.S.liked.indexOf(v); i > -1 ? H.S.liked.splice(i, 1) : H.S.liked.push(v); H.save(); render(); H.popIn(`[data-a="like"][data-v="${v}"] svg`); };
+H.actions.cancelPost = () => { draft = null; caption = ''; render(); };
+H.actions.publish = async () => {
+  if (!draft || busy) return;
+  busy = 'Laster opp …'; render();
+  try {
+    let post;
+    if (draft.type === 'video') {
+      const thumb = await H.storeImage('thumb', draft.poster.blob);
+      post = { type: 'video', url: await H.storeImage('post', draft.file), thumb, w: draft.poster.w, h: draft.poster.h, cap: caption.trim() };
+    } else {
+      const small = await H.resizeImage(draft.blob, 540);
+      post = { type: 'image', url: await H.storeImage('post', draft.blob), thumb: await H.storeImage('thumb', small.blob), cap: caption.trim() };
+    }
+    await H.addPost(post);
+    draft = null; caption = ''; H.toast('Innlegget er publisert');
+  } catch (e) { H.toast(e.message || 'Kunne ikke publisere'); }
+  busy = ''; render();
+};
+H.actions.delPost = async (v) => {
+  if (!confirm('Vil du slette innlegget?')) return;
+  try { await H.removePost(v); H.toast('Innlegget er slettet'); } catch (e) { H.toast(e.message || 'Kunne ikke slette'); }
+  render();
+};
 H.boot(render);
 </script>
 </body>

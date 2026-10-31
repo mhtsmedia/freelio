@@ -39,23 +39,8 @@ const RESP = [[1, '1 time'], [3, '3 timer'], [6, '6 timer'], [24, '1 dag'], [48,
 const DEL = [[0, 'Samme dag'], [1, '1 dag'], [2, '2 dager'], [3, '3 dager'], [5, '5 dager'], [7, '7 dager'], [14, '14 dager'], [21, '21 dager'], [30, '30 dager']];
 const CLOUD = !!(window.Cloud && Cloud.on);
 const PF_MAX = CLOUD ? 24 : 8;
-const VID_MB = CLOUD ? 50 : 3;
+const VID_MB = H.VID_MB();
 let pfBusy = '', coverBusy = '';
-// Lager et stillbilde fra videoen som brukes i rutenettet
-function videoPoster(file) {
-  return new Promise((res, rej) => {
-    const v = document.createElement('video'), u = URL.createObjectURL(file);
-    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = u;
-    v.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Nettleseren kan ikke lese denne videoen. Prøv MP4.')); };
-    v.onloadedmetadata = () => { v.currentTime = Math.min(1, (v.duration || 2) / 3); };
-    v.onseeked = () => {
-      const k = Math.min(1, 900 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');
-      c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
-      c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
-      c.toBlob((b) => { URL.revokeObjectURL(u); b ? res({ blob: b, w: v.videoWidth, h: v.videoHeight, dur: Math.round(v.duration) }) : rej(new Error('Kunne ikke lage forhåndsvisning.')); }, 'image/jpeg', 0.82);
-    };
-  });
-}
 function form() {
   const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
   pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
@@ -105,7 +90,7 @@ function form() {
       try {
         if (/^video\//.test(files[i].type)) {
           if (files[i].size > VID_MB * 1048576) throw new Error(`Videoen er over ${VID_MB} MB. Korte den ned eller eksporter i lavere kvalitet.`);
-          const poster = await videoPoster(files[i]);
+          const poster = await H.videoPoster(files[i]);
           const thumb = await H.storeImage('thumb', poster.blob);
           pf.push({ type: 'video', url: await H.storeImage('video', files[i]), thumb, w: poster.w, h: poster.h, dur: poster.dur });
         } else {
@@ -119,11 +104,13 @@ function form() {
   const cIn = document.getElementById('coverFile');
   cIn.addEventListener('change', async () => {
     const file = cIn.files[0]; cIn.value = ''; if (!file) return;
+    const blob = await H.cropImage(file, { aspect: 3, outW: CLOUD ? 1800 : 1200, title: 'Juster bakgrunnsbildet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Det vises bredt øverst på profilen din.' });
+    if (!blob) return;
     coverBusy = 'Laster opp …'; form();
     try {
-      const a = await H.resizeImage(file, CLOUD ? 2000 : 1200), b = await H.resizeImage(file, 700);
+      const a = { blob }, b = await H.resizeImage(blob, 700);
       const old = cover;
-      cover = { url: await H.storeImage('cover', a.blob), thumb: await H.storeImage('thumb', b.blob), w: a.w, h: a.h };
+      cover = { url: await H.storeImage('cover', a.blob), thumb: await H.storeImage('thumb', b.blob) };
       if (old) { H.dropImage(old.url); H.dropImage(old.thumb); }
     } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
     coverBusy = ''; form();
