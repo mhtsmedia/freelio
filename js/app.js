@@ -495,6 +495,15 @@
         <a href="${S.user ? 'min-side.html' : 'logg-inn.html'}">${S.user ? 'Min side' : 'Logg inn'}</a>
       </div></nav>
     </div></header>`;
+    H.mountTabbar(unread, act);
+  };
+  /* bunnmeny på mobil, bare i det nye designet (se js/design.js) */
+  H.mountTabbar = (unread = H.unread(), act = H.actionCount()) => {
+    let el = document.getElementById('tabbar');
+    if (document.documentElement.dataset.design === 'gammel') { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('nav'); el.id = 'tabbar'; el.className = 'tabbar'; el.setAttribute('aria-label', 'Hurtigmeny'); document.body.appendChild(el); }
+    const items = [['index.html', 'home', 'Hjem'], ['sok.html', 'search', 'Finn'], ['ny-annonse.html', 'plus', 'Legg ut'], ['mine-oppdrag.html', 'clipboard', 'Mine oppdrag', act, 'venter på deg'], ['meldinger.html', 'chat', 'Meldinger', unread, 'uleste']];
+    el.innerHTML = items.map(([h, ic, t, n, why]) => `<a href="${h}" ${h.replace('.html', '') === page ? 'aria-current="page"' : ''}${n ? ` aria-label="${t}, ${n} ${why}"` : ''}>${H.icon(ic, 22)}${n ? '<span class="dot"></span>' : ''}<span>${t}</span></a>`).join('');
   };
   H.mountFooter = () => {
     const el = document.getElementById('site-footer'); if (!el) return;

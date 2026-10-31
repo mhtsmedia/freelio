@@ -1,0 +1,151 @@
+/* Nytt design for Freelio. Lastes etter style.css og endrer bare utseendet: HTML og JS er de samme.
+   Ryddigere oppsett, bedre bruk av bredden på PC og bunnmeny på mobil.
+   Slås av for hele nettsiden i js/design.js (STANDARD = 'gammel'), eller for deg selv med ?design=gammel. */
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap");
+
+:root{
+  --bg:#FFFFFF; --bg2:#FAFBF9; --surface:#F2F5F1; --surface2:#E3E7E2; --line:#E3E5E2; --line-strong:#C9CEC9;
+  --fg:#1B1D1C; --muted:#5C625F; --faint:#6B716E;
+  --accent:#146B4C; --accent-hover:#0E5038; --accent-ink:#146B4C; --accent-soft:#E8F3ED; --on-accent:#FFFFFF;
+  --invert:#1B1D1C; --on-invert:#FFFFFF;
+  --like:#D93A2B; --star:#D99A00;
+  --radius:12px;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949}}
+:root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949}
+
+/* oppsett */
+.wrap{max-width:1280px;padding-left:max(clamp(16px,3vw,32px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,32px),env(safe-area-inset-right,0px))}
+.section{padding-block:32px;gap:16px}
+h1{font-size:clamp(26px,3vw,34px);line-height:1.15}
+h2{font-size:20px}
+.section-head > a{color:var(--accent-ink)}
+.section-head > a:hover{color:var(--accent-hover)}
+
+/* toppmeny */
+.top{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+.top-in{gap:20px}
+.mainnav a{border-radius:8px;padding:10px 12px}
+.usernav{gap:2px}
+.ibtn{border-radius:10px}
+.ibtn.lbl{flex-direction:row;height:40px;min-width:0;padding:0 10px;gap:7px;border-radius:8px}
+.ibtn.lbl .lbl-t{font-size:14px;font-weight:600}
+.ibtn.lbl .dot{top:6px;right:auto;left:24px}
+.usernav .theme-btn .lbl-t,.usernav a[href="assistent.html"] .lbl-t{display:none}
+.usernav .btn.primary{margin-left:6px!important}
+@media (max-width:1180px){.usernav .ibtn.lbl .lbl-t{display:none}}
+@media (max-width:560px){.logo .wm{display:block}}
+.drawer a:hover{color:var(--accent-ink)}
+
+/* knapper, merker og skjema */
+.btn{border-radius:10px;font-weight:600}
+.btn.sm{height:38px;border-radius:8px}
+.btn.ghost{box-shadow:inset 0 0 0 1px var(--line-strong)}
+.btn.ghost:hover{box-shadow:inset 0 0 0 1px var(--fg)}
+.chip{border-radius:8px;border-color:var(--line-strong);color:var(--fg)}
+.chip:hover{border-color:var(--fg)}
+.pill{border-radius:6px}
+.seg{border-radius:10px}
+.seg button,.seg a{border-radius:8px}
+.inp{border-radius:10px;border:1.5px solid var(--line-strong)}
+.inp:hover{border-color:var(--muted)}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sw[aria-checked="true"]{background:var(--accent)}
+.stars button{border-radius:10px}
+.stars button[aria-checked="true"],.stars button.on{color:var(--star)}
+.toast{border-radius:10px}
+.cookie{border-radius:14px}
+.empty{border-radius:14px}
+
+/* kort og lister */
+.cards{gap:28px 20px}
+.fcard .ph,.fc-car{border-radius:12px}
+.fcard .t{font-weight:600;font-size:16px}
+.fcard .price{font-size:15px}
+.fcard .heart{opacity:1;transform:none;width:40px;height:40px;border-radius:50%}
+.fcard .cmp{border-radius:8px}
+.card{border-radius:12px}
+.jrow{padding:14px 4px;gap:14px}
+.jrow:hover{padding-left:8px;padding-right:8px}
+.jrow .ico{background:var(--accent-soft);color:var(--accent-ink);border-radius:10px}
+.tabs button{font-size:15px;border-bottom-width:3px}
+.tabs button[aria-selected="true"]{color:var(--accent-ink)}
+.cmp-table td.best::after{background:var(--accent)}
+.bars i b{background:var(--accent)}
+.steps li.done .n{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.steps li.done .ln{background:var(--accent)}
+.steps li.cur .n{border-color:var(--accent);color:var(--accent-ink)}
+.banner{border-radius:10px}
+.sum{border-radius:12px}
+
+/* forsiden */
+.hero-in{padding-block:32px 4px;align-items:flex-start;text-align:left;gap:14px}
+.hero h1{font-size:clamp(28px,3.2vw,38px);letter-spacing:-.025em;line-height:1.12;max-width:22ch}
+.hero p{font-size:16px;max-width:60ch}
+.searchbox{max-width:860px;border-radius:12px;box-shadow:none;border:1.5px solid var(--line-strong);padding:5px}
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.searchbox .inp{border-radius:8px}
+.searchbox .btn{border-radius:8px}
+#popular{justify-content:flex-start!important}
+.cats{grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:4px}
+.cat{padding:10px 4px;gap:8px;font-size:13px;border-radius:12px}
+.cat:hover{background:transparent}
+.cat .ico{width:56px;height:56px;border-radius:16px;border:0;background:var(--accent-soft);color:var(--accent-ink)}
+.cat .ico svg{width:26px;height:26px}
+.cat:hover .ico{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.steps3 .n{background:var(--accent);color:var(--on-accent);border:0}
+.band{background:var(--surface);border:0;border-radius:16px;padding:28px 32px}
+@media (max-width:600px){
+  .searchbox{border-radius:12px}
+  .cats{display:flex;overflow-x:auto;gap:2px;scrollbar-width:none}
+  .cats::-webkit-scrollbar{display:none}
+  .cat{flex:0 0 84px}
+}
+/* PC: forsiden i to kolonner, populære til venstre og nye oppdrag og «Slik fungerer det» i en kolonne til høyre */
+@media (min-width:1100px){
+  body[data-page="index"] main > .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:40px;align-items:start}
+  body[data-page="index"] main > .wrap > section{padding-block:0;margin-bottom:32px}
+  body[data-page="index"] main > .wrap > section:nth-child(1){grid-column:1/-1;grid-row:1;padding-top:16px!important;margin-bottom:24px}
+  body[data-page="index"] main > .wrap > section:nth-child(2){grid-column:1;grid-row:2/span 2}
+  body[data-page="index"] main > .wrap > section:nth-child(3){grid-column:2;grid-row:2;border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;gap:6px;margin-bottom:16px}
+  body[data-page="index"] main > .wrap > section:nth-child(4){grid-column:2;grid-row:3;background:var(--surface);border-radius:14px;padding:18px;gap:14px}
+  body[data-page="index"] main > .wrap > section:nth-child(5){grid-column:1/-1;grid-row:4}
+  body[data-page="index"] main > .wrap > section:nth-child(3) h2,
+  body[data-page="index"] main > .wrap > section:nth-child(4) h2{font-size:17px}
+  body[data-page="index"] #jobs .jrow{padding-block:12px}
+  body[data-page="index"] #jobs .jrow:last-child{border-bottom:0}
+  body[data-page="index"] #jobs .jrow .ico{width:36px;height:36px}
+  body[data-page="index"] .steps3{grid-template-columns:minmax(0,1fr);gap:14px}
+  body[data-page="index"] .steps3 .card{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;row-gap:2px}
+  body[data-page="index"] .steps3 .n{width:28px;height:28px;font-size:12px;grid-row:span 2}
+  body[data-page="index"] .steps3 h3{font-size:15px}
+  body[data-page="index"] .steps3 p{font-size:14px}
+}
+
+/* meldinger */
+.inbox{border-radius:14px}
+.bubble{border-radius:14px}
+.bubble.me{border-bottom-right-radius:4px}
+.bubble.them{border-bottom-left-radius:4px}
+.cmpbar .wrap{border-radius:14px}
+
+/* bunntekst */
+.foot{background:var(--bg2);margin-top:48px}
+.foot a:hover{color:var(--accent-ink)}
+
+/* bunnmeny på mobil (lages i js/app.js) */
+.tabbar{display:none}
+@media (max-width:760px){
+  body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg);border-top:1px solid var(--line);padding:4px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px))}
+  .tabbar a{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;white-space:nowrap}
+  .tabbar a:hover{color:var(--fg)}
+  .tabbar a[aria-current="page"]{color:var(--accent-ink);font-weight:700}
+  .tabbar .dot{top:4px;right:auto;left:calc(50% + 6px)}
+  .usernav .hide-sm,.usernav a[href="assistent.html"]{display:none}
+  .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+  .cookie{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .cmpbar{bottom:76px}
+  .foot{margin-top:32px}
+}
