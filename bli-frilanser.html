@@ -97,7 +97,7 @@ function form() {
     const name = v('name');
     const ini = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
     const old = S.profile || {};
-    S.profile = Object.assign({ rating: 5.0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
+    S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
       id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
       tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, portfolio: pf, photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });

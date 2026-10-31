@@ -89,11 +89,16 @@
 
   /* ---------- frilansere ---------- */
   H.all = () => {
-    const list = D.FREELANCERS.filter((f) => !S.profile || f.id !== S.profile.id).map((f) => {
-      const extra = S.extraReviews[f.id] || [];
-      return extra.length ? Object.assign({}, f, { rv: extra.concat(f.rv), reviews: f.reviews + extra.length }) : f;
-    });
-    if (S.profile && S.profile.published) list.push(S.profile);
+    // Legger til ekte omtaler. Ekte frilansere får snitt bare av ekte omtaler. Demo-frilansere har et startgrunnlag.
+    const withReviews = (f) => {
+      const extra = (S.extraReviews || {})[f.id] || [];
+      const real = f.demo === false || f.id === (S.profile && S.profile.id);
+      const baseN = real ? 0 : f.reviews || 0, baseSum = real ? 0 : (f.rating || 0) * baseN;
+      const n = baseN + extra.length;
+      return Object.assign({}, f, { rv: extra.concat(real ? [] : f.rv || []), reviews: n, realReviews: extra.length, rating: n ? (baseSum + extra.reduce((t, r) => t + r[1], 0)) / n : 0 });
+    };
+    const list = D.FREELANCERS.filter((f) => !S.profile || f.id !== S.profile.id).map(withReviews);
+    if (S.profile && S.profile.published) list.push(withReviews(S.profile));
     return list;
   };
   H.byId = (id) => H.all().find((f) => f.id === id);
@@ -112,6 +117,7 @@
     if (String(key).startsWith('c:')) { const p = (S.partners || {})[key] || { name: 'Kunde' }; return { id: key, name: p.name, photo: p.photo || null, ini: String(p.name).split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase(), col: '#5B5F97', resp: '', customer: true }; }
     return H.byId(key);
   };
+  H.ratingTxt = (f) => (f.reviews > 0 ? H.num((+f.rating).toFixed(1)) : 'Ny');
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
@@ -262,7 +268,7 @@
       ${H.ph(f, 0, '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
-      <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.num(f.rating.toFixed(1))}</span></div>
+      <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>
       <span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span>
       <span class="price">${H.priceTxt(f)}</span>
     </article>`;

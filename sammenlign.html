@@ -33,7 +33,7 @@ function render() {
     return;
   }
   const rows = [
-    ['Vurdering', (f) => f.rating, 'max', (f) => H.num(f.rating.toFixed(1))],
+    ['Vurdering', (f) => f.rating, 'max', (f) => H.ratingTxt(f)],
     ['Antall omtaler', (f) => f.reviews, 'max', (f) => f.reviews],
     ['Fullførte oppdrag', (f) => f.jobs, 'max', (f) => f.jobs],
     ['Startpris', (f) => f.from, 'min', (f) => H.kr(f.from) + (f.unit || '')],

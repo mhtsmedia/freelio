@@ -44,7 +44,7 @@ function render() {
   document.getElementById('feed').innerHTML = posts.length ? posts.map((p, n) => {
     const f = p.f; const key = f.id + ':' + n; const liked = H.S.liked.includes(key); const saved = H.S.saved.includes(f.id);
     return `<article class="post">
-      <a class="post-h" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${p.ago}</span></span><span class="rate">${H.star()} ${H.num(f.rating.toFixed(1))}</span></a>
+      <a class="post-h" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${p.ago}</span></span><span class="rate">${H.star()} ${H.ratingTxt(f)}</span></a>
       ${p.img != null ? H.ph(f, p.img, '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"`, `<span class="cap">${H.esc(p.cap)}</span>`, true) : `<a class="ph" href="frilanser.html?id=${f.id}" style="${H.phStyle(p.pal)}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"><span class="cap">${H.esc(p.cap)}</span></a>`}
       <div class="row" style="gap:2px">
         <button class="ibtn plain" data-a="like" data-v="${key}" aria-pressed="${liked}" aria-label="Lik" style="color:${liked ? 'var(--like)' : 'inherit'}">${H.icon('heart', 24, 1.8, liked ? 'currentColor' : 'none')}</button>

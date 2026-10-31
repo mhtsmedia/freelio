@@ -70,7 +70,7 @@
     S.extraReviews = {};
     rvRows.forEach((r) => (S.extraReviews[r.freelancer_id] = S.extraReviews[r.freelancer_id] || []).push([r.author_name, r.stars, r.job_label, r.text, r.author_id === C.uid, r.order_id]));
     const all = frRows.map(fromFreelancer).map((f) => {
-      if (!f.demo) { const ex = S.extraReviews[f.id] || []; f.reviews = 0; f.rv = []; f.rating = ex.length ? ex.reduce((n, r) => n + r[1], 0) / ex.length : (f.rating || 5); }
+      if (!f.demo) { const ex = S.extraReviews[f.id] || []; f.reviews = 0; f.rv = []; f.rating = 0; }
       return f;
     });
     D.FREELANCERS = all.filter((f) => f.published && f.id !== C.uid);
