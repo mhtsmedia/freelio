@@ -131,10 +131,12 @@
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
+  // i = 'cover' gir bakgrunnsbildet (eller første bilde i porteføljen)
   H.ph = (f, i = 0, cls = '', tag = 'span', attrs = '', inner = '', big = false) => {
-    const img = (i === 0 && f.coverImg) || (f.portfolio || [])[i];
+    const isCover = i === 'cover'; if (isCover) i = 0;
+    const img = (isCover && f.coverImg) || (f.portfolio || [])[i];
     const vid = img && img.type === 'video';
-    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${vid && !(i === 0 && f.coverImg) ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
+    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${vid && !(isCover && f.coverImg) ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
     return `<${tag} class="ph ${cls}" style="${H.phStyle((f.pal || 0) + i)}" ${attrs}>${inner}</${tag}>`;
   };
 
@@ -276,7 +278,7 @@
     const saved = S.saved.includes(f.id);
     const inCmp = S.cmp.includes(f.id);
     return `<article class="fcard">
-      ${H.ph(f, 0, '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
+      ${H.ph(f, 'cover', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
       <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>

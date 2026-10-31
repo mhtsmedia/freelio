@@ -56,7 +56,7 @@ function render() {
   const similar = H.all().filter((x) => x.id !== f.id && (f.niches || [f.cat]).some((n) => H.inCat(x, n))).slice(0, 4);
   main.innerHTML = `
   <div class="wrap"><div class="crumbs"><a href="index.html">Forside</a><span>/</span><a href="sok.html?kat=${f.cat}">${H.cat(f.cat).name}</a><span>/</span><span>${H.esc(f.name)}</span></div></div>
-  <div class="wrap" style="margin-top:12px">${H.ph(f, 0, 'cover', 'div', 'style="border-radius:20px"', '', true)}
+  <div class="wrap" style="margin-top:12px">${H.ph(f, 'cover', 'cover', 'div', 'style="border-radius:20px"', '', true)}
     <div class="prof-head" style="padding-inline:20px">${H.avatar(f, 104).replace('class="av" style="', 'class="av" style="box-shadow:0 0 0 5px var(--bg);')}
       <div class="stack grow" style="gap:4px;padding-bottom:6px"><h1>${H.esc(f.name)}</h1><span class="muted">${H.esc(f.role)} · ${H.esc(f.area)}${f.km ? ` · ${f.km} km fra deg` : ""}</span></div></div>
   </div>
