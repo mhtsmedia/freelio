@@ -147,5 +147,6 @@ h2{font-size:20px}
   .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
   .cookie{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .cmpbar{bottom:76px}
+  .inbox{height:min(680px,calc(100vh - 204px));min-height:420px}
   .foot{margin-top:32px}
 }
