@@ -229,6 +229,7 @@
     if (/at least 6|Password should/i.test(m)) return 'Passordet må ha minst 6 tegn.';
     if (/valid email|invalid format/i.test(m)) return 'Skriv inn en gyldig e-postadresse.';
     if (/rate limit|too many/i.test(m)) return 'For mange forsøk. Vent litt og prøv igjen.';
+    if (/signups? (are|is) disabled|signups not allowed/i.test(m)) return 'Det er ikke mulig å opprette nye kontoer akkurat nå. (Supabase: e-postinnlogging eller nye registreringer er slått av.)';
     return errText(e);
   };
 
