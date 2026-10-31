@@ -35,6 +35,8 @@ function intro() {
     <div class="card"><span class="n">3</span><h3>Lever og få betalt</h3><p class="muted">Pengene er betalt inn før du starter. Utbetaling innen 2 virkedager etter godkjenning.</p></div></div></div>`;
 }
 let pkgs, pf, cover; const draft = {};
+const RESP = [[1, '1 time'], [3, '3 timer'], [6, '6 timer'], [24, '1 dag'], [48, '2 dager']];
+const DEL = [[0, 'Samme dag'], [1, '1 dag'], [2, '2 dager'], [3, '3 dager'], [5, '5 dager'], [7, '7 dager'], [14, '14 dager'], [21, '21 dager'], [30, '30 dager']];
 const CLOUD = !!(window.Cloud && Cloud.on);
 const PF_MAX = CLOUD ? 24 : 8;
 const VID_MB = CLOUD ? 50 : 3;
@@ -72,7 +74,10 @@ function form() {
       <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
       <div class="grid2"><label class="field"><span class="label">Område *</span><input class="inp" id="area" value="${H.esc(p.area || '')}" placeholder="F.eks. Sandvika"></label>
       <label class="field"><span class="label">Hvor langt reiser du?</span><select class="inp" id="reach">${[5, 10, 25, 50].map((k) => `<option value="${k}" ${p.reach == k ? 'selected' : ''}>Inntil ${k} km</option>`).join('')}</select></label></div>
-      <label class="field" style="max-width:240px"><span class="label">Års erfaring *</span><input class="inp" id="years" type="number" min="0" max="60" inputmode="numeric" value="${H.esc(p.years != null ? p.years : '')}" placeholder="F.eks. 3"></label>
+      <div class="grid2"><label class="field"><span class="label">Års erfaring *</span><input class="inp" id="years" type="number" min="0" max="60" inputmode="numeric" value="${H.esc(p.years != null ? p.years : '')}" placeholder="F.eks. 3"></label>
+      <label class="field"><span class="label">Hvor raskt svarer du?</span><select class="inp" id="respH">${RESP.map(([h, t]) => `<option value="${h}" ${(p.respH || 1) == h ? 'selected' : ''}>Innen ${t}</option>`).join('')}</select></label></div>
+      <div class="grid2"><label class="field"><span class="label">Vanlig leveringstid</span><select class="inp" id="delD">${DEL.map(([d, t]) => `<option value="${d}" ${(p.delD != null ? p.delD : 7) == d ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label class="field"><span class="label">Hvor ledig er du?</span><select class="inp" id="free"><option value="1" ${p.free === false || p.free === '0' ? '' : 'selected'}>Ledig kapasitet</option><option value="0" ${p.free === false || p.free === '0' ? 'selected' : ''}>Få ledige datoer</option></select></label></div>
       <label class="field"><span class="label">Om deg *</span><textarea class="inp" id="bio" rows="4" placeholder="Hva er du god på, og hva kan kunden forvente?">${H.esc(p.bio || '')}</textarea></label>
       <label class="field"><span class="label">Stikkord</span><input class="inp" id="tags" value="${H.esc((p.tags || []).join(', '))}" placeholder="F.eks. Bryllup, Portrett, Produkt"><span class="hint">Skill med komma. Brukes i søket.</span></label>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
@@ -143,7 +148,7 @@ function form() {
     const old = S.profile || {};
     S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
       id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
-      tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, portfolio: pf, coverImg: cover, years, photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
+      tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, portfolio: pf, coverImg: cover, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();
     H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');
