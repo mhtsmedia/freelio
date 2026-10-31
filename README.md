@@ -29,6 +29,9 @@ python3 -m http.server 8000
 
 ## Publiser med GitHub Pages
 
+Kjør `python3 tools/versjon.py` før hver push. Den gir CSS- og JS-filene et nytt versjonsnummer, så nettleseren ikke bruker en gammel kopi.
+
+
 Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på et privat repo krever et betalt GitHub-abonnement. Ellers må repoet være offentlig.
 
 ## Sider
