@@ -35,7 +35,7 @@ if (H.requireLogin()) {
     if (!f) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke frilanseren. <a class="btn primary sm" href="sok.html">Søk etter frilansere</a></div></div>`; return; }
     const p = f.pk[pk]; const fee = Math.round(p[1] * H.FEE);
     const miss = (k) => tried && !String(form[k]).trim();
-    main.innerHTML = `<div class="wrap narrow" style="max-width:1000px">
+    main.innerHTML = `<div class="wrap narrow" style="max-width:1300px">
       <div class="crumbs"><a href="frilanser.html?id=${f.id}">${H.esc(f.name)}</a><span>/</span><span>Book</span></div>
       <div class="two">
         <form class="stack" style="gap:20px" id="bform" novalidate>

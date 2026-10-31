@@ -56,7 +56,7 @@ function render() {
       <p class="hint">Du får ${offerPrice ? H.kr(+offerPrice.replace(/\D/g, '') * 0.95) : 'prisen minus 5 %'} utbetalt når kunden har godkjent leveransen.</p>
       <button class="btn primary block" type="submit">Send tilbud</button></form>`;
   }
-  main.innerHTML = `<div class="wrap" style="max-width:1100px">
+  main.innerHTML = `<div class="wrap" style="max-width:1300px">
     <div class="crumbs"><a href="oppdrag.html">Oppdrag</a><span>/</span><a href="oppdrag.html?kat=${c.id}">${c.name}</a><span>/</span><span>${H.esc(j.title)}</span></div>
     <div class="two">
       <div class="stack" style="gap:20px">

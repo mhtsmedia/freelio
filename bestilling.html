@@ -73,7 +73,7 @@ if (H.requireLogin()) {
       dispute: ['bad', 'Saken er meldt. Pengene holdes til den er løst. Meldingene deres brukes som dokumentasjon.'],
       cancelled: ['warn', `Avbestilt. ${H.kr(o.refund)} blir refundert til deg innen 5 virkedager.`]
     }[st];
-    main.innerHTML = `<div class="wrap" style="max-width:1000px">
+    main.innerHTML = `<div class="wrap" style="max-width:1300px">
       <div class="crumbs"><a href="mine-oppdrag.html">Mine oppdrag</a><span>/</span><span>${H.esc(o.title)}</span></div>
       <div class="two">
         <div class="stack" style="gap:20px">

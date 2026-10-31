@@ -29,7 +29,7 @@ function render() {
   const list = H.S.cmp.map(H.byId).filter(Boolean);
   const main = document.getElementById('main');
   if (list.length < 2) {
-    main.innerHTML = `<div class="wrap section" style="max-width:900px"><h1>Sammenlign</h1><div class="empty"><b style="color:var(--fg)">Velg minst to frilansere</b><span>Trykk «Sammenlign» på kortene i søket. Du kan velge opptil tre.</span>${list.length ? `<span>Valgt nå: ${H.esc(list[0].name)}</span>` : ''}<a class="btn primary sm" href="sok.html">Gå til søk</a></div></div>`;
+    main.innerHTML = `<div class="wrap section" style="max-width:1200px"><h1>Sammenlign</h1><div class="empty"><b style="color:var(--fg)">Velg minst to frilansere</b><span>Trykk «Sammenlign» på kortene i søket. Du kan velge opptil tre.</span>${list.length ? `<span>Valgt nå: ${H.esc(list[0].name)}</span>` : ''}<a class="btn primary sm" href="sok.html">Gå til søk</a></div></div>`;
     return;
   }
   const rows = [

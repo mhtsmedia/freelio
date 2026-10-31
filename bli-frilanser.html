@@ -54,7 +54,7 @@ function form() {
   if (!upCat || !niches.includes(upCat)) upCat = mainCat;
   pf.forEach((x) => { if (!x.cat || !niches.includes(x.cat)) x.cat = mainCat; });
   const catOpts = (sel) => offered.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
-  document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1000px"><div class="two">
+  document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1300px"><div class="two">
     <form class="stack" style="gap:20px" id="pform" novalidate>
       <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
       <section class="card">${H.photoPicker(S.user)}</section>
