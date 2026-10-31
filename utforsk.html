@@ -36,13 +36,16 @@ function render() {
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'For deg' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
   const fl = H.all().filter((f) => H.inCat(f, cat));
   const posts = [];
-  fl.forEach((f, i) => { posts.push({ f, cap: f.cap, pal: f.pal, ago: (i % 5) + 1 + ' t' }); (CAPS[f.cat] || []).slice(0, 1).forEach((c, k) => posts.push({ f, cap: c, pal: f.pal + 3 + k, ago: (i % 3) + 1 + ' d' })); });
+  fl.forEach((f, i) => {
+    if (f.portfolio && f.portfolio.length) { f.portfolio.slice(0, 3).forEach((x, k) => posts.push({ f, img: k, cap: k === 0 ? (f.cap || f.role) : f.role, ago: (k + 1) + ' d' })); return; }
+    posts.push({ f, cap: f.cap, pal: f.pal, ago: (i % 5) + 1 + ' t' }); (CAPS[f.cat] || []).slice(0, 1).forEach((c, k) => posts.push({ f, cap: c, pal: f.pal + 3 + k, ago: (i % 3) + 1 + ' d' }));
+  });
   posts.sort((a, b) => (a.f.id + a.cap).length % 7 - (b.f.id + b.cap).length % 7);
   document.getElementById('feed').innerHTML = posts.length ? posts.map((p, n) => {
     const f = p.f; const key = f.id + ':' + n; const liked = H.S.liked.includes(key); const saved = H.S.saved.includes(f.id);
     return `<article class="post">
       <a class="post-h" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${p.ago}</span></span><span class="rate">${H.star()} ${H.num(f.rating.toFixed(1))}</span></a>
-      <a class="ph" href="frilanser.html?id=${f.id}" style="${H.phStyle(p.pal)}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"><span class="cap">${H.esc(p.cap)}</span></a>
+      ${p.img != null ? H.ph(f, p.img, '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"`, `<span class="cap">${H.esc(p.cap)}</span>`, true) : `<a class="ph" href="frilanser.html?id=${f.id}" style="${H.phStyle(p.pal)}" aria-label="${H.esc(p.cap)}, av ${H.esc(f.name)}"><span class="cap">${H.esc(p.cap)}</span></a>`}
       <div class="row" style="gap:2px">
         <button class="ibtn plain" data-a="like" data-v="${key}" aria-pressed="${liked}" aria-label="Lik" style="color:${liked ? 'var(--like)' : 'inherit'}">${H.icon('heart', 24, 1.8, liked ? 'currentColor' : 'none')}</button>
         <button class="ibtn plain" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="Lagre ${H.esc(f.name)}">${H.icon('save', 22, 1.8, saved ? 'currentColor' : 'none')}</button>

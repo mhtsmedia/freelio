@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/seed.sql` er demo-data, og `database/oppsett.sql` er begge samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/seed.sql` er demo-data, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, holder det å kjøre `bilder.sql`.
 
 ## Kjør lokalt
 
@@ -73,7 +73,7 @@ js/app.js       Felles kode: lagring, meny, cookies, kort, meldinger, assistent
 
 ## Neste steg mot ekte app
 
-1. **Bilder i portefølje.** Last opp porteføljebilder til Supabase Storage i stedet for eksempelbilder.
+1. **Video i portefølje.** Porteføljen tar bare bilder i dag.
 2. **Innlogging.** Vipps Login og BankID via en leverandør som Signicat eller Criipto (OpenID Connect).
 3. **Betaling med tilbakeholdt beløp.** Bruk en lisensiert leverandør med markedsplassløsning, for eksempel Stripe Connect, Adyen for Platforms eller Vipps MobilePay. Freelio skal ikke holde kundens penger selv, siden det krever konsesjon fra Finanstilsynet.
 4. **Kart.** Mapbox eller Leaflet med OpenStreetMap. Vis omtrentlig posisjon.

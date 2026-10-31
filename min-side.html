@@ -33,7 +33,9 @@ if (H.requireLogin()) {
     const saved = S.saved.map(H.byId).filter(Boolean);
     const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
     document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:900px">
-      <div class="row"><span class="av" style="width:64px;height:64px;background:var(--accent);color:var(--on-accent);font-size:22px">${H.esc(S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span><div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
+      <div class="row">${H.avatar({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo }, 64)}<div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
+
+      <section class="card">${H.photoPicker({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo })}</section>
 
       <section class="card stack"><h2 style="font-size:20px">Frilanserprofil</h2>
         ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div><a class="btn soft sm" href="frilanser.html?id=${S.profile.id}">Se</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul' : 'Publiser'}</button></div>`
@@ -59,6 +61,7 @@ if (H.requireLogin()) {
         <div class="row"><button class="btn soft sm" data-a="export">Last ned mine data</button>
         ${confirmDel ? `<span class="small">Er du sikker? Alt i denne nettleseren slettes.</span><button class="btn soft sm" data-a="noDel">Avbryt</button><button class="btn dark sm" data-a="del">Ja, slett</button>` : '<button class="btn ghost sm" data-a="askDel">Slett konto</button>'}</div></section>
     </div>`;
+    H.bindPhotoPicker(render);
   }
   Object.assign(H.actions, {
     logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },

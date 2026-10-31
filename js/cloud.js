@@ -84,14 +84,14 @@
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};
     if (C.uid) {
       const [prof, offers, orders, msgs, saved] = await Promise.all([
-        sb.from('profiles').select('id,name,created_at').eq('id', C.uid).maybeSingle(),
+        sb.from('profiles').select('id,name,avatar_url,created_at').eq('id', C.uid).maybeSingle(),
         sb.from('offers').select('*'),
         sb.from('orders').select('*').order('created_at'),
         sb.from('messages').select('*').order('created_at'),
         sb.from('saved').select('freelancer_id')
       ]);
       const p = must(prof);
-      S.user = Object.assign({}, S.user || {}, { id: C.uid, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
+      S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
 
       must(offers).forEach((o) => {
         const job = S.myJobs.find((j) => j.id === o.job_id);
@@ -102,7 +102,8 @@
       const orderRows = must(orders), msgRows = must(msgs);
       const customerIds = [...new Set(orderRows.filter((o) => o.customer_id !== C.uid).map((o) => o.customer_id).concat(msgRows.filter((m) => m.customer_id !== C.uid).map((m) => m.customer_id)))];
       const names = {};
-      if (customerIds.length) must(await sb.from('profiles').select('id,name').in('id', customerIds)).forEach((r) => (names[r.id] = r.name));
+      const photos = {};
+      if (customerIds.length) must(await sb.from('profiles').select('id,name,avatar_url').in('id', customerIds)).forEach((r) => { names[r.id] = r.name; photos[r.id] = r.avatar_url; });
 
       S.orders = orderRows.map((r) => Object.assign({}, r.data, {
         id: r.id, fid: r.freelancer_id, jobId: r.job_id, status: r.status, title: r.title, price: r.price, reviewed: r.reviewed, created: Date.parse(r.created_at),
@@ -112,11 +113,11 @@
       msgRows.forEach((m) => {
         const mine = m.customer_id === C.uid;
         const key = mine ? m.freelancer_id : 'c:' + m.customer_id;
-        if (!mine) S.partners[key] = { name: names[m.customer_id] || 'Kunde' };
+        if (!mine) S.partners[key] = { name: names[m.customer_id] || 'Kunde', photo: photos[m.customer_id] || null };
         const who = m.sender === 'system' ? 'sys' : (mine ? (m.sender === 'customer' ? 'me' : 'them') : (m.sender === 'freelancer' ? 'me' : 'them'));
         (S.threads[key] = S.threads[key] || []).push({ who, text: m.text, at: Date.parse(m.created_at) });
       });
-      orderRows.forEach((r) => { if (r.customer_id !== C.uid) S.partners['c:' + r.customer_id] = { name: names[r.customer_id] || 'Kunde' }; });
+      orderRows.forEach((r) => { if (r.customer_id !== C.uid) S.partners['c:' + r.customer_id] = { name: names[r.customer_id] || 'Kunde', photo: photos[r.customer_id] || null }; });
 
       S.saved = must(saved).map((r) => r.freelancer_id);
     }
@@ -133,7 +134,7 @@
     const threads = {}; Object.keys(S.threads).forEach((k) => (threads[k] = S.threads[k].length));
     const reviews = []; Object.values(S.extraReviews || {}).forEach((l) => l.forEach((r) => r[5] && reviews.push(r[5])));
     return {
-      user: !!S.user, profile: S.profile ? JSON.stringify(freelancerRow(S.profile)) : null,
+      user: !!S.user, photo: (S.user && S.user.photo) || null, profile: S.profile ? JSON.stringify(freelancerRow(S.profile)) : null,
       jobs: Object.fromEntries(S.myJobs.map((j) => [j.id, JSON.stringify(jobRow(j))])), offers,
       sent: Object.keys(S.sentOffers || {}),
       orders: Object.fromEntries(S.orders.map((o) => [o.id, JSON.stringify(orderRow(o))])),
@@ -147,6 +148,7 @@
     if (!C.uid) { snap = takeSnap(); return; }
     const next = takeSnap();
 
+    if (S.user && next.photo !== snap.photo) must(await sb.from('profiles').update({ avatar_url: next.photo }).eq('id', C.uid));
     if (S.profile && next.profile !== snap.profile) must(await sb.from('freelancers').upsert(freelancerRow(S.profile)));
 
     for (const j of S.myJobs) {
@@ -210,6 +212,20 @@
   H.flush = () => chain;
   H.go = async (url) => { await H.flush(); location.href = url; };
   H.refresh = async () => { await H.flush(); await C.pull(); };
+
+  /* ---------- bilder ---------- */
+  H.storeImage = async (kind, blob) => {
+    if (!C.uid) throw new Error('Du må være logget inn for å laste opp bilder.');
+    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${C.uid}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const r = await sb.storage.from('profiles').upload(path, blob, { contentType: blob.type, upsert: false });
+    if (r.error) throw new Error(/bucket not found/i.test(r.error.message) ? 'Bildelagringen er ikke satt opp. Kjør database/bilder.sql i Supabase.' : r.error.message);
+    return sb.storage.from('profiles').getPublicUrl(path).data.publicUrl;
+  };
+  H.dropImage = async (url) => {
+    const m = String(url || '').match(/\/object\/public\/profiles\/(.+)$/);
+    if (m && C.uid) await sb.storage.from('profiles').remove([decodeURIComponent(m[1])]);
+  };
 
   /* ---------- innlogging ---------- */
   C.signUp = async (name, email, password) => {

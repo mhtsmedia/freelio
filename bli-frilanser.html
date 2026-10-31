@@ -34,13 +34,17 @@ function intro() {
     <div class="card"><span class="n">2</span><h3>Få forespørsler</h3><p class="muted">Kunder booker deg direkte, eller du sender tilbud på oppdrag.</p></div>
     <div class="card"><span class="n">3</span><h3>Lever og få betalt</h3><p class="muted">Pengene er betalt inn før du starter. Utbetaling innen 2 virkedager etter godkjenning.</p></div></div></div>`;
 }
-let pkgs; const draft = {};
+let pkgs, pf; const draft = {};
+const PF_MAX = window.Cloud && Cloud.on ? 24 : 8;
+let pfBusy = '';
 function form() {
   const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
   pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
+  pf = pf || (p.portfolio || []).slice();
   document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1000px"><div class="two">
     <form class="stack" style="gap:20px" id="pform" novalidate>
       <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
+      <section class="card">${H.photoPicker(S.user)}</section>
       <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" value="${H.esc(p.name || S.user.name)}"></label>
       <label class="field"><span class="label">Hovedområde *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
       <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
@@ -51,18 +55,36 @@ function form() {
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
         ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
-      <label class="field"><span class="label">Porteføljebilder</span><input class="inp" type="file" accept="image/*,video/*" multiple style="padding-top:10px"><span class="hint">I demoen brukes eksempelbilder.</span></label>
+      <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
+        <p class="hint">Last opp dine beste bilder, gjerne 6 til ${PF_MAX}. Det første bildet blir forsidebildet på profilen og kortet ditt i søket.</p>
+        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="Bilde ${i + 1} i porteføljen"><button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${i === 0 ? '<span class="first">Forsidebilde</span>' : ''}</div>`).join('')}</div>` : ''}
+        <div class="row">${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
+      </fieldset>
       <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
       <div id="err"></div>
-      <div class="row"><button class="btn primary" type="submit">${S.profile ? 'Lagre endringer' : 'Publiser profil'}</button>${S.profile ? '<a class="btn soft" href="frilanser.html?id=${S.profile.id}">Se profilen</a>' : ''}</div>
+      <div class="row"><button class="btn primary" type="submit">${S.profile ? 'Lagre endringer' : 'Publiser profil'}</button>${S.profile ? `<a class="btn soft" href="frilanser.html?id=${S.profile.id}">Se profilen</a>` : ''}</div>
     </form>
-    <aside><div class="banner acc">${H.icon('shield', 20)}<span>Profilen får merket «BankID-verifisert» fordi du logget inn med ${H.esc(S.user.method)}.</span></div>
+    <aside><div class="banner acc">${H.icon('shield', 20)}<span>${S.user.method === 'E-post' ? 'Merket «BankID-verifisert» kommer når innlogging med Vipps og BankID er på plass.' : `Profilen får merket «BankID-verifisert» fordi du logget inn med ${H.esc(S.user.method)}.`}</span></div>
       <div class="card stack small"><b style="font-size:15px">Utbetaling</b><span class="muted">I den ferdige appen legger du inn kontonummer hos betalingspartneren vår. Freelio ser aldri kontonummeret ditt.</span><span class="muted">Du betaler 5 % av hvert oppdrag. Ingen faste kostnader.</span></div></aside>
   </div></div>`;
-  const pf = document.getElementById('pform');
-  pf.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal') { draft[e.target.id] = e.target.id === 'tags' ? e.target.value.split(',') : e.target.value; } });
-  pf.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') draft[e.target.id] = e.target.value; });
-  pf.addEventListener('submit', (e) => {
+  H.bindPhotoPicker(() => form());
+  const pfIn = document.getElementById('pfFile');
+  if (pfIn) pfIn.addEventListener('change', async () => {
+    const files = [...pfIn.files].slice(0, PF_MAX - pf.length); pfIn.value = '';
+    const big = window.Cloud && Cloud.on ? 1600 : 900, small = window.Cloud && Cloud.on ? 600 : 400;
+    for (let i = 0; i < files.length; i++) {
+      pfBusy = `Laster opp ${i + 1} av ${files.length} …`; form();
+      try {
+        const a = await H.resizeImage(files[i], big), b = await H.resizeImage(files[i], small);
+        pf.push({ url: await H.storeImage('portfolio', a.blob), thumb: await H.storeImage('thumb', b.blob), w: a.w, h: a.h });
+      } catch (e) { H.toast(files[i].name + ': ' + (e.message || 'kunne ikke lastes opp')); }
+    }
+    pfBusy = ''; form();
+  });
+  const pf_ = document.getElementById('pform');
+  pf_.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal') { draft[e.target.id] = e.target.id === 'tags' ? e.target.value.split(',') : e.target.value; } });
+  pf_.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') draft[e.target.id] = e.target.value; });
+  pf_.addEventListener('submit', (e) => {
     e.preventDefault();
     const v = (id) => document.getElementById(id).value.trim();
     const pk = pkgs.filter((x) => x[0].trim() && +String(x[1]).replace(/\D/g, '')).map((x) => [x[0].trim(), +String(x[1]).replace(/\D/g, ''), x[2].trim()]);
@@ -77,7 +99,7 @@ function form() {
     const old = S.profile || {};
     S.profile = Object.assign({ rating: 5.0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
       id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
-      tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
+      tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, portfolio: pf, photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();
     H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');
@@ -85,6 +107,7 @@ function form() {
   });
 }
 Object.assign(H.actions, {
+  rmPf: (v) => { const x = pf.splice(+v, 1)[0]; if (x) { H.dropImage(x.url); H.dropImage(x.thumb); } form(); },
   addPk: () => { pkgs.push(['', '', '']); form(); },
   rmPk: (v) => { pkgs.splice(+v, 1); form(); }
 });

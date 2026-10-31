@@ -108,18 +108,73 @@
   };
   // Samtalepartner: en frilanser, eller en kunde når du selv er frilanseren (nøkkel c:<kunde-id>)
   H.partner = (key) => {
-    if (String(key).startsWith('c:')) { const p = (S.partners || {})[key] || { name: 'Kunde' }; return { id: key, name: p.name, ini: String(p.name).split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase(), col: '#5B5F97', resp: '', customer: true }; }
+    if (String(key).startsWith('c:')) { const p = (S.partners || {})[key] || { name: 'Kunde' }; return { id: key, name: p.name, photo: p.photo || null, ini: String(p.name).split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase(), col: '#5B5F97', resp: '', customer: true }; }
     return H.byId(key);
   };
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
-  H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col};font-size:${Math.round(s * 0.36)}px">${H.esc(f.ini)}</span>`;
+  H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
+  // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
+  H.ph = (f, i = 0, cls = '', tag = 'span', attrs = '', inner = '', big = false) => {
+    const img = (f.portfolio || [])[i];
+    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${inner}</${tag}>`;
+    return `<${tag} class="ph ${cls}" style="${H.phStyle((f.pal || 0) + i)}" ${attrs}>${inner}</${tag}>`;
+  };
+
+  /* ---------- bilder (profil og portefølje) ---------- */
+  H.resizeImage = async (file, max, square = false, q = 0.82) => {
+    if (!file || !/^image\//.test(file.type)) throw new Error('Velg en bildefil (JPG, PNG eller WebP).');
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (e) { bmp = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Kunne ikke lese bildet. Prøv JPG eller PNG.')); i.src = URL.createObjectURL(file); }); }
+    const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+    let sx = 0, sy = 0, sw = w, sh = h;
+    if (square) { const m = Math.min(w, h); sx = (w - m) / 2; sy = (h - m) / 2; sw = sh = m; }
+    const k = Math.min(1, max / Math.max(sw, sh)), cw = Math.round(sw * k), ch = Math.round(sh * k);
+    const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+    cv.getContext('2d').drawImage(bmp, sx, sy, sw, sh, 0, 0, cw, ch);
+    const blob = await new Promise((r) => cv.toBlob((b) => (b && b.type === 'image/webp' ? r(b) : cv.toBlob(r, 'image/jpeg', q)), 'image/webp', q));
+    return { blob, w: cw, h: ch };
+  };
+  // Lagrer et bilde og gir tilbake en adresse. I demo-modus blir det en data-URL. cloud.js bytter til Supabase Storage.
+  H.storeImage = (kind, blob) => new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+  H.dropImage = async () => {};
+  H.photoNote = 'Profilbildet skal være et tydelig bilde av deg selv, der ansiktet ditt synes. Ikke bruk logo, tegning, kjæledyr eller bilder av arbeid du har gjort. Da vet kundene hvem de møter.';
+  H.photoPicker = (who) => `<div class="photo-pick">
+      ${H.avatar(who, 88)}
+      <div class="stack grow" style="gap:8px">
+        <b style="font-size:15px">Profilbilde</b>
+        <p class="hint">${H.photoNote}</p>
+        <label class="check"><input type="checkbox" id="photoOk"> <span>Bildet er av meg</span></label>
+        <div class="row"><label class="btn soft sm" for="photoFile" id="photoBtn">${who.photo ? 'Bytt bilde' : 'Last opp bilde'}</label><input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" class="sr">${who.photo ? '<button type="button" class="btn link small" data-a="photoRemove">Fjern bildet</button>' : ''}</div>
+        <span class="err-text" id="photoErr" role="alert"></span>
+      </div>
+    </div>`;
+  H.bindPhotoPicker = (done) => {
+    const inp = document.getElementById('photoFile'); if (!inp) return;
+    const err = (t) => { document.getElementById('photoErr').textContent = t; };
+    inp.addEventListener('click', (e) => { if (!document.getElementById('photoOk').checked) { e.preventDefault(); err('Kryss av for at bildet er av deg før du laster opp.'); } });
+    inp.addEventListener('change', async () => {
+      const file = inp.files[0]; inp.value = ''; if (!file) return;
+      if (!document.getElementById('photoOk').checked) { err('Kryss av for at bildet er av deg før du laster opp.'); return; }
+      const btn = document.getElementById('photoBtn'); btn.textContent = 'Laster opp …';
+      try {
+        const { blob } = await H.resizeImage(file, 512, true);
+        const url = await H.storeImage('avatar', blob);
+        const old = S.user && S.user.photo;
+        if (S.user) S.user.photo = url;
+        if (S.profile) S.profile.photo = url;
+        H.save(); H.dropImage(old); H.mountHeader();
+        H.toast('Profilbildet er oppdatert'); done && done();
+      } catch (e) { err(e.message || 'Kunne ikke laste opp bildet.'); btn.textContent = 'Last opp bilde'; }
+    });
+  };
   H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
 
   H.fCard = (f, opts = {}) => {
     const saved = S.saved.includes(f.id);
     const inCmp = S.cmp.includes(f.id);
     return `<article class="fcard">
-      <a href="frilanser.html?id=${f.id}" class="ph" style="${H.phStyle(f.pal)}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"></a>
+      ${H.ph(f, 0, '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
       <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.num(f.rating.toFixed(1))}</span></div>
@@ -292,6 +347,7 @@
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
+    photoRemove: () => { const old = S.user && S.user.photo; if (S.user) S.user.photo = null; if (S.profile) S.profile.photo = null; H.save(); H.dropImage(old); H.mountHeader(); H.toast('Profilbildet er fjernet'); H.rerender(); },
     cookie: (v) => {
       S.cookie = v; S.cookies = { analyse: v === 'yes', ads: v === 'yes' }; H.save();
       const c = document.getElementById('cookie'); if (c) { c.classList.add('out'); setTimeout(() => c.remove(), 300); }

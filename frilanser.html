@@ -36,7 +36,8 @@ function render() {
   const dist = [[5, 0.82], [4, 0.13], [3, 0.03], [2, 0.01], [1, 0.01]];
   const tabs = { work: 'Portefølje', pk: 'Pakker og priser', rv: `Omtaler (${f.reviews})`, about: 'Om' };
   const body = {
-    work: `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
+    work: (f.portfolio && f.portfolio.length) ? `<div class="gallery">${f.portfolio.map((x, i) => `<a class="ph has-img" href="${H.esc(x.url)}" target="_blank" rel="noopener" aria-label="Åpne bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join('')}</div>`
+      : f.demo === false ? `<div class="empty">${H.esc(H.first(f.name))} har ikke lastet opp bilder ennå.</div>` : `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
     pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}
       <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
     rv: `<div class="stack" style="gap:20px"><div class="banner acc">${H.icon('spark', 20)}<span><b>Oppsummert av assistenten.</b> ${H.esc(f.sum)}</span></div>
@@ -48,9 +49,9 @@ function render() {
   const similar = H.all().filter((x) => x.id !== f.id && (f.niches || [f.cat]).some((n) => H.inCat(x, n))).slice(0, 4);
   main.innerHTML = `
   <div class="wrap"><div class="crumbs"><a href="index.html">Forside</a><span>/</span><a href="sok.html?kat=${f.cat}">${H.cat(f.cat).name}</a><span>/</span><span>${H.esc(f.name)}</span></div></div>
-  <div class="wrap" style="margin-top:12px"><div class="ph cover" style="${H.phStyle(f.pal)};border-radius:20px"></div>
-    <div class="prof-head" style="padding-inline:20px"><span class="av" style="width:104px;height:104px;background:${f.col};font-size:34px;box-shadow:0 0 0 5px var(--bg)">${H.esc(f.ini)}</span>
-      <div class="stack grow" style="gap:4px;padding-bottom:6px"><h1>${H.esc(f.name)}</h1><span class="muted">${H.esc(f.role)} · ${H.esc(f.area)} · ${f.km} km fra deg</span></div></div>
+  <div class="wrap" style="margin-top:12px">${H.ph(f, 0, 'cover', 'div', 'style="border-radius:20px"', '', true)}
+    <div class="prof-head" style="padding-inline:20px">${H.avatar(f, 104).replace('class="av" style="', 'class="av" style="box-shadow:0 0 0 5px var(--bg);')}
+      <div class="stack grow" style="gap:4px;padding-bottom:6px"><h1>${H.esc(f.name)}</h1><span class="muted">${H.esc(f.role)} · ${H.esc(f.area)}${f.km ? ` · ${f.km} km fra deg` : ""}</span></div></div>
   </div>
   <div class="wrap prof-grid">
     <div class="stack" style="gap:20px">
