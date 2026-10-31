@@ -107,17 +107,17 @@
 
       S.orders = orderRows.map((r) => Object.assign({}, r.data, {
         id: r.id, fid: r.freelancer_id, jobId: r.job_id, status: r.status, title: r.title, price: r.price, reviewed: r.reviewed, created: Date.parse(r.created_at),
-        role: r.customer_id === C.uid ? 'customer' : 'freelancer', customerId: r.customer_id, customerName: names[r.customer_id] || 'Kunde'
+        role: r.customer_id === C.uid ? 'customer' : 'freelancer', customerId: r.customer_id, customerName: names[r.customer_id] || 'Slettet bruker'
       }));
 
       msgRows.forEach((m) => {
         const mine = m.customer_id === C.uid;
         const key = mine ? m.freelancer_id : 'c:' + m.customer_id;
-        if (!mine) S.partners[key] = { name: names[m.customer_id] || 'Kunde', photo: photos[m.customer_id] || null };
+        if (!mine) S.partners[key] = { name: names[m.customer_id] || 'Slettet bruker', photo: photos[m.customer_id] || null, gone: !names[m.customer_id] };
         const who = m.sender === 'system' ? 'sys' : (mine ? (m.sender === 'customer' ? 'me' : 'them') : (m.sender === 'freelancer' ? 'me' : 'them'));
         (S.threads[key] = S.threads[key] || []).push({ who, text: m.text, at: Date.parse(m.created_at) });
       });
-      orderRows.forEach((r) => { if (r.customer_id !== C.uid) S.partners['c:' + r.customer_id] = { name: names[r.customer_id] || 'Kunde', photo: photos[r.customer_id] || null }; });
+      orderRows.forEach((r) => { if (r.customer_id !== C.uid) S.partners['c:' + r.customer_id] = { name: names[r.customer_id] || 'Slettet bruker', photo: photos[r.customer_id] || null, gone: !names[r.customer_id] }; });
 
       S.saved = must(saved).map((r) => r.freelancer_id);
     }

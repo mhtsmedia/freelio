@@ -52,7 +52,7 @@ create table if not exists public.offers (
 -- Bestillinger med trygg betaling
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
-  customer_id uuid not null references public.profiles (id) on delete cascade,
+  customer_id uuid not null,
   freelancer_id text not null references public.freelancers (id) on delete cascade,
   job_id uuid references public.jobs (id) on delete set null,
   status text not null default 'paid' check (status in ('paid', 'delivered', 'approved', 'dispute', 'cancelled')),
@@ -66,7 +66,7 @@ create table if not exists public.orders (
 -- Meldinger mellom kunde og frilanser
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
-  customer_id uuid not null references public.profiles (id) on delete cascade,
+  customer_id uuid not null,
   freelancer_id text not null references public.freelancers (id) on delete cascade,
   sender text not null check (sender in ('customer', 'freelancer', 'system')),
   text text not null check (char_length(text) between 1 and 4000),
@@ -77,7 +77,7 @@ create table if not exists public.messages (
 create table if not exists public.reviews (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null unique references public.orders (id) on delete cascade,
-  author_id uuid not null references public.profiles (id) on delete cascade,
+  author_id uuid not null,
   freelancer_id text not null references public.freelancers (id) on delete cascade,
   author_name text not null default '',
   stars integer not null check (stars between 1 and 5),
@@ -135,10 +135,17 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (select 1 from public.jobs where id = jid and owner_id = auth.uid())
 $$;
 
+-- Samtaler, bestillinger og omtaler blir stående når en kunde sletter kontoen sin.
+-- Frilanseren ser dem fortsatt, med navnet «Slettet bruker».
+alter table public.orders drop constraint if exists orders_customer_id_fkey;
+alter table public.messages drop constraint if exists messages_customer_id_fkey;
+alter table public.reviews drop constraint if exists reviews_author_id_fkey;
+
 -- Lar en bruker slette sin egen konto og alt som hører til den
 create or replace function public.delete_my_account()
 returns void language sql security definer set search_path = public as $$
-  delete from auth.users where id = auth.uid()
+  update public.reviews set author_name = 'Tidligere kunde' where author_id = auth.uid();
+  delete from auth.users where id = auth.uid();
 $$;
 
 revoke all on function public.delete_my_account() from public, anon;

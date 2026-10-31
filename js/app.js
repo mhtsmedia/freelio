@@ -53,6 +53,7 @@
     'c-drone': '<path d="M2 5h7M15 5h7M5.5 5v2.5M18.5 5v2.5"/><rect x="3.5" y="7.5" width="4" height="3" rx="1"/><rect x="16.5" y="7.5" width="4" height="3" rx="1"/><path d="M7.5 9.5h2c0-1.6 1.1-2.8 2.5-2.8s2.5 1.2 2.5 2.8h2M7.5 9.5l2.5 3h4l2.5-3"/><path d="M9.6 12.5 8 19M14.4 12.5 16 19"/><rect x="10.3" y="14" width="3.4" height="3" rx=".8"/>',
     'c-reklamefilm': '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9 2.4 5.6l16.8-3 .6 3.4"/><path d="M6.8 4.8 8.9 8M12 3.9l2.1 3.2"/><path d="M10.5 12.5v5l4-2.5z"/>',
     'c-some': '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 5h3"/><path d="M9 10.5c0-.8.6-1.5 1.5-1.5h3c.9 0 1.5.7 1.5 1.5v2c0 .8-.6 1.5-1.5 1.5h-2L10 15.5V14h0c-.6 0-1-.7-1-1.5z"/><path d="M8.5 18.5h7"/>',
+    clipboard: '<rect x="4.5" y="4" width="15" height="17.5" rx="2.5"/><path d="M9 4V2.8h1.6a1.4 1.4 0 0 1 2.8 0H15V5.5H9z"/><path d="m7.5 10 1.2 1.2 2-2M7.5 14.5l1.2 1.2 2-2M13 10.2h3.5M13 14.7h3.5"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
   };
   H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
@@ -123,7 +124,7 @@
   };
   // Samtalepartner: en frilanser, eller en kunde når du selv er frilanseren (nøkkel c:<kunde-id>)
   H.partner = (key) => {
-    if (String(key).startsWith('c:')) { const p = (S.partners || {})[key] || { name: 'Kunde' }; return { id: key, name: p.name, photo: p.photo || null, ini: String(p.name).split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase(), col: '#5B5F97', resp: '', customer: true }; }
+    if (String(key).startsWith('c:')) { const p = (S.partners || {})[key] || { name: 'Kunde' }; return { id: key, name: p.name, photo: p.photo || null, ini: String(p.name).split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase(), col: '#5B5F97', resp: '', customer: true, gone: !!p.gone }; }
     return H.byId(key);
   };
   H.ratingTxt = (f) => (f.reviews > 0 ? H.num((+f.rating).toFixed(1)) : 'Ny');
@@ -408,11 +409,11 @@
         <a class="logo" href="index.html" aria-label="Freelio, til forsiden">${H.logo()}</a>
         <nav class="mainnav" aria-label="Hovedmeny">${nav.map(([h, t]) => `<a href="${h}" ${cur(h)}>${t}</a>`).join('')}</nav>
         <div class="usernav">
-          <button class="ibtn theme-btn" data-a="theme" aria-label="${dark ? 'Bytt til lys modus' : 'Bytt til mørk modus'}" title="${dark ? 'Lys modus' : 'Mørk modus'}">${H.icon(dark ? 'sun' : 'moon', 19)}</button>
-          <a class="ibtn hide-md" href="assistent.html" aria-label="Assistent" title="Assistent">${H.icon('spark', 19)}</a>
-          <a class="ibtn hide-sm" href="meldinger.html" aria-label="Meldinger${unread ? ', ' + unread + ' uleste' : ''}" title="Meldinger">${H.icon('chat', 19)}${unread ? '<span class="dot"></span>' : ''}</a>
-          <a class="ibtn hide-sm" href="mine-oppdrag.html" aria-label="Mine oppdrag${act ? ', ' + act + ' venter på deg' : ''}" title="Mine oppdrag">${H.icon('bag', 19)}${act ? '<span class="dot"></span>' : ''}</a>
-          <a class="ibtn" href="${S.user ? 'min-side.html' : 'logg-inn.html'}" aria-label="${S.user ? 'Min side' : 'Logg inn'}" title="${S.user ? 'Min side' : 'Logg inn'}">${H.icon('user', 19)}</a>
+          <button class="ibtn lbl theme-btn" data-a="theme" aria-label="${dark ? 'Bytt til lys modus' : 'Bytt til mørk modus'}" title="${dark ? 'Lys modus' : 'Mørk modus'}">${H.icon(dark ? 'sun' : 'moon', 19)}<span class="lbl-t">${dark ? 'Lys' : 'Mørk'}</span></button>
+          <a class="ibtn lbl hide-md" href="assistent.html" aria-label="Assistent" title="Assistent">${H.icon('spark', 19)}<span class="lbl-t">Assistent</span></a>
+          <a class="ibtn lbl hide-sm" href="meldinger.html" aria-label="Meldinger${unread ? ', ' + unread + ' uleste' : ''}" title="Meldinger">${H.icon('chat', 19)}<span class="lbl-t">Meldinger</span>${unread ? '<span class="dot"></span>' : ''}</a>
+          <a class="ibtn lbl hide-sm" href="mine-oppdrag.html" aria-label="Mine oppdrag${act ? ', ' + act + ' venter på deg' : ''}" title="Mine oppdrag">${H.icon('clipboard', 19)}<span class="lbl-t">Mine oppdrag</span>${act ? '<span class="dot"></span>' : ''}</a>
+          <a class="ibtn lbl" href="${S.user ? 'min-side.html' : 'logg-inn.html'}" aria-label="${S.user ? 'Min side' : 'Logg inn'}" title="${S.user ? 'Min side' : 'Logg inn'}">${H.icon('user', 19)}<span class="lbl-t">${S.user ? 'Min side' : 'Logg inn'}</span></a>
           <a class="btn primary sm hide-sm" href="ny-annonse.html" style="margin-left:8px">Legg ut oppdrag</a>
         </div>
         <button class="ibtn menu-btn" data-a="menu" aria-expanded="${!!wasOpen}" aria-label="Meny">${H.icon(wasOpen ? 'close' : 'menu', 20)}</button>

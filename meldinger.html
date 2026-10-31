@@ -47,7 +47,7 @@ if (H.requireLogin()) {
         ${t.length ? '' : `<div class="empty" style="border:0">${f.customer ? 'Ingen meldinger ennå.' : `Skriv hva du trenger, når og hvor. ${H.esc(H.first(f.name))} svarer med pris og ledighet.`}</div>`}
         ${t.map((m) => `<div class="bubble ${m.who}">${H.esc(m.text)}</div>`).join('')}${typing ? `<div class="typing">${H.esc(H.first(f.name))} skriver …</div>` : ''}</div>
         ${f.customer ? '' : `<div class="chips scroll" style="padding:8px 12px 0">${['Er du ledig 14.11?', 'Hva koster det?', 'Kan vi ta en prat på telefon?'].map((q) => `<button class="chip" data-a="quick" data-v="${q}">${q}</button>`).join('')}</div>`}
-        <form class="composer" id="cform"><label class="sr" for="msg">Melding</label><input id="msg" placeholder="Skriv en melding …" autocomplete="off"><button class="send" aria-label="Send">${H.icon('arrow', 20, 2)}</button></form>`;
+        ${f.gone ? `<div class="hint" style="padding:14px 16px;border-top:1px solid var(--line);text-align:center">Kunden har slettet kontoen sin. Du kan lese samtalen, men ikke svare.</div>` : `<form class="composer" id="cform"><label class="sr" for="msg">Melding</label><input id="msg" placeholder="Skriv en melding …" autocomplete="off"><button class="send" aria-label="Send">${H.icon('arrow', 20, 2)}</button></form>`}`;
     }
     box.innerHTML = `<div class="threads">${list}</div><div class="convo">${convo}</div>`;
     const m = document.getElementById('msgs'); if (m) m.scrollTop = m.scrollHeight;

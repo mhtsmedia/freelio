@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/seed.sql` er demo-data, `database/video.sql` slår på video i porteføljen, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, holder det å kjøre `bilder.sql` og `video.sql`.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/seed.sql` er demo-data, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, holder det å kjøre `bilder.sql`, `video.sql` og `meldinger.sql`.
 
 ## Kjør lokalt
 
