@@ -71,19 +71,24 @@
     extraReviews: {}, profile: null, sentOffers: {}, asst: []
   });
   let mem = null;
-  H.load = () => {
-    if (mem) return mem;
+  H.load = (force) => {
+    if (mem && !force) return mem;
     try { const raw = localStorage.getItem(KEY); mem = raw ? Object.assign(DEFAULTS(), JSON.parse(raw)) : DEFAULTS(); }
     catch (e) { mem = DEFAULTS(); }
     return mem;
   };
-  H.save = () => { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { /* privat modus: data lever bare i denne fanen */ } };
+  H.saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { /* privat modus: data lever bare i denne fanen */ } };
+  // Byttes ut av cloud.js når databasen er koblet til
+  H.save = H.saveLocal;
+  H.flush = () => Promise.resolve();
+  H.go = (url) => { location.href = url; };
+  H.uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(36).slice(2));
   H.reset = () => { mem = DEFAULTS(); H.save(); };
   const S = (H.S = H.load());
 
   /* ---------- frilansere ---------- */
   H.all = () => {
-    const list = D.FREELANCERS.map((f) => {
+    const list = D.FREELANCERS.filter((f) => !S.profile || f.id !== S.profile.id).map((f) => {
       const extra = S.extraReviews[f.id] || [];
       return extra.length ? Object.assign({}, f, { rv: extra.concat(f.rv), reviews: f.reviews + extra.length }) : f;
     });
@@ -92,7 +97,7 @@
   };
   H.byId = (id) => H.all().find((f) => f.id === id);
   // Rydd bort data som peker til frilansere som ikke finnes lenger (for eksempel fra en eldre versjon)
-  (function prune() {
+  H.prune = function prune() {
     const ok = (id) => !!H.byId(id);
     S.orders = S.orders.filter((o) => ok(o.fid));
     Object.keys(S.threads).forEach((id) => { if (!ok(id)) delete S.threads[id]; });
@@ -100,7 +105,12 @@
     S.myJobs.forEach((j) => { j.offersList = (j.offersList || []).filter((o) => ok(o.fid)); });
     Object.keys(S.extraReviews).forEach((id) => { if (!ok(id)) delete S.extraReviews[id]; });
     if (S.profile && !D.CATS.some((c) => c.id === S.profile.cat)) S.profile.cat = D.CATS[0].id;
-  })();
+  };
+  // Samtalepartner: en frilanser, eller en kunde når du selv er frilanseren (nøkkel c:<kunde-id>)
+  H.partner = (key) => {
+    if (String(key).startsWith('c:')) { const p = (S.partners || {})[key] || { name: 'Kunde' }; return { id: key, name: p.name, ini: String(p.name).split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase(), col: '#5B5F97', resp: '', customer: true }; }
+    return H.byId(key);
+  };
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col};font-size:${Math.round(s * 0.36)}px">${H.esc(f.ini)}</span>`;
   H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
@@ -133,20 +143,22 @@
 
   /* ---------- bestillinger ---------- */
   H.createOrder = (o) => {
-    const order = Object.assign({ id: 'o' + Date.now(), status: 'paid', reviewed: false, delivered: '', created: Date.now() }, o);
+    const order = Object.assign({ id: H.uid(), role: 'customer', status: 'paid', reviewed: false, delivered: '', created: Date.now() }, o);
     S.orders.push(order); H.save();
     return order;
   };
   H.orderById = (id) => S.orders.find((o) => o.id === id);
-  H.actionCount = () => S.orders.filter((o) => o.status === 'delivered' || (o.status === 'approved' && !o.reviewed)).length
+  H.actionCount = () => S.orders.filter((o) => (o.role === 'freelancer' ? ['paid', 'dispute'].includes(o.status) : o.status === 'delivered' || (o.status === 'approved' && !o.reviewed))).length
     + S.myJobs.filter((j) => j.status === 'open' && H.jobOffers(j).some((o) => !o.seen)).length;
 
   /* ---------- meldinger ---------- */
-  H.unread = () => Object.keys(S.threads).filter((fid) => { const t = S.threads[fid]; return t.length && t[t.length - 1].who === 'them' && (S.readThreads[fid] || 0) < t.length; }).length;
+  H.unread = () => Object.keys(S.threads).filter((fid) => { const t = S.threads[fid]; return H.partner(fid) && t.length && t[t.length - 1].who === 'them' && (S.readThreads[fid] || 0) < t.length; }).length;
   H.sendMessage = (fid, text, onChange) => {
     text = String(text).trim(); if (!text) return;
-    const f = H.byId(fid); if (!f) return;
+    const f = H.partner(fid); if (!f) return;
     (S.threads[fid] = S.threads[fid] || []).push({ who: 'me', text, at: Date.now() });
+    // Bare demo-frilansere svarer automatisk. Ekte personer svarer selv.
+    const auto = !f.customer && f.demo !== false;
     const t = text.toLowerCase(); let reply;
     if (/\d{3}\s?\d{2}\s?\d{3}|@|kontonummer|vipps meg/.test(t)) {
       S.threads[fid].push({ who: 'sys', text: 'Det ser ut som du deler kontaktinfo eller vil betale utenfor Freelio. Da er ikke betalingen beskyttet, og du mister retten til refusjon.', at: Date.now() });
@@ -154,6 +166,7 @@
     } else if (/pris|koster|kost|tilbud/.test(t)) reply = f.pk.map((p) => p[0] + ': ' + H.kr(p[1])).join('\n') + '\n\nDu kan booke en pakke direkte fra profilen min.';
     else if (/ledig|dato|når/.test(t)) reply = f.free ? 'Jeg har ledige datoer i november og desember. Hvilken dato tenker du på?' : 'Jeg er ganske booket fremover, men har ledig fra midten av desember.';
     else reply = `Takk for meldingen! Fortell gjerne litt mer om oppdraget, så kommer jeg med et forslag.`;
+    if (!auto) { H.save(); onChange && onChange('sent'); return; }
     H.save(); onChange && onChange('typing');
     setTimeout(() => { S.threads[fid].push({ who: 'them', text: reply, at: Date.now() }); H.save(); onChange && onChange('reply'); H.mountHeader(); }, 1300);
   };
@@ -324,6 +337,7 @@
       sk.forEach((n) => n.removeAttribute('aria-busy'));
       if (render) render();
       setTimeout(() => document.body.classList.remove('reveal'), 1000);
+      if (H.flashNow) { H.toast(H.flashNow); H.flashNow = null; }
       try { const f = sessionStorage.getItem('freelio:flash'); if (f) { sessionStorage.removeItem('freelio:flash'); H.toast(f); } } catch (e) {}
     };
     if (sk.length) { sk.forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); }); setTimeout(go, H.LOAD_MS); }

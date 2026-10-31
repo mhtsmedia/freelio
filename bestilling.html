@@ -20,9 +20,12 @@
 <div id="site-footer"></div>
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js"></script>
+<script src="js/cloud.js"></script>
 <script src="js/media.js"></script>
-<script>
+<script type="text/freelio">
 if (H.requireLogin()) {
   const o = H.orderById(H.qs('id'));
   let stars = 0, text = '', confirmDispute = false, reason = '', confirmCancel = false;
@@ -30,7 +33,7 @@ if (H.requireLogin()) {
   const LOCK_UNTIL_APPROVED = true;
   let pending = [], busy = 0, note = '', lb = -1;
   const urls = {};
-  const blobURL = async (id, kind) => { const k = id + kind; if (!urls[k]) { const r = await Media.get(id); if (!r) return ''; urls[k] = URL.createObjectURL(r[kind]); } return urls[k]; };
+  const blobURL = async (id, kind) => { const x = (o.files || []).concat(pending).find((m) => m.id === id); return x ? Media.url(o.id, x, kind) : ''; };
   const total = (fs) => Media.size(fs.reduce((n, x) => n + x.size, 0));
   const tile = (x, i, removable) => `<div class="mtile">
       <button class="mthumb" ${removable ? '' : `data-a="open" data-v="${i}"`} aria-label="${removable ? '' : 'Åpne '}${H.esc(x.name)}"><img data-thumb="${x.id}" alt="" loading="lazy">${x.type === 'video' ? `<span class="mplay">${H.icon('play', 14, 2, 'currentColor')} ${Media.dur(x.duration)}</span>` : ''}</button>
@@ -44,6 +47,11 @@ if (H.requireLogin()) {
     const main = document.getElementById('main');
     if (!o) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke bestillingen. <a class="btn primary sm" href="mine-oppdrag.html">Til mine oppdrag</a></div></div>`; return; }
     const f = H.byId(o.fid); const fn = H.esc(H.first(f.name));
+    // Rollen avgjør hva du ser: kunden godkjenner, frilanseren leverer. For demo-frilansere leverer kunden selv.
+    const asFreelancer = o.role === 'freelancer';
+    const canDeliver = asFreelancer || f.demo !== false;
+    const cn = H.esc(H.first(o.customerName || 'Kunden'));
+    const chatKey = asFreelancer ? 'c:' + o.customerId : f.id;
     const st = o.status; const fee = Math.round(o.price * H.FEE);
     const reached = { paid: 1, delivered: 2, dispute: 2, approved: 4, cancelled: 1 }[st];
     const steps = [
@@ -52,7 +60,13 @@ if (H.requireLogin()) {
       ['Godkjent av deg', st === 'dispute' ? `${fn} har fått beskjed og har 3 dager på å rette opp.` : 'Du har 5 dager på å se over. Svarer du ikke, godkjennes leveransen automatisk.'],
       ['Utbetalt', `${fn} får ${H.kr(o.price - fee)} innen 2 virkedager.`]
     ];
-    const banner = {
+    const banner = asFreelancer ? {
+      paid: ['acc', `${cn} har betalt ${H.kr(o.price)}. Pengene holdes trygt. Last opp leveransen når jobben er gjort.`],
+      delivered: ['acc', `Leveransen er sendt. Venter på at ${cn} godkjenner.`],
+      approved: ['ok', `Godkjent. Du får ${H.kr(o.price - fee)} utbetalt innen 2 virkedager.`],
+      dispute: ['bad', `${cn} har meldt fra om feil. Se meldingene og last opp en ny leveranse.`],
+      cancelled: ['warn', 'Kunden har avbestilt oppdraget.']
+    }[st] : {
       paid: ['acc', `Pengene er trygge. ${fn} får dem først når du har godkjent leveransen.`],
       delivered: ['acc', 'Leveransen er klar. Se over og godkjenn, eller meld fra hvis noe ikke er som avtalt.'],
       approved: ['ok', o.reviewed ? 'Fullført og vurdert. Takk for at du bruker Freelio!' : `Fullført. ${fn} har fått betalt. Gi gjerne en omtale.`],
@@ -63,15 +77,15 @@ if (H.requireLogin()) {
       <div class="crumbs"><a href="mine-oppdrag.html">Mine oppdrag</a><span>/</span><span>${H.esc(o.title)}</span></div>
       <div class="two">
         <div class="stack" style="gap:20px">
-          <div class="row">${H.avatar(f, 56)}<div class="stack grow" style="gap:2px"><h1 style="font-size:28px">${H.esc(o.title)}</h1><span class="muted">${H.esc(f.name)} · ${H.esc(o.date)}${o.place ? ' · ' + H.esc(o.place) : ''}</span></div></div>
+          <div class="row">${H.avatar(asFreelancer ? H.partner(chatKey) : f, 56)}<div class="stack grow" style="gap:2px"><h1 style="font-size:28px">${H.esc(o.title)}</h1><span class="muted">${asFreelancer ? 'Kunde: ' + H.esc(o.customerName || 'Kunde') : H.esc(f.name)} · ${H.esc(o.date)}${o.place ? ' · ' + H.esc(o.place) : ''}</span></div></div>
           <div class="banner ${banner[0]}">${H.icon('shield', 20)}<span>${banner[1]}</span></div>
           <ol class="steps">${steps.map((s, i) => { const n = i + 1; const cls = st === 'dispute' && n === 3 ? 'warn' : n <= reached ? 'done' : n === reached + 1 ? 'cur' : ''; return `<li class="${cls}"><div class="rail"><span class="n">${cls === 'done' ? H.icon('check', 14, 3) : n}</span>${n < 4 ? '<span class="ln"></span>' : ''}</div><div class="t"><b>${s[0]}</b><span class="muted small">${s[1]}</span></div></li>`; }).join('')}</ol>
-          ${st === 'paid' ? `<section class="card stack" style="gap:16px"><div class="row" style="justify-content:space-between"><b style="font-size:16px">Lever jobben</b><span class="pill">Frilanserens visning (demo)</span></div>
+          ${(st === 'paid' || (st === 'dispute' && asFreelancer)) && canDeliver ? `<section class="card stack" style="gap:16px"><div class="row" style="justify-content:space-between"><b style="font-size:16px">Lever jobben</b>${asFreelancer ? '' : '<span class="pill">Frilanserens visning (demo)</span>'}</div>
             <label class="drop" id="drop"><input type="file" id="files" accept="image/*,video/*" multiple class="sr">${H.icon('plus', 22, 2)}<b>Last opp bilder eller video</b><span class="meta">Dra filene hit, eller klikk for å velge. Originalene lagres i full kvalitet. Kunden ser en komprimert forhåndsvisning.</span></label>
             ${busy ? `<div class="row small muted"><span class="spin"></span>Komprimerer ${busy} ${busy === 1 ? 'fil' : 'filer'} …</div>` : ''}
             ${pending.length ? `<div class="mlist">${pending.map((x, i) => tile(x, i, true)).join('')}</div><span class="meta">${pending.length} ${pending.length === 1 ? 'fil' : 'filer'} · originaler ${total(pending)} · forhåndsvisninger ${Media.size(pending.reduce((n, x) => n + x.psize, 0))}</span>` : ''}
             <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="dnote" rows="2" placeholder="F.eks. Her er de redigerte bildene. Si fra hvis du vil ha noe justert.">${H.esc(note)}</textarea></label>
-            <div class="row"><button class="btn primary" data-a="sendDelivery" ${pending.length && !busy ? '' : 'disabled'}>Send leveranse</button><button class="btn link" data-a="sampleFiles" ${busy ? 'disabled' : ''}>Bruk eksempelbilder</button></div>
+            <div class="row"><button class="btn primary" data-a="sendDelivery" ${pending.length && !busy ? '' : 'disabled'}>Send leveranse</button>${asFreelancer ? '' : `<button class="btn link" data-a="sampleFiles" ${busy ? 'disabled' : ''}>Bruk eksempelbilder</button>`}</div>
           </section>` : ''}
           ${['delivered', 'approved', 'dispute'].includes(st) ? (o.files && o.files.length ? `<section class="card stack" style="gap:16px">
             <div class="row" style="justify-content:space-between"><div class="stack" style="gap:0"><b style="font-size:16px">Leveranse</b><span class="meta">${o.files.length} ${o.files.length === 1 ? 'fil' : 'filer'} · ${total(o.files)} i full kvalitet</span></div>
@@ -81,7 +95,7 @@ if (H.requireLogin()) {
             <span class="meta">Visningen her er komprimert så siden laster raskt. ${locked() ? 'Originalene kan lastes ned etter godkjenning.' : 'Last ned for å få originalene i full kvalitet.'}</span></section>`
             : `<div class="card stack"><b>Leveranse</b><div class="gallery" style="grid-template-columns:repeat(4,minmax(0,1fr))">${[0, 1, 2, 3].map((i) => `<span class="ph" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div><span class="muted small">${H.esc(o.delivered)}</span></div>`) : ''}
           ${st === 'delivered' && confirmDispute ? `<div class="card stack"><b>Hva er ikke som avtalt?</b><textarea class="inp" id="reason" rows="3" placeholder="Beskriv kort hva som mangler eller er feil">${H.esc(reason)}</textarea><div class="row"><button class="btn soft sm" data-a="cancelDispute">Avbryt</button><button class="btn dark sm" data-a="dispute">Send til ${fn}</button></div></div>` : ''}
-          ${st === 'approved' && !o.reviewed ? `<div class="card stack"><h2 style="font-size:20px">Hvordan var ${fn}?</h2>
+          ${st === 'approved' && !o.reviewed && !asFreelancer ? `<div class="card stack"><h2 style="font-size:20px">Hvordan var ${fn}?</h2>
             <div class="stars" role="radiogroup" aria-label="Antall stjerner">${[1, 2, 3, 4, 5].map((k) => `<button role="radio" aria-checked="${k === stars}" aria-label="${k} stjerner" class="${k <= stars ? 'on' : ''}" data-a="stars" data-v="${k}">${H.star(24)}</button>`).join('')}</div>
             <label class="field"><span class="label">Fortell andre om oppdraget</span><textarea class="inp" id="rtext" rows="4" placeholder="Hva var bra? Var noe annerledes enn avtalt?">${H.esc(text)}</textarea></label>
             <p class="hint">Omtalen publiseres når ${fn} også har vurdert deg, eller etter 14 dager. Da kan ingen av dere svare på den andres omtale først.</p>
@@ -90,12 +104,13 @@ if (H.requireLogin()) {
         <aside>
           <div class="card stack">
             <div class="sum"><div><span>Oppdrag</span><b>${H.kr(o.price)}</b></div><div class="muted"><span>Plattformavgift 5 %</span><span>− ${H.kr(fee)}</span></div><div class="tot"><span>${fn} får</span><span>${H.kr(o.price - fee)}</span></div></div>
-            ${st === 'delivered' && !confirmDispute ? `<button class="btn primary block" data-a="approve">Godkjenn og betal ut</button><button class="btn ghost block" data-a="askDispute">Meld fra om feil</button>` : ''}
-            ${st === 'paid' && !confirmCancel ? `<button class="btn ghost block" data-a="askCancel">Avbestill</button>` : ''}
+            ${st === 'delivered' && !confirmDispute && !asFreelancer ? `<button class="btn primary block" data-a="approve">Godkjenn og betal ut</button><button class="btn ghost block" data-a="askDispute">Meld fra om feil</button>` : ''}
+            ${st === 'paid' && !confirmCancel && !asFreelancer ? `<button class="btn ghost block" data-a="askCancel">Avbestill</button>` : ''}
             ${st === 'paid' && confirmCancel ? `<div class="stack small"><span>${o.refundAll ? 'Du får hele beløpet tilbake.' : 'Avbestilling nærmere enn 7 dager før gir 50 % tilbake.'} Vil du avbestille?</span><div class="row"><button class="btn soft sm grow" data-a="noCancel">Nei</button><button class="btn dark sm grow" data-a="cancel">Ja, avbestill</button></div></div>` : ''}
-            ${st === 'dispute' ? `<button class="btn soft block" style="border:1.5px dashed var(--muted)" data-a="resolve">Demo: ${fn} retter opp</button>` : ''}
-            <a class="btn soft block" href="meldinger.html?med=${f.id}">${H.icon('chat', 18)} Send melding</a>
-            <a class="btn link" href="frilanser.html?id=${f.id}">Se profilen til ${fn}</a>
+            ${st === 'dispute' && !asFreelancer && f.demo !== false ? `<button class="btn soft block" style="border:1.5px dashed var(--muted)" data-a="resolve">Demo: ${fn} retter opp</button>` : ''}
+            <a class="btn soft block" href="meldinger.html?med=${encodeURIComponent(chatKey)}">${H.icon('chat', 18)} Send melding til ${asFreelancer ? cn : fn}</a>
+            ${asFreelancer ? '' : `<a class="btn link" href="frilanser.html?id=${f.id}">Se profilen til ${fn}</a>`}
+            ${st === 'paid' && !asFreelancer && !canDeliver ? `<p class="hint">${fn} laster opp leveransen her. Du får beskjed når den er klar.</p>` : ''}
           </div>
           ${st === 'paid' ? `<p class="hint">Avbestilling: gratis frem til 7 dager før. Etter det får du 50 % tilbake. <a href="hjelp.html">Les mer</a></p>` : ''}
         </aside>
@@ -113,7 +128,7 @@ if (H.requireLogin()) {
     hydrate();
     renderLightbox();
   }
-  const locked = () => LOCK_UNTIL_APPROVED && o.status !== 'approved';
+  const locked = () => LOCK_UNTIL_APPROVED && o.status !== 'approved' && o.role !== 'freelancer';
   async function addFiles(list) {
     const files = [...list];
     if (!Media.supported) { H.toast('Nettleseren støtter ikke lagring av filer'); return; }
@@ -149,17 +164,19 @@ if (H.requireLogin()) {
     if (e.key === 'ArrowRight') H.actions.nav(1);
     if (e.key === 'ArrowLeft') H.actions.nav(-1);
   });
-  async function dl(i) { const x = o.files[i]; const r = await Media.get(x.id); if (!r) { H.toast('Fant ikke filen i denne nettleseren'); return; } Media.download(r.original, x.name); }
+  async function dl(i) { const ok = await Media.save(o.id, o.files[i]); if (!ok) H.toast('Fant ikke filen. Prøv å laste inn siden på nytt.'); }
   const f0 = () => H.byId(o.fid);
   const upd = (msg) => { H.save(); H.mountHeader(); render(); if (msg) H.toast(msg); };
   Object.assign(H.actions, {
     sampleFiles: async () => { busy += 4; render(); const out = await Media.sample(o.id, 4, (i) => H.pal(f0().pal + i)); pending.push(...out); busy -= 4; render(); },
-    rmFile: (v) => { pending = pending.filter((x) => x.id !== v); Media.remove(v); render(); },
+    rmFile: (v) => { const x = pending.find((m) => m.id === v); pending = pending.filter((m) => m.id !== v); if (x) Media.discard(o.id, x); render(); },
     sendDelivery: () => {
       if (!pending.length) return;
-      o.files = pending; o.deliveryNote = note.trim(); pending = []; note = '';
+      o.files = (o.files || []).concat(pending); o.deliveryNote = note.trim(); pending = []; note = '';
       o.status = 'delivered'; o.delivered = `${o.files.length} ${o.files.length === 1 ? 'fil' : 'filer'}, ${total(o.files)}`;
-      (H.S.threads[o.fid] = H.S.threads[o.fid] || []).push({ who: 'them', text: 'Leveransen er lastet opp. ' + (o.deliveryNote || 'Si fra hvis du vil ha noe justert.'), at: Date.now() });
+      const msg = 'Leveransen er lastet opp. ' + (o.deliveryNote || 'Si fra hvis du vil ha noe justert.');
+      if (o.role === 'freelancer') (H.S.threads['c:' + o.customerId] = H.S.threads['c:' + o.customerId] || []).push({ who: 'me', text: msg, at: Date.now() });
+      else (H.S.threads[o.fid] = H.S.threads[o.fid] || []).push({ who: 'them', text: msg, at: Date.now() });
       upd('Leveransen er sendt til kunden.');
     },
     open: (v) => { lb = +v; renderLightbox(); },
@@ -177,7 +194,7 @@ if (H.requireLogin()) {
     resolve: () => { o.status = 'delivered'; o.delivered += ' (rettet opp)'; upd('Frilanseren har levert på nytt.'); },
     stars: (v) => { stars = +v; render(); },
     review: () => {
-      (H.S.extraReviews[o.fid] = H.S.extraReviews[o.fid] || []).unshift([H.S.user.name, stars, o.title + ' · ' + H.today(), text.trim() || 'Ingen kommentar.', true]);
+      (H.S.extraReviews[o.fid] = H.S.extraReviews[o.fid] || []).unshift([H.S.user.name, stars, o.title + ' · ' + H.today(), text.trim() || 'Ingen kommentar.', true, o.id]);
       o.reviewed = true; upd('Takk! Omtalen er lagt til på profilen.');
     }
   });

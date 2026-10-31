@@ -20,8 +20,11 @@
 <div id="site-footer"></div>
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js"></script>
-<script>
+<script src="js/cloud.js"></script>
+<script type="text/freelio">
 if (H.requireLogin()) {
   let confirmDel = false;
   const S = H.S;
@@ -33,7 +36,7 @@ if (H.requireLogin()) {
       <div class="row"><span class="av" style="width:64px;height:64px;background:var(--accent);color:var(--on-accent);font-size:22px">${H.esc(S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase())}</span><div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
 
       <section class="card stack"><h2 style="font-size:20px">Frilanserprofil</h2>
-        ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div><a class="btn soft sm" href="frilanser.html?id=meg">Se</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul' : 'Publiser'}</button></div>`
+        ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div><a class="btn soft sm" href="frilanser.html?id=${S.profile.id}">Se</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul' : 'Publiser'}</button></div>`
         : `<p class="muted">Vil du ta oppdrag selv? Lag en gratis profil.</p><a class="btn primary sm" style="align-self:flex-start" href="bli-frilanser.html">Bli frilanser</a>`}
       </section>
 
@@ -58,7 +61,7 @@ if (H.requireLogin()) {
     </div>`;
   }
   Object.assign(H.actions, {
-    logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); location.href = 'index.html'; },
+    logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
     togglePub: () => { S.profile.published = !S.profile.published; H.save(); H.toast(S.profile.published ? 'Profilen er synlig igjen.' : 'Profilen er skjult fra søk.'); render(); },
     notify: (v) => { S.notify[v] = !S.notify[v]; H.save(); render(); },
     ck: (v) => { S.cookies[v] = !S.cookies[v]; S.cookie = 'custom'; H.save(); H.toast('Cookie-valget er lagret.'); render(); },
@@ -69,7 +72,13 @@ if (H.requireLogin()) {
     },
     askDel: () => { confirmDel = true; render(); },
     noDel: () => { confirmDel = false; render(); },
-    del: () => { H.reset(); H.flash('Kontoen og alle data i nettleseren er slettet.'); location.href = 'index.html'; }
+    del: async () => {
+      if (window.Cloud && Cloud.on) {
+        try { await Cloud.deleteAccount(); } catch (e) { H.toast('Kunne ikke slette kontoen: ' + Cloud.authError(e)); return; }
+        H.reset(); H.flash('Kontoen din og alt som hørte til den er slettet.'); location.href = 'index.html'; return;
+      }
+      H.reset(); H.flash('Kontoen og alle data i nettleseren er slettet.'); location.href = 'index.html';
+    }
   });
   H.boot(render);
 }

@@ -58,7 +58,16 @@ window.Media = (function () {
     if (!isVideo && !file.type.startsWith('image/')) throw new Error('Bare bilder og video kan lastes opp');
     const p = isVideo ? await fromVideo(file) : await fromImage(file);
     const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-    await put({ id, orderId, name: file.name, mime: file.type, original: file, preview: p.preview, thumb: p.thumb });
+    if (cloud()) {
+      if (file.size > MAX_CLOUD) throw new Error('Filen er større enn 50 MB, som er grensen i gratisversjonen av Supabase');
+      const st = Cloud.sb.storage.from(BUCKET);
+      // Video lagres som «stream», så kunden kan se den før godkjenning. Bilder lagres som «original», som låses til godkjenning.
+      const parts = [['thumb', p.thumb], ['preview', p.preview], [isVideo ? 'stream' : 'original', file]];
+      for (const [kind, blob] of parts) {
+        const r = await st.upload(`${orderId}/${id}/${kind}`, blob, { contentType: blob.type || 'application/octet-stream', upsert: false });
+        if (r.error) throw new Error(r.error.message);
+      }
+    } else await put({ id, orderId, name: file.name, mime: file.type, original: file, preview: p.preview, thumb: p.thumb });
     return { id, name: file.name, type: p.type, mime: file.type, size: file.size, psize: p.preview.size, w: p.w, h: p.h, duration: p.duration || 0 };
   }
 
@@ -90,5 +99,40 @@ window.Media = (function () {
 
   const remove = (id) => tx('readwrite', (s) => s.delete(id));
 
-  return { add, sample, get, byOrder, remove, removeOrder, size, dur, download, supported: 'indexedDB' in window };
+  /* ---------- felles for demo (IndexedDB) og Supabase Storage ---------- */
+  const BUCKET = 'deliveries', MAX_CLOUD = 50 * 1024 * 1024;
+  const cloud = () => window.Cloud && Cloud.on && Cloud.sb;
+  const kindFor = (meta, kind) => (kind === 'original' && meta.type === 'video' ? 'stream' : kind);
+  const urlCache = {};
+  // Adresse til en fil for visning: thumb, preview eller original
+  async function url(orderId, meta, kind) {
+    const k = meta.id + kind;
+    if (urlCache[k]) return urlCache[k];
+    if (cloud()) {
+      const r = await Cloud.sb.storage.from(BUCKET).createSignedUrl(`${orderId}/${meta.id}/${kindFor(meta, kind)}`, 3600);
+      if (r.error) return '';
+      return (urlCache[k] = r.data.signedUrl);
+    }
+    const rec = await get(meta.id);
+    return rec ? (urlCache[k] = URL.createObjectURL(rec[kind])) : '';
+  }
+  // Last ned originalen i full kvalitet
+  async function save(orderId, meta) {
+    if (cloud()) {
+      const r = await Cloud.sb.storage.from(BUCKET).createSignedUrl(`${orderId}/${meta.id}/${kindFor(meta, 'original')}`, 300, { download: meta.name });
+      if (r.error) return false;
+      const a = document.createElement('a'); a.href = r.data.signedUrl; a.download = meta.name; document.body.appendChild(a); a.click(); a.remove();
+      return true;
+    }
+    const rec = await get(meta.id);
+    if (!rec) return false;
+    download(rec.original, meta.name);
+    return true;
+  }
+  async function discard(orderId, meta) {
+    if (cloud()) { await Cloud.sb.storage.from(BUCKET).remove(['thumb', 'preview', kindFor(meta, 'original')].map((k) => `${orderId}/${meta.id}/${k}`)); return; }
+    return remove(meta.id);
+  }
+
+  return { add, sample, get, byOrder, remove, removeOrder, url, save, discard, size, dur, download, supported: 'indexedDB' in window || !!cloud() };
 })();

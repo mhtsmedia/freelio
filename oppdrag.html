@@ -39,8 +39,11 @@
 <div id="site-footer"></div>
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js"></script>
-<script>
+<script src="js/cloud.js"></script>
+<script type="text/freelio">
 const $ = (id) => document.getElementById(id);
 const k0 = H.qs('kat') || 'alle';
 $('fcat').innerHTML = [{ id: 'alle', name: 'Alle fagfelt' }].concat(HDATA.CATS).map((c) => `<label class="check"><input type="radio" name="kat" value="${c.id}" ${k0 === c.id ? 'checked' : ''}> ${c.name}</label>`).join('');

@@ -20,13 +20,17 @@
 <div id="site-footer"></div>
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js"></script>
-<script>
+<script src="js/cloud.js"></script>
+<script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
 const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
 let busy = null, step = 'start', name = '';
 function render() {
   const box = document.getElementById('box');
+  if (window.Cloud && Cloud.on) return renderCloud(box);
   if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, verifisert med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (step === 'name') {
     box.innerHTML = `<h1>Velkommen!</h1><p class="muted">Navnet ditt er bekreftet med ${H.esc(busy)}. Hvilket navn vil du vise til frilanserne?</p>
@@ -50,6 +54,46 @@ function render() {
     <p class="hint">Demo: ingen ekte innlogging. Trykk på en knapp for å fortsette.</p>`;
 }
 H.actions.login = (v) => { busy = v; render(); setTimeout(() => { name = 'Kari Nordmann'; step = 'name'; render(); }, 1300); };
+// Innlogging mot Supabase med e-post og passord
+let mode = H.qs('ny') ? 'up' : 'in', cbusy = false, cmsg = '', cerr = '';
+function renderCloud(box) {
+  if (H.S.user && !cmsg) { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)} (${H.esc(H.S.user.email || '')}).</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
+  if (cmsg) { box.innerHTML = `<h1>Sjekk e-posten din</h1><p class="muted">${H.esc(cmsg)}</p><button class="btn soft" data-a="mode" data-v="in">Til innlogging</button>`; return; }
+  const up = mode === 'up';
+  box.innerHTML = `<h1>${up ? 'Opprett konto' : 'Logg inn'}</h1>
+    <div class="seg" style="align-self:flex-start"><button aria-pressed="${!up}" data-a="mode" data-v="in">Logg inn</button><button aria-pressed="${up}" data-a="mode" data-v="up">Ny konto</button></div>
+    <form class="stack" id="aform" novalidate>
+      ${up ? '<label class="field"><span class="label">Navn</span><input class="inp" id="aname" autocomplete="name" required></label>' : ''}
+      <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" autocomplete="email" required></label>
+      <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" minlength="6" required>${up ? '<span class="hint">Minst 6 tegn.</span>' : ''}</label>
+      ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
+      <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
+      <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>
+    </form>
+    <p class="hint">Innlogging med Vipps og BankID kommer senere.</p>`;
+  document.getElementById('aform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const val = (id) => (document.getElementById(id) || {}).value || '';
+    const vals = { aname: val('aname'), aemail: val('aemail'), apass: val('apass') };
+    const v = (id) => vals[id];
+    const err = (t) => { cerr = t; document.getElementById('aerr').textContent = t; };
+    if (up && !v('aname').trim()) return err('Skriv inn navnet ditt.');
+    if (!/^\S+@\S+\.\S+$/.test(v('aemail').trim())) return err('Skriv inn en gyldig e-postadresse.');
+    if (v('apass').length < 6) return err('Passordet må ha minst 6 tegn.');
+    if (up && !document.getElementById('aterms').checked) return err('Du må godta vilkårene for å opprette konto.');
+    cbusy = true; cerr = ''; render();
+    try {
+      if (up) {
+        const loggedIn = await Cloud.signUp(v('aname').trim(), v('aemail').trim(), v('apass'));
+        if (!loggedIn) { cbusy = false; cmsg = `Vi har sendt en lenke til ${v('aemail').trim()}. Trykk på den for å bekrefte kontoen, så kan du logge inn.`; render(); return; }
+      } else await Cloud.signIn(v('aemail').trim(), v('apass'));
+      await Cloud.pull();
+      H.flash(`Logget inn som ${H.S.user.name}.`);
+      location.href = safeNext;
+    } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+  });
+}
+H.actions.mode = (v) => { mode = v; cerr = ''; cmsg = ''; render(); };
 H.boot(render);
 </script>
 </body>

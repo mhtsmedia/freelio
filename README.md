@@ -4,7 +4,20 @@ Markedsplass der folk finner, sammenligner og leier lokale fotografer og videogr
 
 Live: https://mhtsmedia.github.io/freelio/
 
-Dette er en fungerende prototype av nettsiden. Alt kjører i nettleseren uten server, så du kan åpne den rett fra GitHub Pages. Innlogging, betaling og meldinger er simulert, og data lagres i `localStorage`.
+Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, bestillinger, meldinger, omtaler og leveransefiler. Betaling er fortsatt simulert. Er databasen ikke satt opp, kjører siden i demo-modus med data i nettleseren.
+
+## Sett opp Supabase
+
+1. Åpne prosjektet på supabase.com og gå til **SQL Editor**, så **New query**.
+2. Lim inn hele `database/oppsett.sql` og trykk **Run**. Skriptet lager tabeller, tilgangsregler, fillagring og 10 demo-frilansere med 9 oppdrag. Det kan kjøres flere ganger.
+3. Gå til **Authentication**, så **URL Configuration**:
+   - Site URL: `https://mhtsmedia.github.io/freelio/`
+   - Redirect URLs: legg til `https://mhtsmedia.github.io/freelio/**`
+4. Under **Authentication**, så **Sign In / Providers**, så **Email**: slå av «Confirm email» mens dere tester. Den innebygde e-posttjenesten sender bare noen få e-poster i timen. Før lansering kobler dere på egen e-post (SMTP), for eksempel Resend, og slår bekreftelsen på igjen.
+
+Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
+
+Filer: `database/schema.sql` er tabeller og regler, `database/seed.sql` er demo-data, og `database/oppsett.sql` er begge samlet.
 
 ## Kjør lokalt
 
@@ -50,14 +63,17 @@ css/style.css   Design, lys og mørk modus, animasjoner og skeleton
 img/            Logo (SVG) og favicon
 js/logo.js      Logoen som vektor, følger lys og mørk modus
 js/data.js      Eksempeldata: kategorier, frilansere og oppdrag
-js/media.js     Leveranser: komprimerte forhåndsvisninger, originaler i IndexedDB, nedlasting
+js/config.js    Adresse og offentlig nøkkel til Supabase
+js/cloud.js     Henter og lagrer data i Supabase. Faller tilbake til demo-modus
+js/media.js     Leveranser: komprimerte forhåndsvisninger og originaler i Supabase Storage (eller IndexedDB i demo)
+database/       SQL for Supabase: tabeller, tilgangsregler og demo-data
 js/app.js       Felles kode: lagring, meny, cookies, kort, meldinger, assistent
 *.html          Én fil per side. Sidespesifikk kode ligger nederst i hver fil.
 ```
 
 ## Neste steg mot ekte app
 
-1. **Backend og database.** For eksempel Supabase (Postgres, auth, lagring av bilder, sanntid for meldinger). Bytt ut `H.load`, `H.save` og `HDATA` med API-kall.
+1. **Bilder i portefølje.** Last opp porteføljebilder til Supabase Storage i stedet for eksempelbilder.
 2. **Innlogging.** Vipps Login og BankID via en leverandør som Signicat eller Criipto (OpenID Connect).
 3. **Betaling med tilbakeholdt beløp.** Bruk en lisensiert leverandør med markedsplassløsning, for eksempel Stripe Connect, Adyen for Platforms eller Vipps MobilePay. Freelio skal ikke holde kundens penger selv, siden det krever konsesjon fra Finanstilsynet.
 4. **Kart.** Mapbox eller Leaflet med OpenStreetMap. Vis omtrentlig posisjon.

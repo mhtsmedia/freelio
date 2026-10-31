@@ -20,8 +20,11 @@
 <div id="site-footer"></div>
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js"></script>
-<script>
+<script src="js/cloud.js"></script>
+<script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
 function intro() {
@@ -51,7 +54,7 @@ function form() {
       <label class="field"><span class="label">Porteføljebilder</span><input class="inp" type="file" accept="image/*,video/*" multiple style="padding-top:10px"><span class="hint">I demoen brukes eksempelbilder.</span></label>
       <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
       <div id="err"></div>
-      <div class="row"><button class="btn primary" type="submit">${S.profile ? 'Lagre endringer' : 'Publiser profil'}</button>${S.profile ? '<a class="btn soft" href="frilanser.html?id=meg">Se profilen</a>' : ''}</div>
+      <div class="row"><button class="btn primary" type="submit">${S.profile ? 'Lagre endringer' : 'Publiser profil'}</button>${S.profile ? '<a class="btn soft" href="frilanser.html?id=${S.profile.id}">Se profilen</a>' : ''}</div>
     </form>
     <aside><div class="banner acc">${H.icon('shield', 20)}<span>Profilen får merket «BankID-verifisert» fordi du logget inn med ${H.esc(S.user.method)}.</span></div>
       <div class="card stack small"><b style="font-size:15px">Utbetaling</b><span class="muted">I den ferdige appen legger du inn kontonummer hos betalingspartneren vår. Freelio ser aldri kontonummeret ditt.</span><span class="muted">Du betaler 5 % av hvert oppdrag. Ingen faste kostnader.</span></div></aside>
@@ -73,12 +76,12 @@ function form() {
     const ini = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
     const old = S.profile || {};
     S.profile = Object.assign({ rating: 5.0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
-      id: 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
+      id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
       tags: v('tags').split(',').map((t) => t.trim()).filter(Boolean), pk, from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();
     H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');
-    location.href = safeNext || 'frilanser.html?id=meg';
+    H.go(safeNext || 'frilanser.html?id=' + S.profile.id);
   });
 }
 Object.assign(H.actions, {

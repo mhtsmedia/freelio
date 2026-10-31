@@ -20,8 +20,11 @@
 <div id="site-footer"></div>
 <script src="js/logo.js"></script>
 <script src="js/data.js"></script>
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js"></script>
-<script>
+<script src="js/cloud.js"></script>
+<script type="text/freelio">
 if (H.requireLogin()) {
   const f = H.byId(H.qs('id') || '');
   let pk = Math.min(+(H.qs('pk') || 0), f ? f.pk.length - 1 : 0);
@@ -75,7 +78,7 @@ if (H.requireLogin()) {
       const o = H.createOrder({ fid: f.id, title: p[0], price: p[1], date: d, place: form.place, note: form.note, method });
       if (form.note.trim()) { (H.S.threads[f.id] = H.S.threads[f.id] || []).push({ who: 'me', text: 'Booking: ' + p[0] + ' ' + d + '. ' + form.note.trim(), at: Date.now() }); H.save(); }
       H.flash(`Betalt. ${H.kr(p[1])} holdes trygt til jobben er levert.`);
-      location.href = 'bestilling.html?id=' + o.id;
+      H.go('bestilling.html?id=' + o.id);
     }, 1500);
   };
   H.boot(render);
