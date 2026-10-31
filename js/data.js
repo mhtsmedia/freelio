@@ -2,14 +2,14 @@
    Freelio starter med foto og video. Hver frilanser har en hovednisje (cat) og flere nisjer (niches). */
 window.HDATA = (function () {
   const CATS = [
-    { id: 'bryllup', name: 'Bryllup', icon: 'heart', desc: 'Foto og film fra hele dagen' },
-    { id: 'portrett', name: 'Portrett', icon: 'user', desc: 'Familie, par og profilbilder' },
-    { id: 'event', name: 'Event', icon: 'spark', desc: 'Fest, konferanse og konsert' },
-    { id: 'produkt', name: 'Produkt', icon: 'bag', desc: 'Nettbutikk, mat og reklame' },
-    { id: 'eiendom', name: 'Eiendom', icon: 'home', desc: 'Bolig, hytte og næringsbygg' },
-    { id: 'drone', name: 'Drone', icon: 'drone', desc: 'Luftfoto og dronefilm' },
-    { id: 'reklamefilm', name: 'Reklamefilm', icon: 'video', desc: 'Film for bedrifter' },
-    { id: 'some', name: 'Sosiale medier', icon: 'phone', desc: 'Korte filmer og innhold' }
+    { id: 'bryllup', name: 'Bryllup', icon: 'c-bryllup', desc: 'Foto og film fra hele dagen' },
+    { id: 'portrett', name: 'Portrett', icon: 'c-portrett', desc: 'Familie, par og profilbilder' },
+    { id: 'event', name: 'Event', icon: 'c-event', desc: 'Fest, konferanse og konsert' },
+    { id: 'produkt', name: 'Produkt', icon: 'c-produkt', desc: 'Nettbutikk, mat og reklame' },
+    { id: 'eiendom', name: 'Eiendom', icon: 'c-eiendom', desc: 'Bolig, hytte og næringsbygg' },
+    { id: 'drone', name: 'Drone', icon: 'c-drone', desc: 'Luftfoto og dronefilm' },
+    { id: 'reklamefilm', name: 'Reklamefilm', icon: 'c-reklamefilm', desc: 'Film for bedrifter' },
+    { id: 'some', name: 'Sosiale medier', icon: 'c-some', desc: 'Korte filmer og innhold' }
   ];
 
   const PAL = [

@@ -73,7 +73,7 @@
 H.boot(() => {
   document.getElementById('popular').innerHTML = ['Bryllupsfotograf', 'Dronefilm', 'Produktbilder', 'Reklamefilm'].map((t) => `<a class="chip" href="sok.html?q=${encodeURIComponent(t)}">${t}</a>`).join('');
   const all = H.all();
-  document.getElementById('cats').innerHTML = HDATA.CATS.map((c) => `<a class="cat" href="sok.html?kat=${c.id}"><span class="ico">${H.icon(c.icon, 22, 1.6)}</span>${c.name}</a>`).join('');
+  document.getElementById('cats').innerHTML = HDATA.CATS.map((c) => `<a class="cat" href="sok.html?kat=${c.id}"><span class="ico">${H.icon(c.icon, 30, 1.5)}</span>${c.name}</a>`).join('');
   document.getElementById('popularF').innerHTML = all.slice().sort((a, b) => b.rating * Math.log(b.reviews + 1) - a.rating * Math.log(a.reviews + 1)).slice(0, 4).map((f) => H.fCard(f)).join('');
   document.getElementById('jobs').innerHTML = H.allJobs().slice(0, 3).map(H.jobRow).join('');
 });
