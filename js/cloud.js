@@ -69,7 +69,8 @@
     // Frilansere og omtaler
     S.extraReviews = {};
     rvRows.forEach((r) => (S.extraReviews[r.freelancer_id] = S.extraReviews[r.freelancer_id] || []).push([r.author_name, r.stars, r.job_label, r.text, r.author_id === C.uid, r.order_id]));
-    const all = frRows.map(fromFreelancer).map((f) => {
+    // Demo-frilansere og demo-oppdrag vises ikke. Bare ekte brukere.
+    const all = frRows.filter((r) => !r.demo).map(fromFreelancer).map((f) => {
       if (!f.demo) { const ex = S.extraReviews[f.id] || []; f.reviews = 0; f.rv = []; f.rating = 0; }
       return f;
     });
@@ -78,7 +79,7 @@
 
     // Oppdrag
     const myJobRows = jobRows.filter((r) => C.uid && r.owner_id === C.uid);
-    D.JOBS = jobRows.filter((r) => !(C.uid && r.owner_id === C.uid)).map((r) => Object.assign({ offers: 0, km: 0 }, r.data, { id: r.id, status: r.status, posted: r.data.posted || posted(r.created_at), by: r.data.by || 'Kunde på Freelio' }));
+    D.JOBS = jobRows.filter((r) => !r.demo && !(C.uid && r.owner_id === C.uid)).map((r) => Object.assign({ offers: 0, km: 0 }, r.data, { id: r.id, status: r.status, posted: r.data.posted || posted(r.created_at), by: r.data.by || 'Kunde på Freelio' }));
     S.myJobs = myJobRows.reverse().map((r) => Object.assign({}, r.data, { id: r.id, status: r.status, created: Date.parse(r.created_at), postedTxt: dateTxt(r.created_at), offersList: [] }));
 
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};

@@ -25,7 +25,7 @@
 <script src="js/app.js"></script>
 <script src="js/cloud.js"></script>
 <script type="text/freelio">
-const id = H.qs('id') || 'ingrid';
+const id = H.qs('id');
 let tab = location.hash === '#omtaler' ? 'rv' : 'work';
 function render() {
   const f = H.byId(id);

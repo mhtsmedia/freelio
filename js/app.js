@@ -56,7 +56,7 @@
     clipboard: '<rect x="4.5" y="4" width="15" height="17.5" rx="2.5"/><path d="M9 4V2.8h1.6a1.4 1.4 0 0 1 2.8 0H15V5.5H9z"/><path d="m7.5 10 1.2 1.2 2-2M7.5 14.5l1.2 1.2 2-2M13 10.2h3.5M13 14.7h3.5"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
   };
-  H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
+  H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${Math.round(w * 78) / 100}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
   H.star = (s = 14) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor">${ICON.star}</svg>`;
 
   /* ---------- små hjelpere ---------- */
@@ -76,7 +76,7 @@
   const KEY = 'freelio:v1';
   const DEFAULTS = () => ({
     user: null, saved: [], liked: [], cmp: [],
-    orders: [{ id: 'o-seed', fid: 'jonas', title: 'Dronefilm', price: 4500, date: '20.10.2026', status: 'delivered', reviewed: false, delivered: '1 film, 62 sekunder i 4K', created: Date.now() - 864e5 * 10 }],
+    orders: [],
     myJobs: [], threads: {}, readThreads: {}, cookie: null, cookies: { analyse: false, ads: false },
     extraReviews: {}, profile: null, sentOffers: {}, asst: []
   });
@@ -435,7 +435,7 @@
         <div class="stack" style="gap:14px;max-width:300px"><a class="logo" href="index.html" aria-label="Freelio">${H.logo()}</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
         <nav aria-label="Bunnmeny">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="#" data-a="cookieSettings">Cookie-valg</a></nav>
       </div>
-      <div class="foot-bottom"><span>© 2026 Freelio</span><span>Demo: ingen ekte innlogging eller betaling. Data lagres bare i nettleseren din.</span></div>
+      <div class="foot-bottom"><span>© 2026 Freelio</span><span>Betaling er ikke koblet på ennå. Ingen penger trekkes.</span></div>
     </div></footer>`;
   };
   H.mountCookie = (force) => {

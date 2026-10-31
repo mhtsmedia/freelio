@@ -97,7 +97,8 @@ if (H.requireLogin()) {
     }
     const now = Date.now();
     const pool = H.all().filter((f) => H.inCat(f, cat) && !(H.S.profile && f.id === H.S.profile.id));
-    const cands = (pool.length ? pool : H.all()).slice(0, 3);
+    // Med database kommer tilbud fra ekte frilansere. Uten database lages eksempeltilbud.
+    const cands = window.Cloud && Cloud.on ? [] : pool.slice(0, 3);
     const msgs = ['Jeg er ledig og har gjort mange lignende jobber. Prisen inkluderer alt du har beskrevet.', 'Høres ut som et fint oppdrag! Jeg kan levere raskt og tar gjerne en prat på forhånd.', 'Gjerne med. Jeg kan ta et kort møte først for å avklare ønsker.'];
     const offersList = cands.map((f, i) => ({ fid: f.id, price: Math.max(f.from, Math.min(budget, Math.round(budget * (0.82 + i * 0.07) / 100) * 100)), msg: msgs[i], at: now + [8, 25, 50][i] * 1000, seen: false }));
     const job = { id: H.uid(), cat, title: $('title').value.trim(), desc: $('desc').value.trim(), budget, date: $('date').value.trim(), area: $('area').value.trim(), scope: $('scope').value.trim(), delivery: $('delivery').value.trim(), ownGear: $('own').checked, status: 'open', created: now, postedTxt: H.today(), offersList };

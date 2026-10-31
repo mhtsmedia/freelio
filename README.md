@@ -9,7 +9,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 ## Sett opp Supabase
 
 1. Åpne prosjektet på supabase.com og gå til **SQL Editor**, så **New query**.
-2. Lim inn hele `database/oppsett.sql` og trykk **Run**. Skriptet lager tabeller, tilgangsregler, fillagring og 10 demo-frilansere med 9 oppdrag. Det kan kjøres flere ganger.
+2. Lim inn hele `database/oppsett.sql` og trykk **Run**. Skriptet lager tabeller, tilgangsregler og fillagring. Det kan kjøres flere ganger.
 3. Gå til **Authentication**, så **URL Configuration**:
    - Site URL: `https://mhtsmedia.github.io/freelio/`
    - Redirect URLs: legg til `https://mhtsmedia.github.io/freelio/**`
@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/seed.sql` er demo-data, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, holder det å kjøre `bilder.sql`, `video.sql` og `meldinger.sql`.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, holder det å kjøre `bilder.sql`, `video.sql` og `meldinger.sql`.
 
 ## Kjør lokalt
 
@@ -62,11 +62,11 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 css/style.css   Design, lys og mørk modus, animasjoner og skeleton
 img/            Logo (SVG) og favicon
 js/logo.js      Logoen som vektor, følger lys og mørk modus
-js/data.js      Eksempeldata: kategorier, frilansere og oppdrag
+js/data.js      Kategorier og farger
 js/config.js    Adresse og offentlig nøkkel til Supabase
 js/cloud.js     Henter og lagrer data i Supabase. Faller tilbake til demo-modus
 js/media.js     Leveranser: komprimerte forhåndsvisninger og originaler i Supabase Storage (eller IndexedDB i demo)
-database/       SQL for Supabase: tabeller, tilgangsregler og demo-data
+database/       SQL for Supabase: tabeller og tilgangsregler
 js/app.js       Felles kode: lagring, meny, cookies, kort, meldinger, assistent
 *.html          Én fil per side. Sidespesifikk kode ligger nederst i hver fil.
 ```
