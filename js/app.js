@@ -95,7 +95,8 @@
       const real = f.demo === false || f.id === (S.profile && S.profile.id);
       const baseN = real ? 0 : f.reviews || 0, baseSum = real ? 0 : (f.rating || 0) * baseN;
       const n = baseN + extra.length;
-      return Object.assign({}, f, { rv: extra.concat(real ? [] : f.rv || []), reviews: n, realReviews: extra.length, rating: n ? (baseSum + extra.reduce((t, r) => t + r[1], 0)) / n : 0 });
+      const done = real ? Math.max(f.jobs || 0, extra.length, (S.orders || []).filter((o) => o.fid === f.id && o.status === 'approved').length) : f.jobs;
+      return Object.assign({}, f, { jobs: done, rv: extra.concat(real ? [] : f.rv || []), reviews: n, realReviews: extra.length, rating: n ? (baseSum + extra.reduce((t, r) => t + r[1], 0)) / n : 0 });
     };
     const list = D.FREELANCERS.filter((f) => !S.profile || f.id !== S.profile.id).map(withReviews);
     if (S.profile && S.profile.published) list.push(withReviews(S.profile));
@@ -122,8 +123,9 @@
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
   H.ph = (f, i = 0, cls = '', tag = 'span', attrs = '', inner = '', big = false) => {
-    const img = (f.portfolio || [])[i];
-    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${inner}</${tag}>`;
+    const img = (i === 0 && f.coverImg) || (f.portfolio || [])[i];
+    const vid = img && img.type === 'video';
+    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${vid && !(i === 0 && f.coverImg) ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
     return `<${tag} class="ph ${cls}" style="${H.phStyle((f.pal || 0) + i)}" ${attrs}>${inner}</${tag}>`;
   };
 

@@ -486,3 +486,9 @@ input[type=file].inp:hover::file-selector-button{background:var(--surface2)}
 .crop-view img{position:absolute;left:50%;top:50%;transform-origin:0 0;max-width:none;pointer-events:none;will-change:transform}
 .crop-view::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.85);pointer-events:none}
 .crop-range{flex:1;accent-color:var(--fg)}
+.play-badge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;pointer-events:none}
+.play-badge svg{margin-left:2px}
+.pf-item .play-badge{width:32px;height:32px}
+button.ph{border:0;padding:0;cursor:pointer;display:block;width:100%}
+.cover-pick{aspect-ratio:4/1;border-radius:12px;overflow:hidden;background:var(--surface);display:grid;place-items:center;text-align:center;padding:0}
+.cover-pick img{width:100%;height:100%;object-fit:cover;display:block}

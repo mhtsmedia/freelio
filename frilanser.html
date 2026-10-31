@@ -42,7 +42,7 @@ function render() {
   });
   const tabs = { work: 'Portefølje', pk: 'Pakker og priser', rv: `Omtaler (${f.reviews})`, about: 'Om' };
   const body = {
-    work: (f.portfolio && f.portfolio.length) ? `<div class="gallery">${f.portfolio.map((x, i) => `<a class="ph has-img" href="${H.esc(x.url)}" target="_blank" rel="noopener" aria-label="Åpne bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join('')}</div>`
+    work: (f.portfolio && f.portfolio.length) ? `<div class="gallery">${f.portfolio.map((x, i) => x.type === 'video' ? `<button class="ph has-img" data-a="playVid" data-v="${i}" aria-label="Spill av video ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb)}" alt="" loading="lazy"><span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span></button>` : `<a class="ph has-img" href="${H.esc(x.url)}" target="_blank" rel="noopener" aria-label="Åpne bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join('')}</div>`
       : f.demo === false ? `<div class="empty">${H.esc(H.first(f.name))} har ikke lastet opp bilder ennå.</div>` : `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
     pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}
       <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
@@ -82,6 +82,16 @@ function render() {
   ${similar.length ? `<div class="wrap section"><h2>Lignende frilansere</h2><div class="cards">${similar.map((x) => H.fCard(x)).join('')}</div></div>` : ''}`;
 }
 H.actions.tab = (v) => { tab = v; render(); };
+// Spiller av video i fullskjerm-visning. Lukk med Esc, krysset eller klikk utenfor.
+H.actions.playVid = (v) => {
+  const x = (H.byId(id).portfolio || [])[+v]; if (!x) return;
+  const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-label', 'Video');
+  lb.innerHTML = `<div class="lb-top"><span></span><button class="ibtn" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div><div class="lb-stage"><video src="${H.esc(x.url)}" poster="${H.esc(x.thumb)}" controls autoplay playsinline></video></div>`;
+  const close = () => { lb.remove(); document.removeEventListener('keydown', key); };
+  const key = (e) => { if (e.key === 'Escape') close(); };
+  lb.addEventListener('click', (e) => { if (e.target === lb || e.target.closest('.lb-top .ibtn') || e.target.classList.contains('lb-stage')) close(); });
+  document.addEventListener('keydown', key); document.body.appendChild(lb);
+};
 H.boot(render);
 </script>
 </body>

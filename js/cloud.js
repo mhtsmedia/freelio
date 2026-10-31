@@ -125,6 +125,11 @@
     S.cmp = (S.cmp || []).filter(exists);
     snap = takeSnap();
     H.saveLocal();
+    // Antall fullførte oppdrag lagres på profilen, så alle besøkende ser riktig tall
+    if (S.profile) {
+      const done = Math.max((S.extraReviews[S.profile.id] || []).length, S.orders.filter((o) => o.fid === S.profile.id && o.status === 'approved').length);
+      if (done > (S.profile.jobs || 0)) { S.profile.jobs = done; if (C.ready) H.save(); else C.dirty = true; }
+    }
   };
 
   /* ---------- send endringer (push) ---------- */
@@ -216,10 +221,11 @@
   /* ---------- bilder ---------- */
   H.storeImage = async (kind, blob) => {
     if (!C.uid) throw new Error('Du må være logget inn for å laste opp bilder.');
-    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const ext = { 'image/webp': 'webp', 'image/png': 'png', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' }[blob.type] || 'jpg';
     const path = `${C.uid}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
     const r = await sb.storage.from('profiles').upload(path, blob, { contentType: blob.type, upsert: false });
-    if (r.error) throw new Error(/bucket not found/i.test(r.error.message) ? 'Bildelagringen er ikke satt opp. Kjør database/bilder.sql i Supabase.' : r.error.message);
+    if (r.error) throw new Error(/bucket not found/i.test(r.error.message) ? 'Bildelagringen er ikke satt opp. Kjør database/bilder.sql i Supabase.'
+      : /mime|size|exceeded|too large/i.test(r.error.message) && /^video/.test(blob.type) ? 'Videolagring er ikke slått på ennå. Kjør database/video.sql i Supabase.' : r.error.message);
     return sb.storage.from('profiles').getPublicUrl(path).data.publicUrl;
   };
   H.dropImage = async (url) => {
@@ -253,7 +259,7 @@
   H.mountHeader(); H.mountFooter();
   document.querySelectorAll('[data-skel]').forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); });
   C.pull()
-    .then(() => { C.ready = true; })
+    .then(() => { C.ready = true; if (C.dirty) { C.dirty = false; H.save(); } })
     .catch((e) => {
       console.error(e);
       const missing = /does not exist|schema cache|PGRST205|42P01/i.test((e && (e.message || e.code)) || '');

@@ -297,7 +297,7 @@ create policy "leveranser slett" on storage.objects for delete to authenticated
 alter table public.profiles add column if not exists avatar_url text;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('profiles', 'profiles', true, 5242880, array['image/webp', 'image/jpeg', 'image/png'])
+values ('profiles', 'profiles', true, 52428800, array['image/webp', 'image/jpeg', 'image/png', 'video/mp4', 'video/quicktime', 'video/webm'])
 on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "profilbilder last opp" on storage.objects;
