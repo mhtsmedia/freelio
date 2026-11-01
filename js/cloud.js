@@ -97,6 +97,8 @@
       ]);
       const p = must(prof);
       S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
+      const meta = session.user.user_metadata || {};
+      S.user.photoSrc = (S.user.photo && meta.avatar_src) || null; S.user.photoCrop = meta.avatar_crop || null;
 
       must(offers).forEach((o) => {
         const job = S.myJobs.find((j) => j.id === o.job_id);
@@ -233,6 +235,8 @@
       : /mime|size|exceeded|too large/i.test(r.error.message) && /^video/.test(blob.type) ? 'Videolagring er ikke slått på ennå. Kjør database/video.sql i Supabase.' : r.error.message);
     return sb.storage.from('profiles').getPublicUrl(path).data.publicUrl;
   };
+  // Originalen og utsnittet av profilbildet lagres på kontoen, så bildet kan justeres senere
+  H.savePhotoMeta = async (src, crop) => { try { await sb.auth.updateUser({ data: { avatar_src: src, avatar_crop: crop } }); } catch (e) { console.error(e); } };
   H.addPost = async (p) => {
     if (!C.postsReady) throw new Error('Innlegg er ikke slått på ennå. Kjør database/innlegg.sql i Supabase.');
     const { id, fid, at, ...data } = p;

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=8bff6d5f">
+<link rel="stylesheet" href="css/style.css?v=b792b330">
 <link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -24,8 +24,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=0d9f4ef0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=ed5c8697"></script>
-<script src="js/cloud.js?v=63cbedd0"></script>
+<script src="js/app.js?v=80f50a29"></script>
+<script src="js/cloud.js?v=f71f3fd1"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   let confirmDel = false;
@@ -37,7 +37,7 @@ if (H.requireLogin()) {
     document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:1200px">
       <div class="row">${H.avatar({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo }, 64)}<div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
 
-      <section class="card">${H.photoPicker({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo })}</section>
+      <section class="card">${H.photoPicker({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo, photoSrc: S.user.photoSrc })}</section>
 
       <section class="card stack"><h2 style="font-size:20px">Frilanserprofil</h2>
         ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div><a class="btn soft sm" href="frilanser.html?id=${S.profile.id}">Se</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul' : 'Publiser'}</button></div>`

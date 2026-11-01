@@ -259,7 +259,17 @@
       draw();
     };
     const load = new Image();
-    load.onload = () => setSource(load);
+    let rot = 0;
+    const rotate = () => {
+      const cv = document.createElement('canvas'); cv.width = ih; cv.height = iw;
+      const g = cv.getContext('2d'); g.translate(ih, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0); setSource(cv); rot = (rot + 1) % 4;
+    };
+    // o.state gjenoppretter et tidligere utsnitt, så du kan justere bildet uten å laste det opp på nytt
+    load.onload = () => {
+      setSource(load);
+      const st = o.state;
+      if (st) { for (let i = 0; i < (st.rot || 0); i++) rotate(); zoom = Math.min(4, Math.max(1, st.zoom || 1)); x = (st.rx || 0) * V; y = (st.ry || 0) * VH; draw(); }
+    };
     load.onerror = () => { H.toast('Kunne ikke lese bildet. Prøv JPG eller PNG.'); finish(null); };
     load.src = URL.createObjectURL(file);
     const setZoom = (z, cx = 0, cy = 0) => {
@@ -290,16 +300,15 @@
     wrap.addEventListener('click', (e) => {
       const c = e.target.closest('[data-c]'); if (!c) { if (e.target === wrap) finish(null); return; }
       if (c.dataset.c === 'cancel') finish(null);
-      if (c.dataset.c === 'rotate' && src) {
-        const cv = document.createElement('canvas'); cv.width = ih; cv.height = iw;
-        const g = cv.getContext('2d'); g.translate(ih, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0); setSource(cv);
-      }
+      if (c.dataset.c === 'rotate' && src) rotate();
       if (c.dataset.c === 'save' && src) {
         const cv = document.createElement('canvas'); cv.width = OUTW; cv.height = OUTH;
         const g = cv.getContext('2d'), k = OUTW / V, s = base * zoom * k;
         g.fillStyle = '#fff'; g.fillRect(0, 0, OUTW, OUTH);
         g.translate(OUTW / 2 + x * k, OUTH / 2 + y * k); g.scale(s, s); g.drawImage(src, -iw / 2, -ih / 2);
-        cv.toBlob((b) => (b && b.type === 'image/webp' ? finish(b) : cv.toBlob(finish, 'image/jpeg', 0.88)), 'image/webp', 0.88);
+        const state = { zoom, rx: x / V, ry: y / VH, rot };
+        const done = (b) => { if (b) b.cropState = state; finish(b); };
+        cv.toBlob((b) => (b && b.type === 'image/webp' ? done(b) : cv.toBlob(done, 'image/jpeg', 0.88)), 'image/webp', 0.88);
       }
     });
     setTimeout(() => view.focus(), 50);
@@ -311,11 +320,22 @@
         <b style="font-size:15px">Profilbilde</b>
         <p class="hint">${H.photoNote}</p>
         <label class="check"><input type="checkbox" id="photoOk"> <span>Bildet er av meg</span></label>
-        <div class="row"><label class="btn soft sm" for="photoFile" id="photoBtn">${who.photo ? 'Bytt bilde' : 'Last opp bilde'}</label><input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" class="sr">${who.photo ? '<button type="button" class="btn link small" data-a="photoRemove">Fjern bildet</button>' : ''}</div>
+        <div class="row"><label class="btn soft sm" for="photoFile" id="photoBtn">${who.photo ? 'Bytt bilde' : 'Last opp bilde'}</label><input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" class="sr">${who.photo && who.photoSrc ? '<button type="button" class="btn soft sm" data-a="photoEdit">Juster bildet</button>' : ''}${who.photo ? '<button type="button" class="btn link small" data-a="photoRemove">Fjern bildet</button>' : ''}</div>
         <span class="err-text" id="photoErr" role="alert"></span>
       </div>
     </div>`;
+  // Lagrer et nytt utsnitt av profilbildet. src er originalen (ny ved opplasting, samme ved justering).
+  H.setPhoto = async (blob, src) => {
+    const url = await H.storeImage('avatar', blob);
+    const old = S.user && S.user.photo, oldSrc = S.user && S.user.photoSrc;
+    if (S.user) Object.assign(S.user, { photo: url, photoSrc: src, photoCrop: blob.cropState || null });
+    if (S.profile) S.profile.photo = url;
+    H.save(); H.dropImage(old); if (oldSrc && oldSrc !== src) H.dropImage(oldSrc); H.mountHeader();
+    if (H.savePhotoMeta) H.savePhotoMeta(src, blob.cropState || null);
+  };
+  H.photoEditDone = null;
   H.bindPhotoPicker = (done) => {
+    H.photoEditDone = done;
     const inp = document.getElementById('photoFile'); if (!inp) return;
     const err = (t) => { document.getElementById('photoErr').textContent = t; };
     inp.addEventListener('click', (e) => { if (!document.getElementById('photoOk').checked) { e.preventDefault(); err('Kryss av for at bildet er av deg før du laster opp.'); } });
@@ -329,11 +349,9 @@
         const blob = await H.cropImage(file);
         if (!blob) { btn.textContent = S.user && S.user.photo ? 'Bytt bilde' : 'Last opp bilde'; return; }
         btn.textContent = 'Laster opp …';
-        const url = await H.storeImage('avatar', blob);
-        const old = S.user && S.user.photo;
-        if (S.user) S.user.photo = url;
-        if (S.profile) S.profile.photo = url;
-        H.save(); H.dropImage(old); H.mountHeader();
+        // Originalen lagres også, så bildet kan justeres senere uten ny opplasting
+        const orig = await H.resizeImage(file, 1600);
+        await H.setPhoto(blob, await H.storeImage('avatar-src', orig.blob));
         H.toast('Profilbildet er oppdatert'); done && done();
       } catch (e) { err(e.message || 'Kunne ikke laste opp bildet.'); btn.textContent = 'Last opp bilde'; }
     });
@@ -539,7 +557,17 @@
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
-    photoRemove: () => { const old = S.user && S.user.photo; if (S.user) S.user.photo = null; if (S.profile) S.profile.photo = null; H.save(); H.dropImage(old); H.mountHeader(); H.toast('Profilbildet er fjernet'); H.rerender(); },
+    photoEdit: async () => {
+      const src = S.user && S.user.photoSrc; if (!src) return;
+      try {
+        const file = await (await fetch(src)).blob();
+        const blob = await H.cropImage(file, { state: S.user.photoCrop });
+        if (!blob) return;
+        await H.setPhoto(blob, src);
+        H.toast('Profilbildet er oppdatert'); if (H.photoEditDone) H.photoEditDone();
+      } catch (e) { H.toast(e.message || 'Kunne ikke åpne bildet'); }
+    },
+    photoRemove: () => { const old = S.user && S.user.photo; H.dropImage(S.user && S.user.photoSrc); if (S.user) { S.user.photoSrc = null; S.user.photoCrop = null; } if (H.savePhotoMeta) H.savePhotoMeta(null, null); if (S.user) S.user.photo = null; if (S.profile) S.profile.photo = null; H.save(); H.dropImage(old); H.mountHeader(); H.toast('Profilbildet er fjernet'); H.rerender(); },
     cookie: (v) => {
       S.cookie = v; S.cookies = { analyse: v === 'yes', ads: v === 'yes' }; H.save();
       const c = document.getElementById('cookie'); if (c) { c.classList.add('out'); setTimeout(() => c.remove(), 300); }

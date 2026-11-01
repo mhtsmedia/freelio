@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=8bff6d5f">
+<link rel="stylesheet" href="css/style.css?v=b792b330">
 <link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -24,8 +24,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=0d9f4ef0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=ed5c8697"></script>
-<script src="js/cloud.js?v=63cbedd0"></script>
+<script src="js/app.js?v=80f50a29"></script>
+<script src="js/cloud.js?v=f71f3fd1"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
@@ -43,6 +43,22 @@ const CLOUD = !!(window.Cloud && Cloud.on);
 const PF_MAX = CLOUD ? 24 : 8;
 const VID_MB = H.VID_MB();
 let pfBusy = '', coverBusy = '';
+// Velg nytt bakgrunnsbilde (file) eller juster det du har (uten file). Originalen lagres så du kan justere senere.
+async function editCover(file) {
+  const old = cover;
+  let src = old && old.src, input = file;
+  try {
+    if (!file) { if (!src) return; input = await (await fetch(src)).blob(); }
+    const blob = await H.cropImage(input, { aspect: 3, outW: CLOUD ? 1800 : 1200, state: file ? null : old.crop, title: 'Juster bakgrunnsbildet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Det vises bredt øverst på profilen din.' });
+    if (!blob) return;
+    coverBusy = 'Laster opp …'; form();
+    if (file) src = await H.storeImage('cover-src', (await H.resizeImage(file, CLOUD ? 2400 : 1400)).blob);
+    const b = await H.resizeImage(blob, 700);
+    cover = { url: await H.storeImage('cover', blob), thumb: await H.storeImage('thumb', b.blob), src, crop: blob.cropState || null };
+    if (old) { H.dropImage(old.url); H.dropImage(old.thumb); if (old.src && old.src !== src) H.dropImage(old.src); }
+  } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
+  coverBusy = ''; form();
+}
 function form() {
   const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
   H.fixCats(p);
@@ -62,7 +78,7 @@ function form() {
       <section class="card">${H.photoPicker(S.user)}</section>
       <section class="card stack" style="gap:10px"><b style="font-size:15px">Bakgrunnsbilde</b>
         <div class="cover-pick">${cover ? `<img src="${H.esc(cover.url)}" alt="Bakgrunnsbildet ditt">` : `<span class="hint">Ingen valgt. Det første bildet i porteføljen brukes.</span>`}</div>
-        <div class="row"><label class="btn soft sm" for="coverFile">${H.icon('plus', 16, 2.2)} ${cover ? 'Bytt bakgrunnsbilde' : 'Velg bakgrunnsbilde'}</label><input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp" class="sr">${cover ? '<button type="button" class="btn link small" data-a="rmCover">Fjern</button>' : ''}<span class="hint" id="coverStatus">${H.esc(coverBusy)}</span></div>
+        <div class="row"><label class="btn soft sm" for="coverFile">${H.icon('plus', 16, 2.2)} ${cover ? 'Bytt bakgrunnsbilde' : 'Velg bakgrunnsbilde'}</label><input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp" class="sr">${cover && cover.src ? '<button type="button" class="btn soft sm" data-a="editCover">Juster bildet</button>' : ''}${cover ? '<button type="button" class="btn link small" data-a="rmCover">Fjern</button>' : ''}<span class="hint" id="coverStatus">${H.esc(coverBusy)}</span></div>
         <span class="hint">Vises øverst på profilen og på kortet ditt i søket. Bruk et bredt bilde, gjerne 1600 piksler eller mer.</span></section>
       <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" value="${H.esc(p.name || S.user.name)}"></label>
       <label class="field"><span class="label">Hovedområde *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
@@ -115,19 +131,7 @@ function form() {
     pfBusy = ''; form();
   });
   const cIn = document.getElementById('coverFile');
-  cIn.addEventListener('change', async () => {
-    const file = cIn.files[0]; cIn.value = ''; if (!file) return;
-    const blob = await H.cropImage(file, { aspect: 3, outW: CLOUD ? 1800 : 1200, title: 'Juster bakgrunnsbildet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Det vises bredt øverst på profilen din.' });
-    if (!blob) return;
-    coverBusy = 'Laster opp …'; form();
-    try {
-      const a = { blob }, b = await H.resizeImage(blob, 700);
-      const old = cover;
-      cover = { url: await H.storeImage('cover', a.blob), thumb: await H.storeImage('thumb', b.blob) };
-      if (old) { H.dropImage(old.url); H.dropImage(old.thumb); }
-    } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
-    coverBusy = ''; form();
-  });
+  cIn.addEventListener('change', async () => { const file = cIn.files[0]; cIn.value = ''; if (file) editCover(file); });
   const pf_ = document.getElementById('pform');
   pf_.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal' && e.target.tagName !== 'SELECT' && e.target.type !== 'file') { draft[e.target.id] = e.target.value; } });
   pf_.addEventListener('change', (e) => {
@@ -172,7 +176,8 @@ function form() {
   });
 }
 Object.assign(H.actions, {
-  rmCover: () => { if (cover) { H.dropImage(cover.url); H.dropImage(cover.thumb); } cover = null; form(); },
+  editCover: () => editCover(null),
+  rmCover: () => { if (cover) { H.dropImage(cover.url); H.dropImage(cover.thumb); H.dropImage(cover.src); } cover = null; form(); },
   rmPf: (v) => { const x = pf.splice(+v, 1)[0]; if (x) { H.dropImage(x.url); H.dropImage(x.thumb); } form(); },
   addPk: () => { pkgs.push(['', '', '']); form(); },
   rmPk: (v) => { pkgs.splice(+v, 1); form(); }
