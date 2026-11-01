@@ -53,22 +53,36 @@ window.Media = (function () {
   }
 
   // Behandler én fil og lagrer original og forhåndsvisning. Returnerer metadata som kan lagres sammen med bestillingen.
-  async function add(orderId, file) {
+  async function add(orderId, file, onProgress) {
     const isVideo = file.type.startsWith('video/');
     if (!isVideo && !file.type.startsWith('image/')) throw new Error('Bare bilder og video kan lastes opp');
     const p = isVideo ? await fromVideo(file) : await fromImage(file);
     const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    let parts = 0;
     if (cloud()) {
-      if (file.size > MAX_CLOUD) throw new Error('Filen er større enn 50 MB, som er grensen i gratisversjonen av Supabase');
+      if (file.size > MAX_FILE) throw new Error('Filen er større enn ' + size(MAX_FILE) + '. Del den opp eller send den på en annen måte.');
       const st = Cloud.sb.storage.from(BUCKET);
-      // Video lagres som «stream», så kunden kan se den før godkjenning. Bilder lagres som «original», som låses til godkjenning.
-      const parts = [['thumb', p.thumb], ['preview', p.preview], [isVideo ? 'stream' : 'original', file]];
-      for (const [kind, blob] of parts) {
-        const r = await st.upload(`${orderId}/${id}/${kind}`, blob, { contentType: blob.type || 'application/octet-stream', upsert: false });
+      const up = async (path, blob) => {
+        const r = await st.upload(`${orderId}/${id}/${path}`, blob, { contentType: blob.type || file.type || 'application/octet-stream', upsert: false });
         if (r.error) throw new Error(r.error.message);
+      };
+      const say = (t) => onProgress && onProgress(t);
+      await up('thumb', p.thumb); await up('preview', p.preview);
+      if (isVideo) {
+        // «stream» er versjonen kunden ser før godkjenning. Store videoer får en mindre utgave.
+        const stream = file.size <= CHUNK ? file : await H.fitVideo(file, (pc) => say(`Lager forhåndsvisning … ${pc} %`), { max: CHUNK, minBr: 150000 });
+        say('Laster opp forhåndsvisning …'); await up('stream', stream);
+      }
+      // Originalen. Over 45 MB deles den i biter (Supabase gratis tar maks 50 MB per fil). Låst til kunden har godkjent.
+      if (!isVideo || file.size > CHUNK) {
+        if (file.size <= CHUNK) await up('original', file);
+        else {
+          parts = Math.ceil(file.size / CHUNK);
+          for (let i = 0; i < parts; i++) { say(`Laster opp original … ${Math.round((i / parts) * 100)} %`); await up(`original/${i}`, file.slice(i * CHUNK, (i + 1) * CHUNK, 'application/octet-stream')); }
+        }
       }
     } else await put({ id, orderId, name: file.name, mime: file.type, original: file, preview: p.preview, thumb: p.thumb });
-    return { id, name: file.name, type: p.type, mime: file.type, size: file.size, psize: p.preview.size, w: p.w, h: p.h, duration: p.duration || 0 };
+    return { id, name: file.name, type: p.type, mime: file.type, size: file.size, psize: p.preview.size, w: p.w, h: p.h, duration: p.duration || 0, parts };
   }
 
   // Lager eksempelfiler, så flyten kan testes uten egne bilder
@@ -100,7 +114,7 @@ window.Media = (function () {
   const remove = (id) => tx('readwrite', (s) => s.delete(id));
 
   /* ---------- felles for demo (IndexedDB) og Supabase Storage ---------- */
-  const BUCKET = 'deliveries', MAX_CLOUD = 50 * 1024 * 1024;
+  const BUCKET = 'deliveries', CHUNK = 45 * 1024 * 1024, MAX_FILE = 4 * 1024 * 1024 * 1024;
   const cloud = () => window.Cloud && Cloud.on && Cloud.sb;
   const kindFor = (meta, kind) => (kind === 'original' && meta.type === 'video' ? 'stream' : kind);
   const urlCache = {};
@@ -117,9 +131,23 @@ window.Media = (function () {
     return rec ? (urlCache[k] = URL.createObjectURL(rec[kind])) : '';
   }
   // Last ned originalen i full kvalitet
-  async function save(orderId, meta) {
+  async function save(orderId, meta, onProgress) {
+    if (cloud() && meta.parts) {
+      // Henter bitene og setter dem sammen til én fil igjen
+      const st = Cloud.sb.storage.from(BUCKET), chunks = [];
+      for (let i = 0; i < meta.parts; i++) {
+        if (onProgress) onProgress(Math.round((i / meta.parts) * 100));
+        const r = await st.createSignedUrl(`${orderId}/${meta.id}/original/${i}`, 600);
+        if (r.error) return false;
+        const res = await fetch(r.data.signedUrl); if (!res.ok) return false;
+        chunks.push(await res.blob());
+      }
+      if (onProgress) onProgress(100);
+      download(new Blob(chunks, { type: meta.mime || 'application/octet-stream' }), meta.name);
+      return true;
+    }
     if (cloud()) {
-      const r = await Cloud.sb.storage.from(BUCKET).createSignedUrl(`${orderId}/${meta.id}/${kindFor(meta, 'original')}`, 300, { download: meta.name });
+      const r = await Cloud.sb.storage.from(BUCKET).createSignedUrl(`${orderId}/${meta.id}/${meta.type === 'video' ? 'stream' : 'original'}`, 300, { download: meta.name });
       if (r.error) return false;
       const a = document.createElement('a'); a.href = r.data.signedUrl; a.download = meta.name; document.body.appendChild(a); a.click(); a.remove();
       return true;
@@ -130,7 +158,10 @@ window.Media = (function () {
     return true;
   }
   async function discard(orderId, meta) {
-    if (cloud()) { await Cloud.sb.storage.from(BUCKET).remove(['thumb', 'preview', kindFor(meta, 'original')].map((k) => `${orderId}/${meta.id}/${k}`)); return; }
+    if (cloud()) {
+      const paths = ['thumb', 'preview', meta.type === 'video' ? 'stream' : 'original'].concat(Array.from({ length: meta.parts || 0 }, (_, i) => 'original/' + i));
+      await Cloud.sb.storage.from(BUCKET).remove(paths.map((k) => `${orderId}/${meta.id}/${k}`)); return;
+    }
     return remove(meta.id);
   }
 

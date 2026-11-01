@@ -188,10 +188,11 @@
   H.VID_MB = () => (window.Cloud && Cloud.on ? 50 : 3);
   // Komprimerer en video i nettleseren til den er under grensen. Bruker Mediabunny (WebCodecs).
   // Lastes bare inn når noen faktisk laster opp en video som er for stor.
-  H.fitVideo = async (file, onProgress) => {
-    const max = H.VID_MB() * 1048576;
+  // o.max er grensen i byte (standard er grensen for porteføljen), o.minBr er laveste bitrate vi godtar
+  H.fitVideo = async (file, onProgress, o = {}) => {
+    const max = o.max || H.VID_MB() * 1048576, mbTxt = Math.round(max / 1048576), minBr = o.minBr || 350000;
     if (file.size <= max) return file;
-    if (!window.VideoEncoder) throw new Error('Videoen er over ' + H.VID_MB() + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
+    if (!window.VideoEncoder) throw new Error('Videoen er over ' + mbTxt + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
     const MB = await import(new URL('js/vendor/mediabunny-1.61.4.min.mjs', document.baseURI).href);
     const input = new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) });
     const vt = await input.getPrimaryVideoTrack();
@@ -200,7 +201,7 @@
     const audioBr = 96000, dw = vt.displayWidth, dh = vt.displayHeight;
     // Sikter på 88 % av grensen. Blir filen likevel for stor, prøver den igjen med lavere kvalitet.
     let vbr = Math.min(6e6, Math.floor((max * 0.88 * 8) / Math.max(1, dur) - audioBr));
-    if (vbr < 350000) throw new Error(`Videoen er for lang til å bli under ${H.VID_MB()} MB i god kvalitet. Korte den ned til under ${Math.floor((max * 0.88 * 8) / 450000 / 60)} minutter.`);
+    if (vbr < minBr) throw new Error(`Videoen er for lang til å bli under ${mbTxt} MB i god kvalitet. Korte den ned til under ${Math.floor((max * 0.88 * 8) / (minBr + 100000) / 60)} minutter.`);
     for (let round = 0; round < 3; round++) {
       const long = vbr > 3.5e6 ? 1920 : vbr > 1.6e6 ? 1280 : vbr > 800000 ? 960 : 640;
       const k = Math.min(1, long / Math.max(dw, dh));
@@ -214,9 +215,9 @@
       const out = new Blob([output.target.buffer], { type: 'video/mp4' });
       if (out.size <= max) { if (onProgress) onProgress(100); return out; }
       vbr = Math.floor(vbr * ((max * 0.8) / out.size));
-      if (vbr < 250000) break;
+      if (vbr < minBr * 0.7) break;
     }
-    throw new Error(`Klarte ikke å få videoen under ${H.VID_MB()} MB. Korte den ned og prøv igjen.`);
+    throw new Error(`Klarte ikke å få videoen under ${mbTxt} MB. Korte den ned og prøv igjen.`);
   };
   // Innlegg på Utforsk. Uten database lagres de bare i nettleseren. cloud.js bytter til Supabase.
   H.addPost = async (p) => { S.posts = S.posts || []; S.posts.unshift(Object.assign({}, p, { id: H.uid(), fid: S.profile.id, at: Date.now() })); H.save(); };
