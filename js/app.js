@@ -45,7 +45,7 @@
     drone: '<circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7 8l3 3M17 8l-3 3M7 16l3-3M17 16l-3-3"/><rect x="10" y="10" width="4" height="4" rx="1"/>',
     phone: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
     rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
-    'c-bilder': '<path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2L9 3.5h6L16.5 6h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.8"/><path d="M17.5 9.5h.01"/>',
+    'c-automotiv': '<path d="M3.5 16.5H3v-3.2c0-.5.2-1 .6-1.3L6 9.8l1.6-2.6c.3-.5.9-.8 1.5-.8h5.6c.6 0 1.1.3 1.5.7l2.3 2.7 2.4.7c.7.2 1.1.8 1.1 1.5v3.3c0 .5-.4 1-1 1h-.5"/><path d="M10 16.5h4"/><circle cx="7" cy="16.5" r="2.3"/><circle cx="17" cy="16.5" r="2.3"/><path d="M6 9.8h12.5M12 6.4v3.4"/>',
     'c-bryllup': '<path d="M12 7.2c-1.5-1.1-2.6-1.9-2.6-3 0-1.1 1.5-1.6 2.6-.4 1.1-1.2 2.6-.7 2.6.4 0 1.1-1.1 1.9-2.6 3z"/><circle cx="7" cy="12" r="2.7"/><circle cx="17" cy="12" r="2.7"/><path d="M4.3 12c0 1.9.3 3.2.9 4M9.7 12c0 1.9-.3 3.2-.9 4"/><path d="M2 21.5c.4-2.5 2.4-4 5-4s4.6 1.5 5 4M12 21.5c.4-2.5 2.4-4 5-4s4.6 1.5 5 4"/><path d="m15.6 17.7 1.4 1.8 1.4-1.8"/>',
     'c-portrett': '<rect x="4" y="2.5" width="16" height="19" rx="2.5"/><circle cx="12" cy="10" r="3.2"/><path d="M7.5 21.5c.7-3 2.4-4.7 4.5-4.7s3.8 1.7 4.5 4.7"/>',
     'c-event': '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M7 13.5h.01M11 13.5h.01M7 17.5h.01"/><circle cx="16" cy="16" r="2.8"/><path d="m14.8 16.1.9.9 1.6-1.7"/>',
@@ -68,6 +68,15 @@
   H.pal = (i) => D.PAL[((i % D.PAL.length) + D.PAL.length) % D.PAL.length];
   H.phStyle = (i) => { const p = H.pal(i); return `--a:${p[0]};--b:${p[1]};--s:${p[2]}`; };
   H.inCat = (f, kat) => kat === 'alle' || f.cat === kat || (f.niches || []).includes(kat);
+  // Kategorien «Bilder» heter nå «Automotiv». Gamle profiler, bilder og innlegg flyttes over.
+  const OLD = { bilder: 'automotiv' };
+  H.fixCats = (f) => {
+    if (!f) return f;
+    if (OLD[f.cat]) f.cat = OLD[f.cat];
+    if (f.niches) f.niches = [...new Set(f.niches.map((n) => OLD[n] || n))];
+    (f.portfolio || []).forEach((x) => { if (OLD[x.cat]) x.cat = OLD[x.cat]; });
+    return f;
+  };
   H.cat = (id) => D.CATS.find((c) => c.id === id) || { id, name: id, icon: 'grid' };
   H.first = (name) => String(name).split(' ')[0];
   H.FEE = 0.05;
@@ -101,6 +110,7 @@
   H.all = () => {
     // Legger til ekte omtaler. Ekte frilansere får snitt bare av ekte omtaler. Demo-frilansere har et startgrunnlag.
     const withReviews = (f) => {
+      H.fixCats(f);
       const extra = (S.extraReviews || {})[f.id] || [];
       const real = f.demo === false || f.id === (S.profile && S.profile.id);
       const baseN = real ? 0 : f.reviews || 0, baseSum = real ? 0 : (f.rating || 0) * baseN;

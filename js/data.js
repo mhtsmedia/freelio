@@ -2,7 +2,7 @@
    Freelio starter med foto og video. Hver frilanser har en hovednisje (cat) og flere nisjer (niches). */
 window.HDATA = (function () {
   const CATS = [
-    { id: 'bilder', name: 'Bilder', icon: 'c-bilder', desc: 'Fotografering til alt mulig' },
+    { id: 'automotiv', name: 'Automotiv', icon: 'c-automotiv', desc: 'Biler, motorsykler og bilforhandlere' },
     { id: 'bryllup', name: 'Bryllup', icon: 'c-bryllup', desc: 'Foto og film fra hele dagen' },
     { id: 'portrett', name: 'Portrett', icon: 'c-portrett', desc: 'Familie, par og profilbilder' },
     { id: 'event', name: 'Event', icon: 'c-event', desc: 'Fest, konferanse og konsert' },

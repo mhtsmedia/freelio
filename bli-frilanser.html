@@ -12,18 +12,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=29ab4bea">
+<link rel="stylesheet" href="css/style.css?v=8bff6d5f">
 </head>
 <body data-page="bli-frilanser">
 <div id="site-header"></div>
 <main id="main"></main>
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=20c19068"></script>
+<script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=0d9f4ef0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=47f27bc9"></script>
-<script src="js/cloud.js?v=db9531bf"></script>
+<script src="js/app.js?v=90497e80"></script>
+<script src="js/cloud.js?v=63cbedd0"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
@@ -43,6 +43,7 @@ const VID_MB = H.VID_MB();
 let pfBusy = '', coverBusy = '';
 function form() {
   const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
+  H.fixCats(p);
   pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
   pf = pf || (p.portfolio || []).slice();
   if (cover === undefined) cover = p.coverImg || null;
@@ -50,10 +51,9 @@ function form() {
   const mainCat = p.cat || HDATA.CATS[0].id;
   niches = niches || ((p.niches && p.niches.length) ? p.niches.slice() : [mainCat]);
   if (!niches.includes(mainCat)) niches.unshift(mainCat);
-  const offered = HDATA.CATS.filter((c) => niches.includes(c.id));
   if (!upCat || !niches.includes(upCat)) upCat = mainCat;
   pf.forEach((x) => { if (!x.cat || !niches.includes(x.cat)) x.cat = mainCat; });
-  const catOpts = (sel) => offered.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+  const catOpts = (sel) => HDATA.CATS.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
   document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1300px"><div class="two">
     <form class="stack" style="gap:20px" id="pform" novalidate>
       <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
@@ -79,9 +79,9 @@ function form() {
         ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
-        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB.${offered.length > 1 ? ' Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.' : ''}</p>
-        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${offered.length > 1 ? `<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>` : ''}</div>`).join('')}</div>` : ''}
-        <div class="row">${pf.length < PF_MAX && offered.length > 1 ? `<label class="row small" style="gap:6px"><span class="muted">Last opp til</span><select class="inp sm" id="upCat" style="width:auto;height:36px;padding:0 10px">${catOpts(upCat)}</select></label>` : ''}${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
+        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB. Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.</p>
+        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${`<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>`}</div>`).join('')}</div>` : ''}
+        <div class="row">${pf.length < PF_MAX ? `<label class="row small" style="gap:6px"><span class="muted">Last opp til</span><select class="inp sm" id="upCat" style="width:auto;height:36px;padding:0 10px">${catOpts(upCat)}</select></label>` : ''}${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
       </fieldset>
       <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
       <div id="err"></div>
@@ -131,8 +131,9 @@ function form() {
   pf_.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.niche) { const id = t.dataset.niche; niches = t.checked ? niches.concat(id) : niches.filter((n) => n !== id); form(); return; }
-    if (t.dataset.pfcat) { pf[+t.dataset.pfcat].cat = t.value; return; }
-    if (t.id === 'upCat') { upCat = t.value; return; }
+    // Velger du et fagfelt du ikke har krysset av, blir det lagt til
+    if (t.dataset.pfcat) { pf[+t.dataset.pfcat].cat = t.value; if (!niches.includes(t.value)) { niches.push(t.value); form(); } return; }
+    if (t.id === 'upCat') { upCat = t.value; if (!niches.includes(t.value)) { niches.push(t.value); form(); } return; }
     if (t.id === 'cat') {
       // Bytter hovedområde: det gamle fjernes fra listen, det nye legges til
       const prev = draft.cat || (H.S.profile && H.S.profile.cat) || HDATA.CATS[0].id;

@@ -43,7 +43,7 @@
   } else S.user = null;
 
   /* ---------- mapping mellom databasen og sidene ---------- */
-  const fromFreelancer = (r) => Object.assign({ rv: [], niches: [], tags: [], pk: [] }, r.data, { id: r.id, demo: r.demo, userId: r.user_id, published: r.published });
+  const fromFreelancer = (r) => H.fixCats(Object.assign({ rv: [], niches: [], tags: [], pk: [] }, r.data, { id: r.id, demo: r.demo, userId: r.user_id, published: r.published }));
   const freelancerRow = (p) => ({ id: C.uid, user_id: C.uid, demo: false, published: !!p.published, data: pick(p, ['id', 'demo', 'userId', 'published', 'rv']) });
 
   const jobRow = (j) => ({ id: j.id, owner_id: C.uid, demo: false, status: j.status || 'open', data: pick(j, ['id', 'status', 'offersList', 'mine', 'by', 'posted', 'created']) });
