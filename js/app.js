@@ -140,7 +140,8 @@
   };
   H.ratingTxt = (f) => (f.reviews > 0 ? H.num((+f.rating).toFixed(1)) : 'Ny');
   H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
-  H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
+  // Standardfargen fra Bli frilanser (#0B6E5F) følger fargen i designet som er i bruk
+  H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col === '#0B6E5F' ? 'var(--av-default,#0B6E5F)' : f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
   // i = 'cover' gir bakgrunnsbildet (eller første bilde i porteføljen)
   // i = 'card' gir bildet på kortet i søket: eget kortbilde, ellers bakgrunnsbildet, ellers første bilde i porteføljen

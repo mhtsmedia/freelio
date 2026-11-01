@@ -10,11 +10,12 @@
   --accent:#3E5368; --accent-hover:#2F4052; --accent-ink:#3E5368; --accent-soft:#E6ECF1; --on-accent:#FFFFFF;
   --invert:#1A1D21; --on-invert:#FFFFFF;
   --like:#D93A2B; --star:#D99A00;
+  --ok:#2E5A7A; --ok-soft:#E3EEF6; --av-default:#3E5368;
   --radius:12px;
   --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949;--accent:#9DB4CC;--accent-hover:#B3C6DA;--accent-ink:#A9BED4;--accent-soft:#1E2833;--on-accent:#0E1620}}
-:root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949;--accent:#9DB4CC;--accent-hover:#B3C6DA;--accent-ink:#A9BED4;--accent-soft:#1E2833;--on-accent:#0E1620}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949;--accent:#9DB4CC;--accent-hover:#B3C6DA;--accent-ink:#A9BED4;--accent-soft:#1E2833;--on-accent:#0E1620;--ok:#8FB8D8;--ok-soft:#16222D}}
+:root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949;--accent:#9DB4CC;--accent-hover:#B3C6DA;--accent-ink:#A9BED4;--accent-soft:#1E2833;--on-accent:#0E1620;--ok:#8FB8D8;--ok-soft:#16222D}
 
 /* oppsett: alt innhold ligger i én boks med samme bredde på alle sider, så venstrekanten
    til logoen, overskriftene og innholdet står på linje overalt */
@@ -72,7 +73,9 @@ h2{font-size:20px}
 .card{border-radius:12px}
 .jrow{padding:14px 4px;gap:14px}
 .jrow:hover{padding-left:8px;padding-right:8px}
-.jrow .ico{background:var(--accent-soft);color:var(--accent-ink);border-radius:10px}
+/* ikoner uten boks bak, bare streken i hovedfargen */
+.jrow .ico{width:32px;height:32px;background:none;color:var(--accent-ink);border-radius:0}
+.jrow .ico svg{width:26px;height:26px}
 .tabs button{font-size:15px;border-bottom-width:3px}
 .tabs button[aria-selected="true"]{color:var(--accent-ink)}
 .cmp-table td.best::after{background:var(--accent)}
@@ -95,9 +98,9 @@ h2{font-size:20px}
 .cats{grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:4px}
 .cat{padding:10px 4px;gap:8px;font-size:13px;border-radius:12px}
 .cat:hover{background:transparent}
-.cat .ico{width:56px;height:56px;border-radius:16px;border:0;background:var(--accent-soft);color:var(--accent-ink)}
-.cat .ico svg{width:26px;height:26px}
-.cat:hover .ico{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.cat .ico{width:44px;height:40px;border-radius:0;border:0;background:none;color:var(--accent-ink)}
+.cat .ico svg{width:34px;height:34px}
+.cat:hover .ico{background:none;color:var(--accent-hover);border-color:transparent;transform:translateY(-2px)}
 .steps3 .n{background:var(--accent);color:var(--on-accent);border:0}
 .band{background:var(--surface);border:0;border-radius:16px;padding:28px 32px}
 @media (max-width:600px){
@@ -120,7 +123,8 @@ h2{font-size:20px}
   body[data-page="index"] main > .wrap > section:nth-child(4) h2{font-size:17px}
   body[data-page="index"] #jobs .jrow{padding-block:12px}
   body[data-page="index"] #jobs .jrow:last-child{border-bottom:0}
-  body[data-page="index"] #jobs .jrow .ico{width:36px;height:36px}
+  body[data-page="index"] #jobs .jrow .ico{width:28px;height:28px}
+  body[data-page="index"] #jobs .jrow .ico svg{width:24px;height:24px}
   body[data-page="index"] .steps3{grid-template-columns:minmax(0,1fr);gap:14px}
   body[data-page="index"] .steps3 .card{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;row-gap:2px}
   body[data-page="index"] .steps3 .n{width:28px;height:28px;font-size:12px;grid-row:span 2}
