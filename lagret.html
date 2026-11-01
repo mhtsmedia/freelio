@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lagret | Freelio</title>
+<meta name="description" content="Frilansere, innlegg og oppdrag du har lagret, samlet i mapper.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css?v=2862206d">
+<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
+<script src="js/design.js?v=7c71ad27"></script>
+</head>
+<body data-page="lagret">
+<div id="site-header"></div>
+<main id="main"></main>
+<div id="site-footer"></div>
+<script src="js/logo.js?v=e81a0a03"></script>
+<script src="js/data.js?v=20c19068"></script>
+<script src="js/config.js?v=a40d434d"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="js/app.js?v=0135080a"></script>
+<script src="js/cloud.js?v=681fd476"></script>
+<script type="text/freelio">
+const S = H.S, esc = H.esc;
+let confirmDel = false, renaming = false;
+const plural = (n) => (n === 1 ? '1 lagret' : n + ' lagret');
+const live = (m) => m.items.filter((x) => H.folderItem(x));
+// Bilde som representerer en lagret ting i forhåndsvisningen av mappen
+const thumbOf = (x) => {
+  const it = H.folderItem(x); if (!it) return null;
+  if (x.t === 'f') { const img = it.cardImg || it.coverImg || (it.portfolio || [])[0]; return img ? { src: img.thumb || img.url } : { ph: it }; }
+  if (x.t === 'p') return { src: it.thumb || it.url };
+  return { icon: H.cat(it.cat).icon };
+};
+const tileImg = (m) => {
+  const th = m.items.map(thumbOf).filter(Boolean).slice(0, 4);
+  if (!th.length) return `<span class="ftile-img empty-f">${H.icon('save', 34, 1.4)}</span>`;
+  const one = th.length === 1;
+  return `<span class="ftile-img"${one ? ' style="grid-template-columns:1fr;grid-template-rows:1fr"' : ''}>${th.map((t) => `<span>${t.src ? `<img src="${esc(t.src)}" alt="" loading="lazy">` : t.ph ? H.ph(t.ph, 'card', '', 'span', 'style="width:100%;height:100%"') : H.icon(t.icon, 28, 1.5)}</span>`).join('')}${!one && th.length < 4 ? '<span></span>'.repeat(4 - th.length) : ''}</span>`;
+};
+const note = () => {
+  if (!(window.Cloud && Cloud.on)) return '';
+  if (!S.user) return `<div class="banner acc">${H.icon('lock', 20)}<span>Logg inn for å ta vare på det du lagrer, på alle enhetene dine. <a href="logg-inn.html?neste=lagret.html">Logg inn</a></span></div>`;
+  if (Cloud.foldersReady === false) return `<div class="banner warn">${H.icon('lock', 20)}<span>Mappene lagres foreløpig bare i denne nettleseren. Kjør database/mapper.sql i Supabase for å lagre dem på kontoen.</span></div>`;
+  return '';
+};
+const crumbs = (last) => `<div class="crumbs" style="padding-top:0">${S.user ? '<a href="min-side.html">Min side</a><span>/</span>' : ''}${last}</div>`;
+
+function overview() {
+  const folders = H.folders();
+  const saved = S.saved.map(H.byId).filter(Boolean);
+  return `<div class="wrap section">
+    ${crumbs('<span>Lagret</span>')}
+    <div class="stack" style="gap:6px"><h1>Lagret</h1><p class="muted">Frilansere, innlegg og oppdrag du har lagret. Samle dem i mapper, for eksempel én for bryllupet og én for nettbutikken.</p></div>
+    ${note()}
+    <section class="stack"><h2>Mapper</h2>
+      <div class="ftiles">${folders.map((m) => `<a class="ftile" href="lagret.html?mappe=${m.id}">${tileImg(m)}<span class="ftile-name">${esc(m.name)}</span><span class="meta" style="margin-top:-6px">${plural(live(m).length)}</span></a>`).join('')}
+        <form class="ftile-new" id="newForm"><b>Ny mappe</b><label class="sr" for="fname">Navn på mappen</label><input class="inp" id="fname" maxlength="60" placeholder="F.eks. Bryllup" autocomplete="off"><button class="btn primary sm" type="submit">Lag mappe</button></form>
+      </div></section>
+    <section class="stack"><div class="section-head"><h2>Lagrede frilansere (${saved.length})</h2><a href="sok.html">Finn flere</a></div>
+      ${saved.length ? `<div class="cards">${saved.map((f) => { const n = H.inFolders('f', f.id).length; return `<div class="stack" style="gap:8px">${H.fCard(f)}<button class="btn soft sm" data-a="folder" data-v="f:${f.id}">${n ? 'I ' + n + (n === 1 ? ' mappe' : ' mapper') + '. Endre' : 'Legg i mappe'}</button></div>`; }).join('')}</div>`
+        : '<p class="muted">Trykk på hjertet på et kort for å lagre frilansere du liker.</p>'}
+    </section>
+  </div>`;
+}
+
+function folderView(m) {
+  const items = m.items.map((x) => ({ x, it: H.folderItem(x) })).filter((o) => o.it);
+  const fr = items.filter((o) => o.x.t === 'f'), po = items.filter((o) => o.x.t === 'p'), jo = items.filter((o) => o.x.t === 'j');
+  const rm = (x) => `<button class="btn link small" style="align-self:flex-start" data-a="rmItem" data-v="${x.t}:${x.id}">Fjern fra mappen</button>`;
+  return `<div class="wrap section">
+    ${crumbs(`<a href="lagret.html">Lagret</a><span>/</span><span>${esc(m.name)}</span>`)}
+    ${renaming ? `<form class="row" id="renForm" style="max-width:560px;flex-wrap:nowrap"><label class="sr" for="rname">Nytt navn på mappen</label><input class="inp" id="rname" maxlength="60" value="${esc(m.name)}"><button class="btn primary sm" type="submit">Lagre</button><button class="btn soft sm" type="button" data-a="noRename">Avbryt</button></form>`
+      : `<div class="row" style="justify-content:space-between;align-items:flex-end"><div class="stack" style="gap:2px"><h1>${esc(m.name)}</h1><span class="muted">${plural(items.length)}</span></div>
+        <div class="row">${confirmDel ? `<span class="small">Slette mappen? Det du har lagret, forsvinner bare fra denne mappen.</span><button class="btn soft sm" data-a="noDel">Avbryt</button><button class="btn dark sm" data-a="delFolder">Ja, slett</button>`
+          : '<button class="btn soft sm" data-a="rename">Gi nytt navn</button><button class="btn ghost sm" data-a="askDel">Slett mappen</button>'}</div></div>`}
+    ${note()}
+    ${items.length ? '' : `<div class="empty"><b style="color:var(--fg)">Mappen er tom</b><span>Lagre frilansere med hjertet, og innlegg og oppdrag med lagre-knappen. Da kan du velge denne mappen.</span><div class="row" style="justify-content:center"><a class="btn primary sm" href="sok.html">Finn frilansere</a><a class="btn soft sm" href="utforsk.html">Se innlegg</a><a class="btn soft sm" href="oppdrag.html">Se oppdrag</a></div></div>`}
+    ${fr.length ? `<section class="stack"><h2>Frilansere (${fr.length})</h2><div class="cards">${fr.map(({ x, it }) => `<div class="stack" style="gap:6px">${H.fCard(it)}${rm(x)}</div>`).join('')}</div></section>` : ''}
+    ${po.length ? `<section class="stack"><h2>Innlegg og videoer (${po.length})</h2><div class="ptiles">${po.map(({ x, it }) => { const f = H.byId(it.fid); return `<div class="ptile"><a class="ptile-img" href="frilanser.html?id=${it.fid}" aria-label="${f ? 'Innlegg fra ' + esc(f.name) : 'Innlegg'}"><img src="${esc(it.thumb || it.url)}" alt="" loading="lazy">${it.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</a>${f ? `<a href="frilanser.html?id=${f.id}" class="small" style="font-weight:700;color:var(--fg)">${esc(f.name)}</a>` : ''}${it.cap ? `<span class="meta" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(it.cap)}</span>` : ''}${rm(x)}</div>`; }).join('')}</div></section>` : ''}
+    ${jo.length ? `<section class="stack"><h2>Oppdrag (${jo.length})</h2><div class="stack list">${jo.map(({ x, it }) => `<div class="row" style="flex-wrap:nowrap;gap:8px"><div class="grow" style="min-width:0">${H.jobRow(it)}</div>${rm(x)}</div>`).join('')}</div></section>` : ''}
+  </div>`;
+}
+
+function render() {
+  const main = document.getElementById('main');
+  const id = H.qs('mappe');
+  const m = id && H.folders().find((x) => x.id === id);
+  if (id && !m) { main.innerHTML = `<div class="wrap section"><div class="empty"><b style="color:var(--fg)">Fant ikke mappen</b><span>Den kan være slettet.</span><a class="btn primary sm" href="lagret.html">Til Lagret</a></div></div>`; return; }
+  document.title = (m ? m.name + ' | Lagret' : 'Lagret') + ' | Freelio';
+  main.innerHTML = m ? folderView(m) : overview();
+  const nf = document.getElementById('newForm');
+  if (nf) nf.addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('fname'); const n = i.value.trim(); if (!n) { i.focus(); return; } H.makeFolder(n); H.toast('Mappen «' + n + '» er laget'); render(); });
+  const rf = document.getElementById('renForm');
+  if (rf) rf.addEventListener('submit', (e) => { e.preventDefault(); const n = document.getElementById('rname').value.trim(); if (!n) return; m.name = n.slice(0, 60); renaming = false; H.save(); render(); });
+}
+Object.assign(H.actions, {
+  rename: () => { renaming = true; render(); const i = document.getElementById('rname'); if (i) { i.focus(); i.select(); } },
+  noRename: () => { renaming = false; render(); },
+  askDel: () => { confirmDel = true; render(); },
+  noDel: () => { confirmDel = false; render(); },
+  delFolder: () => { const id = H.qs('mappe'); S.folders = H.folders().filter((x) => x.id !== id); H.save(); H.flash('Mappen er slettet.'); H.go('lagret.html'); },
+  rmItem: (v) => { const m = H.folders().find((x) => x.id === H.qs('mappe')); if (!m) return; const t = v.slice(0, 1), id = v.slice(2); m.items = m.items.filter((x) => !(x.t === t && x.id === id)); H.save(); render(); }
+});
+H.boot(render);
+</script>
+</body>
+</html>

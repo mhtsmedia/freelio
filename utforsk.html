@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=29ab4bea">
-<link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=2862206d">
+<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="utforsk">
@@ -27,10 +27,10 @@
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
 <script src="js/data.js?v=20c19068"></script>
-<script src="js/config.js?v=0d9f4ef0"></script>
+<script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=854ae0da"></script>
-<script src="js/cloud.js?v=db9531bf"></script>
+<script src="js/app.js?v=0135080a"></script>
+<script src="js/cloud.js?v=681fd476"></script>
 <script type="text/freelio">
 let cat = 'alle';
 let draft = null, busy = '', caption = '';
@@ -53,13 +53,13 @@ function render() {
   const posts = (H.S.posts || []).map((p) => ({ p, f: H.byId(p.fid) })).filter((x) => x.f && H.inCat(x.f, cat)).sort((a, b) => b.p.at - a.p.at);
   const mineId = H.S.profile && H.S.profile.id;
   document.getElementById('feed').innerHTML = posts.length ? posts.map(({ p, f }) => {
-    const key = 'p:' + p.id; const liked = H.S.liked.includes(key); const saved = H.S.saved.includes(f.id);
+    const key = 'p:' + p.id; const liked = H.S.liked.includes(key); const saved = H.isSavedItem('p', p.id);
     return `<article class="post">
       <div class="row" style="flex-wrap:nowrap;gap:8px"><a class="post-h grow" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${ago(p.at)}</span></span></a>${p.fid === mineId ? `<button class="btn link small" data-a="delPost" data-v="${p.id}">Slett</button>` : `<span class="rate">${H.star()} ${H.ratingTxt(f)}</span>`}</div>
       <div class="post-media">${p.type === 'video' ? `<video src="${H.esc(p.url)}" poster="${H.esc(p.thumb)}" controls playsinline preload="none"></video>` : `<a href="frilanser.html?id=${f.id}" aria-label="Se profilen til ${H.esc(f.name)}"><img src="${H.esc(p.url)}" alt="${H.esc(p.cap || 'Arbeid fra ' + f.name)}" loading="lazy"></a>`}</div>
       <div class="row" style="gap:2px">
         <button class="ibtn plain" data-a="like" data-v="${key}" aria-pressed="${liked}" aria-label="Lik" style="color:${liked ? 'var(--like)' : 'inherit'}">${H.icon('heart', 24, 1.8, liked ? 'currentColor' : 'none')}</button>
-        <button class="ibtn plain" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="Lagre ${H.esc(f.name)}">${H.icon('save', 22, 1.8, saved ? 'currentColor' : 'none')}</button>
+        <button class="ibtn plain" data-a="folder" data-v="p:${p.id}" aria-pressed="${saved}" aria-label="${saved ? 'Lagret i mappe. Endre mapper' : 'Lagre innlegget i en mappe'}">${H.icon('save', 22, 1.8, saved ? 'currentColor' : 'none')}</button>
         <a class="ibtn plain" href="meldinger.html?med=${f.id}" aria-label="Send melding til ${H.esc(f.name)}">${H.icon('chat', 22)}</a>
         <span class="grow meta" style="padding-left:8px">${H.priceTxt(f)}</span>
         <a class="btn dark sm" href="book.html?id=${f.id}">Book</a>

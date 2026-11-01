@@ -79,7 +79,7 @@
     user: null, saved: [], liked: [], cmp: [],
     orders: [],
     myJobs: [], threads: {}, readThreads: {}, cookie: null, cookies: { analyse: false, ads: false },
-    extraReviews: {}, profile: null, sentOffers: {}, asst: [], posts: []
+    extraReviews: {}, profile: null, sentOffers: {}, asst: [], posts: [], folders: []
   });
   let mem = null;
   H.load = (force) => {
@@ -133,11 +133,13 @@
   H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
   // i = 'cover' gir bakgrunnsbildet (eller første bilde i porteføljen)
+  // i = 'card' gir bildet på kortet i søket: eget kortbilde, ellers bakgrunnsbildet, ellers første bilde i porteføljen
   H.ph = (f, i = 0, cls = '', tag = 'span', attrs = '', inner = '', big = false) => {
-    const isCover = i === 'cover'; if (isCover) i = 0;
-    const img = (isCover && f.coverImg) || (f.portfolio || [])[i];
+    const isCover = i === 'cover', isCard = i === 'card'; if (isCover || isCard) i = 0;
+    const own = (isCard && (f.cardImg || f.coverImg)) || (isCover && f.coverImg) || null;
+    const img = own || (f.portfolio || [])[i];
     const vid = img && img.type === 'video';
-    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${vid && !(isCover && f.coverImg) ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
+    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${vid && !own ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
     return `<${tag} class="ph ${cls}" style="${H.phStyle((f.pal || 0) + i)}" ${attrs}>${inner}</${tag}>`;
   };
 
@@ -331,11 +333,12 @@
   H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
 
   // Bla gjennom porteføljen rett fra kortet. Med et fagfelt valgt vises bare bilder fra det fagfeltet.
-  // Ellers bakgrunnsbildet først, så hele porteføljen.
+  // Ellers kortbildet (eller bakgrunnsbildet) først, så hele porteføljen.
   H.carousel = (f, cat) => {
     const pfl = f.portfolio || [];
     const inCat = cat && cat !== 'alle' ? pfl.filter((x) => (x.cat || f.cat) === cat) : [];
-    const imgs = (inCat.length ? inCat : [].concat(f.coverImg ? [f.coverImg] : [], pfl)).slice(0, 8);
+    const lead = f.cardImg || f.coverImg;
+    const imgs = (inCat.length ? inCat : [].concat(lead ? [lead] : [], pfl)).slice(0, 8);
     if (!imgs.length || (imgs.length < 2 && !inCat.length)) return '';
     return `<div class="fc-car">
       <a class="fc-track" href="frilanser.html?id=${f.id}${inCat.length ? '&kat=' + cat : ''}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}. ${imgs.length} bilder">${imgs.map((x) => `<span class="fc-slide"><img src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy" draggable="false">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</span>`).join('')}</a>
@@ -347,13 +350,81 @@
     const saved = S.saved.includes(f.id);
     const inCmp = S.cmp.includes(f.id);
     return `<article class="fcard">
-      ${H.carousel(f, opts.cat) || H.ph(f, 'cover', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
+      ${H.carousel(f, opts.cat) || H.ph(f, 'card', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
       <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>
       <span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span>
       <span class="price">${H.priceTxt(f)}</span>
     </article>`;
+  };
+
+  /* ---------- lagret i mapper ---------- */
+  // En mappe: { id, name, items: [{ t, id, at }], at, owner }. t er 'f' (frilanser), 'p' (innlegg) eller 'j' (oppdrag).
+  // owner er bruker-id-en mappen er lagret på. Mapper laget uten innlogging har ingen owner.
+  H.folders = () => (S.folders = S.folders || []);
+  H.inFolders = (t, id) => H.folders().filter((m) => m.items.some((x) => x.t === t && x.id === id));
+  H.isSavedItem = (t, id) => (t === 'f' && S.saved.includes(id)) || H.inFolders(t, id).length > 0;
+  H.makeFolder = (name) => {
+    const m = { id: H.uid(), name: String(name).trim().slice(0, 60) || 'Ny mappe', items: [], at: Date.now(), owner: (window.Cloud && Cloud.uid) || null };
+    H.folders().push(m); H.save(); return m;
+  };
+  H.toggleInFolder = (mid, t, id) => {
+    const m = H.folders().find((x) => x.id === mid); if (!m) return;
+    const i = m.items.findIndex((x) => x.t === t && x.id === id);
+    if (i > -1) m.items.splice(i, 1);
+    else { m.items.unshift({ t, id, at: Date.now() }); if (t === 'f' && !S.saved.includes(id)) S.saved.push(id); }
+    H.save();
+  };
+  H.folderItem = (x) => (x.t === 'f' ? H.byId(x.id) : x.t === 'j' ? H.jobById(x.id) : (S.posts || []).find((p) => p.id === x.id));
+  // Velg mapper for en frilanser, et innlegg eller et oppdrag
+  H.pickFolder = (t, id) => {
+    const last = document.activeElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'crop-wrap'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Lagre i mappe');
+    const what = { f: 'frilanseren', p: 'innlegget', j: 'oppdraget' }[t] || 'dette';
+    const draw = () => {
+      const list = H.folders();
+      wrap.innerHTML = `<div class="crop-box folder-box">
+        <div class="row" style="justify-content:space-between"><b style="font-size:17px">Lagre i mappe</b><button type="button" class="ibtn" data-f="close" aria-label="Lukk">${H.icon('close', 18, 2)}</button></div>
+        <p class="hint">Velg hvilke mapper ${what} skal ligge i.</p>
+        <div class="stack" style="gap:6px">${list.length ? list.map((m) => { const on = m.items.some((x) => x.t === t && x.id === id); return `<button type="button" class="folder-opt" data-f="toggle" data-id="${m.id}" aria-pressed="${on}"><span class="folder-check">${on ? H.icon('check', 14, 3) : ''}</span><span class="grow">${H.esc(m.name)}</span><span class="meta">${m.items.length}</span></button>`; }).join('') : '<p class="muted small">Du har ingen mapper ennå. Lag den første under.</p>'}</div>
+        <form class="row" data-f="new" style="flex-wrap:nowrap"><label class="sr" for="newFolder">Navn på ny mappe</label><input class="inp" id="newFolder" maxlength="60" placeholder="Ny mappe, f.eks. Bryllup" autocomplete="off"><button class="btn soft" type="submit">Lag mappe</button></form>
+        <div class="row" style="justify-content:space-between"><a class="small" href="lagret.html">Se alt du har lagret</a><button type="button" class="btn primary" data-f="close">Ferdig</button></div>
+      </div>`;
+    };
+    const close = () => { document.removeEventListener('keydown', key); wrap.remove(); document.body.style.overflow = ''; if (last && last.focus) last.focus(); H.rerender(); };
+    const key = (e) => { if (e.key === 'Escape') close(); };
+    wrap.addEventListener('click', (e) => {
+      const c = e.target.closest('[data-f]');
+      if (!c) { if (e.target === wrap) close(); return; }
+      if (c.dataset.f === 'close') close();
+      if (c.dataset.f === 'toggle') { const mid = c.dataset.id; H.toggleInFolder(mid, t, id); draw(); const b = wrap.querySelector(`[data-id="${mid}"]`); if (b) b.focus(); }
+    });
+    wrap.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const inp = wrap.querySelector('#newFolder'); const name = inp.value.trim();
+      if (!name) { inp.focus(); return; }
+      const m = H.makeFolder(name); H.toggleInFolder(m.id, t, id); draw();
+      wrap.querySelector('#newFolder').focus();
+    });
+    draw();
+    document.addEventListener('keydown', key); document.body.appendChild(wrap); document.body.style.overflow = 'hidden';
+    setTimeout(() => { const b = wrap.querySelector('.folder-opt') || wrap.querySelector('#newFolder'); if (b) b.focus(); }, 50);
+  };
+
+  /* ---------- sted på kart ---------- */
+  // Finner omtrentlig posisjon for et stedsnavn i Norge med OpenStreetMap (Nominatim). Svaret huskes i nettleseren.
+  H.geocode = async (place) => {
+    const q = String(place || '').trim(); if (!q) return null;
+    const k = 'freelio:geo:' + q.toLowerCase();
+    try { const c = localStorage.getItem(k); if (c) return JSON.parse(c); } catch (e) {}
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=no&accept-language=nb&q=' + encodeURIComponent(q));
+    if (!r.ok) throw new Error('Fant ikke stedet');
+    const j = await r.json();
+    const hit = j && j[0] ? [Math.round(+j[0].lat * 1e4) / 1e4, Math.round(+j[0].lon * 1e4) / 1e4] : null;
+    try { localStorage.setItem(k, JSON.stringify(hit)); } catch (e) {}
+    return hit;
   };
 
   /* ---------- oppdrag (annonser) ---------- */
@@ -429,12 +500,14 @@
 
   /* ---------- toast ---------- */
   let tt;
-  H.toast = (msg) => {
+  // act = { label, a, v } gir en knapp i meldingen som kjører H.actions[a](v)
+  H.toast = (msg, act) => {
     let el = document.getElementById('toast');
     if (el) el.remove();
     el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el);
     el.textContent = msg;
-    clearTimeout(tt); tt = setTimeout(() => el.remove(), 3600);
+    if (act) { const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-btn'; b.dataset.a = act.a; b.dataset.v = act.v; b.textContent = act.label; el.append(' ', b); b.addEventListener('click', () => el.remove()); }
+    clearTimeout(tt); tt = setTimeout(() => el.remove(), act ? 6000 : 3600);
   };
   H.flash = (msg) => { try { sessionStorage.setItem('freelio:flash', msg); } catch (e) {} };
 
@@ -491,7 +564,7 @@
       </div>
       <nav class="drawer" aria-label="Meny for mobil"><div>
         <a href="ny-annonse.html">Legg ut oppdrag</a>${nav.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="kart.html">Kart</a>
-        <a href="assistent.html">Assistent</a><a href="meldinger.html">Meldinger${unread ? ` (${unread})` : ''}</a><a href="mine-oppdrag.html">Mine oppdrag${act ? ` (${act})` : ''}</a>
+        <a href="assistent.html">Assistent</a><a href="meldinger.html">Meldinger${unread ? ` (${unread})` : ''}</a><a href="mine-oppdrag.html">Mine oppdrag${act ? ` (${act})` : ''}</a><a href="lagret.html">Lagret</a>
         <a href="${S.user ? 'min-side.html' : 'logg-inn.html'}">${S.user ? 'Min side' : 'Logg inn'}</a>
       </div></nav>
     </div></header>`;
@@ -537,9 +610,15 @@
     cookieSettings: () => H.mountCookie(true),
     save: (v) => {
       const i = S.saved.indexOf(v);
-      if (i > -1) { S.saved.splice(i, 1); H.toast('Fjernet fra lagrede'); } else { S.saved.push(v); H.toast('Lagret'); }
+      if (i > -1) {
+        S.saved.splice(i, 1);
+        H.folders().forEach((m) => { m.items = m.items.filter((x) => !(x.t === 'f' && x.id === v)); });
+        H.toast('Fjernet fra lagrede');
+      } else { S.saved.push(v); H.toast('Lagret', { label: 'Legg i mappe', a: 'folder', v: 'f:' + v }); }
       H.save(); H.rerender(); popIn(`[data-a="save"][data-v="${v}"] svg`);
     },
+    // v = 'f:<id>', 'p:<id>' eller 'j:<id>'
+    folder: (v) => { const t = String(v).slice(0, 1), id = String(v).slice(2); if (t && id) H.pickFolder(t, id); },
     cmp: (v) => {
       const i = S.cmp.indexOf(v);
       if (i > -1) S.cmp.splice(i, 1);

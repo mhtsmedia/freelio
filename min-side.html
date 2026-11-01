@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=29ab4bea">
-<link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=2862206d">
+<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="min-side">
@@ -22,10 +22,10 @@
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
 <script src="js/data.js?v=20c19068"></script>
-<script src="js/config.js?v=0d9f4ef0"></script>
+<script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=854ae0da"></script>
-<script src="js/cloud.js?v=db9531bf"></script>
+<script src="js/app.js?v=0135080a"></script>
+<script src="js/cloud.js?v=681fd476"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   let confirmDel = false;
@@ -33,9 +33,19 @@ if (H.requireLogin()) {
   S.notify = S.notify || { email: true, push: true, jobs: true };
   function render() {
     const saved = S.saved.map(H.byId).filter(Boolean);
+    const folders = H.folders();
     const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
     document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:1200px">
       <div class="row">${H.avatar({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo }, 64)}<div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
+
+      <nav class="mside-menu" aria-label="Min side">
+        <a href="lagret.html">${H.icon('heart', 22)}<span><b>Lagret</b><span class="meta">${saved.length} ${saved.length === 1 ? 'frilanser' : 'frilansere'} · ${folders.length} ${folders.length === 1 ? 'mappe' : 'mapper'}</span></span></a>
+        <a href="mine-oppdrag.html">${H.icon('clipboard', 22)}<span><b>Mine oppdrag</b><span class="meta">Bestillinger, annonser og tilbud</span></span></a>
+        <a href="meldinger.html">${H.icon('chat', 22)}<span><b>Meldinger</b><span class="meta">Samtaler med frilansere og kunder</span></span></a>
+        <a href="bli-frilanser.html">${H.icon('user', 22)}<span><b>Frilanserprofil</b><span class="meta">${S.profile ? 'Rediger profilen din' : 'Ta oppdrag selv'}</span></span></a>
+        <a href="#varsler">${H.icon('clock', 22)}<span><b>Varsler</b><span class="meta">Push og e-post</span></span></a>
+        <a href="#data">${H.icon('lock', 22)}<span><b>Personvern og data</b><span class="meta">Cookies, nedlasting og sletting</span></span></a>
+      </nav>
 
       <section class="card">${H.photoPicker({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo })}</section>
 
@@ -44,10 +54,11 @@ if (H.requireLogin()) {
         : `<p class="muted">Vil du ta oppdrag selv? Lag en gratis profil.</p><a class="btn primary sm" style="align-self:flex-start" href="bli-frilanser.html">Bli frilanser</a>`}
       </section>
 
-      <section class="stack"><h2 style="font-size:20px">Lagrede frilansere (${saved.length})</h2>
-        ${saved.length ? `<div class="cards">${saved.map((f) => H.fCard(f)).join('')}</div>` : '<p class="muted">Trykk på hjertet på et kort for å lagre frilansere du liker.</p>'}</section>
+      <section class="stack" id="lagret"><div class="section-head"><h2 style="font-size:20px">Lagret</h2><a href="lagret.html">Se alt lagret</a></div>
+        <div class="chips">${folders.map((m) => `<a class="chip" href="lagret.html?mappe=${m.id}">${H.esc(m.name)} · ${m.items.length}</a>`).join('')}<a class="chip" href="lagret.html">${H.icon('plus', 14, 2.2)} Ny mappe</a></div>
+        ${saved.length ? `<div class="cards">${saved.slice(0, 4).map((f) => H.fCard(f)).join('')}</div>` : '<p class="muted">Trykk på hjertet på et kort for å lagre frilansere du liker.</p>'}</section>
 
-      <section class="card stack" style="gap:0"><h2 style="font-size:20px;margin-bottom:6px">Varsler</h2>
+      <section class="card stack" style="gap:0" id="varsler"><h2 style="font-size:20px;margin-bottom:6px">Varsler</h2>
         ${sw(S.notify.push, 'notify', 'push', 'Push-varsler', 'Nye meldinger, tilbud og leveranser.')}
         ${sw(S.notify.email, 'notify', 'email', 'E-post', 'Kvitteringer og viktige endringer.')}
         ${sw(S.notify.jobs, 'notify', 'jobs', 'Nye oppdrag i ditt fagfelt', 'Bare for frilansere.')}</section>
@@ -58,7 +69,7 @@ if (H.requireLogin()) {
         ${sw(S.cookies.ads, 'ck', 'ads', 'Markedsføring', 'Måler effekten av annonser på andre nettsider.')}
         <p class="hint" style="margin-top:10px">Les mer i <a href="cookies.html">cookieerklæringen</a>.</p></section>
 
-      <section class="card stack"><h2 style="font-size:20px">Dine data</h2>
+      <section class="card stack" id="data"><h2 style="font-size:20px">Dine data</h2>
         <p class="muted">Du kan laste ned alt vi har lagret om deg, eller slette kontoen. Kontoen slettes når aktive oppdrag er avsluttet. Kvitteringer lagres i 5 år fordi bokføringsloven krever det.</p>
         <div class="row"><button class="btn soft sm" data-a="export">Last ned mine data</button>
         ${confirmDel ? `<span class="small">Er du sikker? Alt i denne nettleseren slettes.</span><button class="btn soft sm" data-a="noDel">Avbryt</button><button class="btn dark sm" data-a="del">Ja, slett</button>` : '<button class="btn ghost sm" data-a="askDel">Slett konto</button>'}</div></section>

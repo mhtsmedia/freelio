@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=29ab4bea">
-<link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=2862206d">
+<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="bli-frilanser">
@@ -22,10 +22,10 @@
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
 <script src="js/data.js?v=20c19068"></script>
-<script src="js/config.js?v=0d9f4ef0"></script>
+<script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=854ae0da"></script>
-<script src="js/cloud.js?v=db9531bf"></script>
+<script src="js/app.js?v=0135080a"></script>
+<script src="js/cloud.js?v=681fd476"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
@@ -36,18 +36,19 @@ function intro() {
     <div class="card"><span class="n">2</span><h3>Få forespørsler</h3><p class="muted">Kunder booker deg direkte, eller du sender tilbud på oppdrag.</p></div>
     <div class="card"><span class="n">3</span><h3>Lever og få betalt</h3><p class="muted">Pengene er betalt inn før du starter. Utbetaling innen 2 virkedager etter godkjenning.</p></div></div></div>`;
 }
-let pkgs, pf, cover, niches, upCat; const draft = {};
+let pkgs, pf, cover, card, niches, upCat; const draft = {};
 const RESP = [[1, '1 time'], [3, '3 timer'], [6, '6 timer'], [24, '1 dag'], [48, '2 dager']];
 const DEL = [[0, 'Samme dag'], [1, '1 dag'], [2, '2 dager'], [3, '3 dager'], [5, '5 dager'], [7, '7 dager'], [14, '14 dager'], [21, '21 dager'], [30, '30 dager']];
 const CLOUD = !!(window.Cloud && Cloud.on);
 const PF_MAX = CLOUD ? 24 : 8;
 const VID_MB = H.VID_MB();
-let pfBusy = '', coverBusy = '';
+let pfBusy = '', coverBusy = '', cardBusy = '', saving = false;
 function form() {
   const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
   pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
   pf = pf || (p.portfolio || []).slice();
   if (cover === undefined) cover = p.coverImg || null;
+  if (card === undefined) card = p.cardImg || null;
   // Fagfelt: hovedområdet er alltid med. Hvert bilde i porteføljen hører til ett av dem.
   const mainCat = p.cat || HDATA.CATS[0].id;
   niches = niches || ((p.niches && p.niches.length) ? p.niches.slice() : [mainCat]);
@@ -63,7 +64,11 @@ function form() {
       <section class="card stack" style="gap:10px"><b style="font-size:15px">Bakgrunnsbilde</b>
         <div class="cover-pick">${cover ? `<img src="${H.esc(cover.url)}" alt="Bakgrunnsbildet ditt">` : `<span class="hint">Ingen valgt. Det første bildet i porteføljen brukes.</span>`}</div>
         <div class="row"><label class="btn soft sm" for="coverFile">${H.icon('plus', 16, 2.2)} ${cover ? 'Bytt bakgrunnsbilde' : 'Velg bakgrunnsbilde'}</label><input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp" class="sr">${cover ? '<button type="button" class="btn link small" data-a="rmCover">Fjern</button>' : ''}<span class="hint" id="coverStatus">${H.esc(coverBusy)}</span></div>
-        <span class="hint">Vises øverst på profilen og på kortet ditt i søket. Bruk et bredt bilde, gjerne 1600 piksler eller mer.</span></section>
+        <span class="hint">Vises øverst på profilen din. Bruk et bredt bilde, gjerne 1600 piksler eller mer.</span></section>
+      <section class="card stack" style="gap:10px"><b style="font-size:15px">Bilde på kortet</b>
+        <div class="card-pick">${card ? `<img src="${H.esc(card.url)}" alt="Bildet på kortet ditt">` : `<span class="hint" style="padding:12px">Ingen valgt. ${cover ? 'Bakgrunnsbildet' : 'Det første bildet i porteføljen'} brukes.</span>`}</div>
+        <div class="row"><label class="btn soft sm" for="cardFile">${H.icon('plus', 16, 2.2)} ${card ? 'Bytt bilde på kortet' : 'Velg bilde på kortet'}</label><input type="file" id="cardFile" accept="image/jpeg,image/png,image/webp" class="sr">${card ? '<button type="button" class="btn link small" data-a="rmCard">Fjern</button>' : ''}<span class="hint" id="cardStatus">${H.esc(cardBusy)}</span></div>
+        <span class="hint">Vises på kortet ditt i søket og på forsiden. Velg gjerne et annet bilde enn bakgrunnsbildet, så hvert bilde passer sitt format.</span></section>
       <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" value="${H.esc(p.name || S.user.name)}"></label>
       <label class="field"><span class="label">Hovedområde *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
       <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
@@ -128,6 +133,20 @@ function form() {
     } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
     coverBusy = ''; form();
   });
+  const kIn = document.getElementById('cardFile');
+  kIn.addEventListener('change', async () => {
+    const file = kIn.files[0]; kIn.value = ''; if (!file) return;
+    const blob = await H.cropImage(file, { aspect: 4 / 3, outW: CLOUD ? 1200 : 800, title: 'Juster bildet på kortet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Slik ser kortet ditt ut i søket og på forsiden.' });
+    if (!blob) return;
+    cardBusy = 'Laster opp …'; form();
+    try {
+      const b = await H.resizeImage(blob, 600);
+      const old = card;
+      card = { url: await H.storeImage('card', blob), thumb: await H.storeImage('thumb', b.blob) };
+      if (old) { H.dropImage(old.url); H.dropImage(old.thumb); }
+    } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
+    cardBusy = ''; form();
+  });
   const pf_ = document.getElementById('pform');
   pf_.addEventListener('input', (e) => { const k = e.target.dataset.pk; if (k) { const [i, j] = k.split(':').map(Number); pkgs[i][j] = e.target.value; } else if (e.target.id && e.target.id !== 'legal' && e.target.tagName !== 'SELECT' && e.target.type !== 'file') { draft[e.target.id] = e.target.value; } });
   pf_.addEventListener('change', (e) => {
@@ -143,8 +162,9 @@ function form() {
     }
     if (t.tagName === 'SELECT') draft[t.id] = t.value;
   });
-  pf_.addEventListener('submit', (e) => {
+  pf_.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (saving) return;
     const v = (id) => document.getElementById(id).value.trim();
     const pk = pkgs.filter((x) => x[0].trim() && +String(x[1]).replace(/\D/g, '')).map((x) => [x[0].trim(), +String(x[1]).replace(/\D/g, ''), x[2].trim()]);
     const miss = ['name', 'role', 'area', 'bio', 'years'].filter((k) => !v(k));
@@ -161,9 +181,16 @@ function form() {
     pf.forEach((x) => { if (!nich.includes(x.cat)) x.cat = mc; });
     const ini = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
     const old = S.profile || {};
+    // Omtrentlig posisjon til kartet. Finnes ikke stedet, lagres profilen likevel.
+    let pos = old.lat != null && old.area === v('area') ? [old.lat, old.lng] : null;
+    if (!pos) {
+      saving = true; const btn = pf_.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = 'Lagrer …'; }
+      pos = await Promise.race([H.geocode(v('area')).catch(() => null), new Promise((r) => setTimeout(() => r(null), 4000))]);
+      saving = false;
+    }
     S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
       id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
-      niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
+      niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, cardImg: card, lat: pos ? pos[0] : null, lng: pos ? pos[1] : null, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();
     H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');
@@ -172,6 +199,7 @@ function form() {
 }
 Object.assign(H.actions, {
   rmCover: () => { if (cover) { H.dropImage(cover.url); H.dropImage(cover.thumb); } cover = null; form(); },
+  rmCard: () => { if (card) { H.dropImage(card.url); H.dropImage(card.thumb); } card = null; form(); },
   rmPf: (v) => { const x = pf.splice(+v, 1)[0]; if (x) { H.dropImage(x.url); H.dropImage(x.thumb); } form(); },
   addPk: () => { pkgs.push(['', '', '']); form(); },
   rmPk: (v) => { pkgs.splice(+v, 1); form(); }

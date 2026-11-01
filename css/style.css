@@ -528,3 +528,60 @@ button.ph{border:0;padding:0;cursor:pointer;display:block;width:100%}
 .feed-compose{max-width:640px}
 /* Forsiden: fire store kort som fyller bredden */
 @media (min-width:900px){#popularF{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* Meldinger: samtalen og listen ruller hver for seg, så skrivefeltet alltid synes */
+.inbox{grid-template-rows:minmax(0,1fr)}
+.threads,.convo,.msgs{min-height:0}
+
+/* Knapp i meldingen nederst på skjermen */
+.toast{display:flex;align-items:center;gap:12px}
+.toast-btn{border:0;background:transparent;color:inherit;font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:3px;padding:0;cursor:pointer;white-space:nowrap}
+
+/* Lagre i mappe */
+.folder-box{width:min(440px,100%)}
+.folder-opt{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);text-align:left;font-weight:600;color:var(--fg);transition:border-color .2s,background .2s}
+.folder-opt:hover{border-color:var(--surface2)}
+.folder-opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.folder-check{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--surface2);display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--on-accent);background:var(--bg)}
+.folder-opt[aria-pressed="true"] .folder-check{background:var(--accent);border-color:var(--accent)}
+
+/* Lagret: mapper og lagrede ting */
+.ftiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:24px 20px}
+.ftile{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:var(--fg);min-width:0}
+.ftile:hover{color:var(--fg)}
+.ftile-img{aspect-ratio:1/1;border-radius:var(--radius);background:var(--surface);overflow:hidden;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+.ftile:hover .ftile-img{transform:translateY(-3px);box-shadow:var(--shadow)}
+.ftile-img > span{background:var(--surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.ftile-img img{width:100%;height:100%;object-fit:cover;display:block}
+.ftile-img.empty-f{display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.ftile-new{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:10px;aspect-ratio:1/1;border:1.5px dashed var(--surface2);border-radius:var(--radius);padding:16px}
+.ftile-name{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:20px 16px}
+.ptile{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ptile-img{position:relative;display:block;aspect-ratio:4/5;border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.ptile-img img{width:100%;height:100%;object-fit:cover;display:block}
+.item-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Meny øverst på Min side */
+.mside-menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.mside-menu a{display:flex;gap:14px;align-items:center;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);text-decoration:none;color:var(--fg);transition:border-color .2s,transform .2s var(--ease)}
+.mside-menu a:hover{border-color:var(--fg);color:var(--fg)}
+.mside-menu a > svg{flex:none;color:var(--accent-ink)}
+.mside-menu a > span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.mside-menu b{font-size:15px}
+
+/* Eget bilde på kortet i søket */
+.card-pick{aspect-ratio:4/3;width:min(280px,100%);border-radius:12px;overflow:hidden;background:var(--surface);display:grid;place-items:center;text-align:center;padding:0}
+.card-pick img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* Ekte kart (OpenStreetMap, eller Google Maps med nøkkel i js/config.js) */
+.mapx{position:absolute;inset:0;z-index:0}
+.map.real > i,.map.real > .me-dot,.map.real > #pins{display:none}
+.map .mapcard{z-index:1100}
+.leaflet-container{font-family:var(--f-body);background:var(--map)}
+.lpin-wrap{background:none;border:0}
+.lpin{display:inline-flex;align-items:center;height:30px;padding:0 11px;border-radius:15px;border:0;background:var(--bg);color:var(--fg);font:700 12px var(--f-body);box-shadow:var(--shadow);white-space:nowrap;transform:translate(-50%,-50%);cursor:pointer;font-variant-numeric:tabular-nums}
+.lpin.g{transform:translateY(50%)}
+.lpin.on{background:var(--accent);color:var(--on-accent)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mapx .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}}
+:root[data-theme="dark"] .mapx .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}

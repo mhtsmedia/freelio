@@ -87,6 +87,7 @@
     S.myJobs = myJobRows.reverse().map((r) => Object.assign({}, r.data, { id: r.id, status: r.status, created: Date.parse(r.created_at), postedTxt: dateTxt(r.created_at), offersList: [] }));
 
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};
+    let adopted = [];
     if (C.uid) {
       const [prof, offers, orders, msgs, saved] = await Promise.all([
         sb.from('profiles').select('id,name,avatar_url,created_at').eq('id', C.uid).maybeSingle(),
@@ -125,10 +126,27 @@
       orderRows.forEach((r) => { if (r.customer_id !== C.uid) S.partners['c:' + r.customer_id] = { name: names[r.customer_id] || 'Slettet bruker', photo: photos[r.customer_id] || null, gone: !names[r.customer_id] }; });
 
       S.saved = must(saved).map((r) => r.freelancer_id);
+
+      // Mapper. Mangler tabellen, lagres mappene bare i nettleseren til database/mapper.sql er kjørt.
+      const fo = await sb.from('saved_folders').select('id,name,items,created_at').order('created_at');
+      C.foldersReady = !fo.error;
+      const local = (S.folders || []).filter((m) => !m.owner || m.owner === C.uid);
+      if (fo.error) S.folders = local;
+      else {
+        const remote = fo.data.map((r) => ({ id: r.id, name: r.name, items: Array.isArray(r.items) ? r.items : [], at: Date.parse(r.created_at), owner: C.uid }));
+        // Mapper som ble laget før du logget inn, tas med og lagres på kontoen
+        adopted = local.filter((m) => !m.owner && !remote.some((x) => x.id === m.id));
+        S.folders = remote.concat(adopted);
+      }
+    } else {
+      S.folders = (S.folders || []).filter((m) => !m.owner);
     }
     const exists = (id) => !!H.byId(id);
     S.cmp = (S.cmp || []).filter(exists);
     snap = takeSnap();
+    // Mappene fra før innlogging finnes ikke i databasen ennå, så de sendes med første lagring
+    adopted.forEach((m) => delete snap.folders[m.id]);
+    if (adopted.length) C.dirty = true;
     H.saveLocal();
     // Antall fullførte oppdrag lagres på profilen, så alle besøkende ser riktig tall
     if (S.profile) {
@@ -143,7 +161,10 @@
     S.myJobs.forEach((j) => (j.offersList || []).forEach((o) => (offers[j.id + '|' + o.fid] = { seen: !!o.seen })));
     const threads = {}; Object.keys(S.threads).forEach((k) => (threads[k] = S.threads[k].length));
     const reviews = []; Object.values(S.extraReviews || {}).forEach((l) => l.forEach((r) => r[5] && reviews.push(r[5])));
+    const folders = {};
+    if (C.foldersReady && C.uid) (S.folders || []).forEach((m) => (folders[m.id] = JSON.stringify({ name: m.name, items: m.items })));
     return {
+      folders,
       user: !!S.user, photo: (S.user && S.user.photo) || null, profile: S.profile ? JSON.stringify(freelancerRow(S.profile)) : null,
       jobs: Object.fromEntries(S.myJobs.map((j) => [j.id, JSON.stringify(jobRow(j))])), offers,
       sent: Object.keys(S.sentOffers || {}),
@@ -203,6 +224,16 @@
 
     for (const id of next.saved) if (!snap.saved.includes(id)) must(await sb.from('saved').insert({ user_id: C.uid, freelancer_id: id }));
     for (const id of snap.saved) if (!next.saved.includes(id)) must(await sb.from('saved').delete().eq('user_id', C.uid).eq('freelancer_id', id));
+
+    if (C.foldersReady) {
+      for (const m of S.folders || []) {
+        if (!next.folders[m.id]) continue;
+        const body = { name: m.name, items: m.items };
+        if (!snap.folders[m.id]) { must(await sb.from('saved_folders').insert(Object.assign({ id: m.id, user_id: C.uid }, body))); m.owner = C.uid; }
+        else if (snap.folders[m.id] !== next.folders[m.id]) must(await sb.from('saved_folders').update(body).eq('id', m.id));
+      }
+      for (const id of Object.keys(snap.folders)) if (!next.folders[id]) must(await sb.from('saved_folders').delete().eq('id', id));
+    }
 
     snap = next;
   }

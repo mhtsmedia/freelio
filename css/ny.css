@@ -15,8 +15,14 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949}}
 :root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949}
 
-/* oppsett */
-.wrap{max-width:1280px;padding-left:max(clamp(16px,3vw,32px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,32px),env(safe-area-inset-right,0px))}
+/* oppsett: nettsiden bruker hele bredden på skjermen */
+.wrap{max-width:none;padding-left:max(clamp(16px,3vw,48px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,48px),env(safe-area-inset-right,0px))}
+body[data-page="min-side"] main .wrap,
+body[data-page="mine-oppdrag"] main .wrap,
+body[data-page="sammenlign"] main .wrap,
+body[data-page="annonse"] main .wrap,
+body[data-page="bestilling"] main .wrap,
+body[data-page="lagret"] main .wrap{max-width:none!important}
 .section{padding-block:32px;gap:16px}
 h1{font-size:clamp(26px,3vw,34px);line-height:1.15}
 h2{font-size:20px}
@@ -123,9 +129,23 @@ h2{font-size:20px}
   body[data-page="index"] .steps3 p{font-size:14px}
 }
 
-/* meldinger */
-.inbox{border-radius:14px}
-.bubble{border-radius:14px}
+/* profil: høyere banner som toner ut nederst og leder blikket videre ned på siden */
+.cover{height:clamp(200px,22vw,380px)}
+.ph.cover::before{content:"";position:absolute;left:0;right:0;bottom:0;height:70%;background:linear-gradient(to bottom,transparent 0%,color-mix(in srgb,var(--bg) 55%,transparent) 55%,var(--bg) 100%);z-index:1;pointer-events:none}
+
+/* meldinger: hele skjermen under toppmenyen, ingen boks midt på siden */
+body[data-page="meldinger"]{height:100vh;height:100dvh;min-height:0;overflow:hidden}
+body[data-page="meldinger"] #site-footer{display:none}
+body[data-page="meldinger"] main{flex:1;min-height:0;display:flex;flex-direction:column}
+body[data-page="meldinger"] main > .wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}
+body[data-page="meldinger"] .inbox{flex:1;height:auto;min-height:0;margin:0;border:0;border-radius:0;grid-template-columns:minmax(280px,360px) minmax(0,1fr)}
+body[data-page="meldinger"] .threads{background:var(--bg2)}
+body[data-page="meldinger"] .thread-btn{background:transparent}
+body[data-page="meldinger"] .thread-btn[aria-current="true"]{background:var(--accent-soft)}
+body[data-page="meldinger"] .msgs{padding:24px clamp(16px,3vw,48px)}
+body[data-page="meldinger"] .composer{padding:12px clamp(12px,3vw,48px)}
+body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
+.bubble{border-radius:14px;max-width:min(78%,680px)}
 .bubble.me{border-bottom-right-radius:4px}
 .bubble.them{border-bottom-left-radius:4px}
 .cmpbar .wrap{border-radius:14px}
@@ -147,6 +167,6 @@ h2{font-size:20px}
   .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
   .cookie{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .cmpbar{bottom:76px}
-  .inbox{height:min(680px,calc(100vh - 204px));min-height:420px}
+  body[data-page="meldinger"] .inbox{grid-template-columns:minmax(0,1fr)}
   .foot{margin-top:32px}
 }

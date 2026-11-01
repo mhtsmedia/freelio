@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=29ab4bea">
-<link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=2862206d">
+<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="annonse">
@@ -22,10 +22,10 @@
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
 <script src="js/data.js?v=20c19068"></script>
-<script src="js/config.js?v=0d9f4ef0"></script>
+<script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=854ae0da"></script>
-<script src="js/cloud.js?v=db9531bf"></script>
+<script src="js/app.js?v=0135080a"></script>
+<script src="js/cloud.js?v=681fd476"></script>
 <script type="text/freelio">
 const jid = H.qs('id');
 let confirmDelete = false, offerPrice = '', offerMsg = '';
@@ -62,7 +62,7 @@ function render() {
     <div class="crumbs"><a href="oppdrag.html">Oppdrag</a><span>/</span><a href="oppdrag.html?kat=${c.id}">${c.name}</a><span>/</span><span>${H.esc(j.title)}</span></div>
     <div class="two">
       <div class="stack" style="gap:20px">
-        <div class="row" style="gap:6px"><span class="pill">${H.icon(c.icon, 14)} ${c.name}</span>${j.status === 'booked' ? '<span class="pill ok">Booket</span>' : '<span class="pill acc">Åpen for tilbud</span>'}</div>
+        <div class="row" style="gap:6px"><span class="pill">${H.icon(c.icon, 14)} ${c.name}</span>${j.status === 'booked' ? '<span class="pill ok">Booket</span>' : '<span class="pill acc">Åpen for tilbud</span>'}${j.mine ? '' : `<button class="btn soft sm" style="margin-left:auto" data-a="folder" data-v="j:${j.id}" aria-pressed="${H.isSavedItem('j', j.id)}">${H.icon('save', 16, 1.8, H.isSavedItem('j', j.id) ? 'currentColor' : 'none')} ${H.isSavedItem('j', j.id) ? 'Lagret' : 'Lagre'}</button>`}</div>
         <h1>${H.esc(j.title)}</h1>
         <p style="font-size:16px;white-space:pre-line">${H.esc(j.desc)}</p>
         <dl class="sum" style="margin:0">${facts.map(([k, v]) => `<div><dt class="muted">${k}</dt><dd style="margin:0;font-weight:800;text-align:right">${H.esc(v)}</dd></div>`).join('')}</dl>

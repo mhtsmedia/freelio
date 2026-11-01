@@ -12,15 +12,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=29ab4bea">
-<link rel="stylesheet" href="css/ny.css?v=9703482c" id="ny-css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css?v=2862206d">
+<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="kart">
 <div id="site-header"></div>
 <main id="main"><div class="mapwrap">
-  <div class="maplist"><h1 style="font-size:24px">Frilansere nær Sandvika</h1><div class="chips scroll" id="chips"></div><p class="hint">Posisjonene er omtrentlige for å beskytte hjemmeadressen til frilanserne.</p><div class="stack" id="list" style="gap:4px" data-skel="list:5"></div></div>
+  <div class="maplist"><h1 style="font-size:24px">Frilansere på kartet</h1><div class="chips scroll" id="chips"></div><p class="hint">Posisjonene er omtrentlige for å beskytte hjemmeadressen til frilanserne.</p><div class="stack" id="list" style="gap:4px" data-skel="list:5"></div></div>
   <div class="map" id="map" role="region" aria-label="Kart">
+    <div class="mapx" id="mapx"></div>
     <i style="left:-20%;top:68%;width:140%;height:28%;background:var(--map-water);transform:rotate(-8deg)"></i>
     <i style="left:6%;top:10%;width:22%;height:16%;background:var(--map-park);border-radius:28px"></i>
     <i style="left:62%;top:56%;width:26%;height:12%;background:var(--map-park);border-radius:28px"></i>
@@ -35,24 +37,121 @@
 </div></main>
 <script src="js/logo.js?v=e81a0a03"></script>
 <script src="js/data.js?v=20c19068"></script>
-<script src="js/config.js?v=0d9f4ef0"></script>
+<script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=854ae0da"></script>
-<script src="js/cloud.js?v=db9531bf"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/app.js?v=0135080a"></script>
+<script src="js/cloud.js?v=681fd476"></script>
 <script type="text/freelio">
 let cat = H.qs('kat') || 'alle', sel = null;
+const CFG = window.FREELIO_CONFIG || {};
+// Ekte kart: Google Maps hvis det ligger en nøkkel i js/config.js, ellers OpenStreetMap.
+// Går ingen av dem, vises det enkle kartet med nålene slik det var før.
+const M = { kind: null, map: null, layer: null, markers: {}, fitted: false, pos: {} };
+const current = () => H.all().filter((f) => H.inCat(f, cat)).sort((a, b) => a.km - b.km);
+const priceTag = (f) => H.kr(f.from).replace(' kr', '');
+// Flytter nålen litt, likt hver gang, så hjemmeadressen ikke vises nøyaktig
+const jitter = (id) => { let h = 7; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0; h >>>= 0; return [((h % 1000) / 1000 - 0.5) * 0.012, (((h >>> 10) % 1000) / 1000 - 0.5) * 0.02]; };
+const areaKey = (f) => String(f.area || '').trim().toLowerCase();
+const posOf = (f) => {
+  const base = f.lat != null && f.lng != null ? [f.lat, f.lng] : M.pos[areaKey(f)];
+  if (!base) return null;
+  const j = jitter(f.id); return [base[0] + j[0], base[1] + j[1]];
+};
+
 function render() {
-  const list = H.all().filter((f) => H.inCat(f, cat)).sort((a, b) => a.km - b.km);
+  const list = current();
   if (!list.find((f) => f.id === sel)) sel = list[0] ? list[0].id : null;
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'Alle' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
-  document.getElementById('list').innerHTML = list.length ? list.map((f) => `<button class="li ${f.id === sel ? 'on' : ''}" data-a="sel" data-v="${f.id}">${f.photo ? H.avatar(f, 56) : H.ph(f)}<span class="stack grow" style="gap:2px"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${f.km} km</span><span class="small">${H.star(12)} ${H.ratingTxt(f)} · ${H.priceTxt(f)}</span></span></button>`).join('') : '<div class="empty">Ingen i denne kategorien i nærheten.</div>';
-  document.getElementById('pins').innerHTML = list.map((f) => `<button class="pin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${H.kr(f.from).replace(' kr', '')}${f.unit ? '<span class="sr">' + f.unit + '</span>' : ''}</button>`).join('');
+  document.getElementById('list').innerHTML = list.length ? list.map((f) => `<button class="li ${f.id === sel ? 'on' : ''}" data-a="sel" data-v="${f.id}">${f.photo ? H.avatar(f, 56) : H.ph(f)}<span class="stack grow" style="gap:2px"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small">${H.star(12)} ${H.ratingTxt(f)} · ${H.priceTxt(f)}</span></span></button>`).join('') : '<div class="empty">Ingen i denne kategorien i nærheten.</div>';
+  document.getElementById('pins').innerHTML = M.kind ? '' : list.map((f) => `<button class="pin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${priceTag(f)}${f.unit ? '<span class="sr">' + f.unit + '</span>' : ''}</button>`).join('');
   const f = sel && H.byId(sel);
   document.getElementById('mcard').innerHTML = f ? `<div class="mapcard">${f.photo ? H.avatar(f, 72) : H.ph(f)}<div class="stack grow" style="gap:2px;min-width:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small"><b>${H.ratingTxt(f)}</b> · ${H.priceTxt(f)}</span></div><a class="btn dark sm" href="frilanser.html?id=${f.id}">Se profil</a></div>` : '';
+  drawPins(list);
+  locate(list);
 }
-H.actions.cat = (v) => { cat = v; render(); };
-H.actions.sel = (v) => { sel = v; render(); };
+
+function drawPins(list = current()) {
+  if (!M.map) return;
+  if (M.kind === 'osm') {
+    M.layer.clearLayers();
+    const pts = [];
+    list.forEach((f) => {
+      const p = posOf(f); if (!p) return; pts.push(p);
+      const icon = L.divIcon({ className: 'lpin-wrap', html: `<span class="lpin${f.id === sel ? ' on' : ''}">${priceTag(f)}</span>`, iconSize: null });
+      L.marker(p, { icon, title: f.name + ', ' + H.priceTxt(f), alt: f.name, zIndexOffset: f.id === sel ? 1000 : 0 }).on('click', () => pick(f.id)).addTo(M.layer);
+    });
+    if (!M.fitted && pts.length) { M.fitted = true; M.map.fitBounds(L.latLngBounds(pts).pad(0.4), { maxZoom: 12 }); }
+  } else if (M.kind === 'google') {
+    Object.values(M.markers).forEach((m) => { m.map = null; });
+    M.markers = {};
+    const b = new google.maps.LatLngBounds(); let n = 0;
+    list.forEach((f) => {
+      const p = posOf(f); if (!p) return; n++; b.extend({ lat: p[0], lng: p[1] });
+      const el = document.createElement('span'); el.className = 'lpin g' + (f.id === sel ? ' on' : ''); el.textContent = priceTag(f);
+      const mk = new google.maps.marker.AdvancedMarkerElement({ map: M.map, position: { lat: p[0], lng: p[1] }, content: el, title: f.name + ', ' + H.priceTxt(f), zIndex: f.id === sel ? 1000 : 1 });
+      mk.addListener('click', () => pick(f.id));
+      M.markers[f.id] = mk;
+    });
+    if (!M.fitted && n) { M.fitted = true; M.map.fitBounds(b, 80); if (n === 1) M.map.setZoom(12); }
+  }
+}
+
+// Finner posisjon for områder som mangler den. OpenStreetMap tillater én forespørsel i sekundet.
+let locating = false;
+async function locate(list) {
+  if (locating || !M.kind) return;
+  const todo = [...new Set(list.filter((f) => f.lat == null && f.area).map(areaKey))].filter((a) => !(a in M.pos));
+  if (!todo.length) return;
+  locating = true;
+  for (const a of todo) {
+    let cached = false; try { cached = localStorage.getItem('freelio:geo:' + a) !== null; } catch (e) {}
+    try { M.pos[a] = await H.geocode(a); } catch (e) { M.pos[a] = null; }
+    drawPins();
+    if (!cached) await new Promise((r) => setTimeout(r, 1100));
+  }
+  locating = false;
+}
+
+function pick(id) {
+  sel = id; render();
+  const f = H.byId(id), p = f && posOf(f);
+  if (!p || !M.map) return;
+  if (M.kind === 'osm') M.map.panTo(p); else M.map.panTo({ lat: p[0], lng: p[1] });
+}
+
+function startOSM() {
+  if (!window.L) return false;
+  const el = document.getElementById('mapx'); el.innerHTML = '';
+  M.map = L.map(el, { scrollWheelZoom: true }).setView([59.89, 10.52], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(M.map);
+  M.layer = L.layerGroup().addTo(M.map);
+  M.kind = 'osm'; M.fitted = false;
+  document.getElementById('map').classList.add('real');
+  setTimeout(() => M.map.invalidateSize(), 200);
+  return true;
+}
+function startGoogle() {
+  const fallback = () => { if (M.kind === 'osm') return; M.kind = null; M.map = null; M.markers = {}; if (startOSM()) render(); };
+  window.gm_authFailure = fallback;
+  window.__freelioMap = () => {
+    try {
+      M.map = new google.maps.Map(document.getElementById('mapx'), { center: { lat: 59.89, lng: 10.52 }, zoom: 10, mapId: CFG.googleMapId || 'DEMO_MAP_ID', clickableIcons: false, streetViewControl: false });
+      M.kind = 'google'; M.fitted = false;
+      document.getElementById('map').classList.add('real');
+      render();
+    } catch (e) { fallback(); }
+  };
+  const s = document.createElement('script');
+  s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(CFG.googleMapsKey) + '&v=weekly&libraries=marker&loading=async&callback=__freelioMap';
+  s.async = true; s.onerror = fallback;
+  document.head.appendChild(s);
+}
+
+H.actions.cat = (v) => { cat = v; M.fitted = false; render(); };
+H.actions.sel = (v) => pick(v);
 H.boot(render);
+if (CFG.googleMapsKey) startGoogle(); else if (startOSM()) render();
 </script>
 </body>
 </html>
