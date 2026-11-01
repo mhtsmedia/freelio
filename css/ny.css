@@ -150,3 +150,19 @@ h2{font-size:20px}
   .inbox{height:min(680px,calc(100vh - 204px));min-height:420px}
   .foot{margin-top:32px}
 }
+
+/* Meldinger fyller hele skjermen. Samtalen scroller inne i vinduet, ikke hele siden. */
+.inbox{grid-template-rows:minmax(0,1fr)}
+.threads,.convo{min-height:0}
+.convo{overflow:hidden}
+.msgs{min-height:0}
+body[data-page="meldinger"] #site-footer{display:none}
+@media (min-width:761px){
+  body[data-page="meldinger"] main > .wrap{max-width:none;padding:0}
+  body[data-page="meldinger"] .inbox{height:calc(100dvh - 65px);min-height:420px;margin:0;border:0;border-radius:0;grid-template-columns:340px minmax(0,1fr)}
+  body[data-page="meldinger"] main{animation:none}
+}
+@media (max-width:760px){
+  body[data-page="meldinger"] .inbox{height:calc(100dvh - 65px - 72px - env(safe-area-inset-bottom,0px));margin:0;border-radius:0;border-left:0;border-right:0}
+  body[data-page="meldinger"] main > .wrap{padding:0}
+}

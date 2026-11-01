@@ -526,3 +526,8 @@ button.ph{border:0;padding:0;cursor:pointer;display:block;width:100%}
 #feed.feed{max-width:560px}
 /* Forsiden: fire store kort som fyller bredden */
 @media (min-width:900px){#popularF{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* Meldinger: samtalen scroller inne i vinduet */
+.inbox{grid-template-rows:minmax(0,1fr)}
+.threads,.convo{min-height:0}
+.convo{overflow:hidden}
+.msgs{min-height:0}
