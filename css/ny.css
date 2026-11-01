@@ -3,17 +3,18 @@
    Slås av for hele nettsiden i js/design.js (STANDARD = 'gammel'), eller for deg selv med ?design=gammel. */
 @import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap");
 
+/* Farge: skifer, en dempet blågrå. Nøytralene har samme kjølige tone. */
 :root{
-  --bg:#FFFFFF; --bg2:#FAFBF9; --surface:#F2F5F1; --surface2:#E3E7E2; --line:#E3E5E2; --line-strong:#C9CEC9;
-  --fg:#1B1D1C; --muted:#5C625F; --faint:#6B716E;
-  --accent:#146B4C; --accent-hover:#0E5038; --accent-ink:#146B4C; --accent-soft:#E8F3ED; --on-accent:#FFFFFF;
-  --invert:#1B1D1C; --on-invert:#FFFFFF;
+  --bg:#FFFFFF; --bg2:#F9FAFB; --surface:#F1F4F7; --surface2:#E2E7EC; --line:#E1E5EA; --line-strong:#C7CED6;
+  --fg:#1A1D21; --muted:#5A626C; --faint:#6A727C;
+  --accent:#3E5368; --accent-hover:#2F4052; --accent-ink:#3E5368; --accent-soft:#E6ECF1; --on-accent:#FFFFFF;
+  --invert:#1A1D21; --on-invert:#FFFFFF;
   --like:#D93A2B; --star:#D99A00;
   --radius:12px;
   --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949}}
-:root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949;--accent:#9DB4CC;--accent-hover:#B3C6DA;--accent-ink:#A9BED4;--accent-soft:#1E2833;--on-accent:#0E1620}}
+:root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949;--accent:#9DB4CC;--accent-hover:#B3C6DA;--accent-ink:#A9BED4;--accent-soft:#1E2833;--on-accent:#0E1620}
 
 /* oppsett: alt innhold ligger i én boks med samme bredde på alle sider, så venstrekanten
    til logoen, overskriftene og innholdet står på linje overalt */
