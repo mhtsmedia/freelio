@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=8c5d3f31">
+<link rel="stylesheet" href="css/style.css?v=760da67c">
 <link rel="stylesheet" href="css/ny.css?v=620a6d89" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -24,58 +24,74 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=66e90026"></script>
-<script src="js/cloud.js?v=ff7a73ba"></script>
+<script src="js/app.js?v=e64b764f"></script>
+<script src="js/cloud.js?v=a26e07f4"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   let confirmDel = false;
   const S = H.S;
   S.notify = S.notify || { email: true, push: true, jobs: true };
-  function render() {
-    const saved = S.saved.map(H.byId).filter(Boolean);
-    const folders = H.folders();
-    const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
-    document.getElementById('main').innerHTML = `<div class="wrap section" style="max-width:1200px">
-      <div class="row">${H.avatar({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo }, 64)}<div class="stack grow" style="gap:2px"><h1 style="font-size:30px">${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
-
+  // Min side er en oversikt med fliser. Hver innstilling har sin egen visning (?vis=...), så siden ikke blir rotete.
+  const VIEWS = { konto: 'Profilbilde og konto', frilanser: 'Frilanserprofil', varsler: 'Varsler', personvern: 'Personvern og data' };
+  const OLD = { varsler: 'varsler', cookies: 'personvern', data: 'personvern' };
+  const pickVis = () => { const v = H.qs('vis') || OLD[location.hash.slice(1)] || ''; return VIEWS[v] ? v : ''; };
+  let vis = pickVis();
+  const me = () => ({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo, photoSrc: S.user.photoSrc });
+  const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
+  const tile = (href, icon, title, sub, v) => `<a href="${href}"${v ? ` data-vis="${v}"` : ''}>${H.icon(icon, 22)}<span><b>${title}</b><span class="meta">${sub}</span></span><i class="chev" aria-hidden="true">${H.icon('next', 18)}</i></a>`;
+  function hub() {
+    const saved = S.saved.map(H.byId).filter(Boolean), folders = H.folders();
+    return `<div class="row mside-head">${H.avatar(me(), 64)}<div class="stack grow" style="gap:2px;min-width:0"><h1>${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
       <nav class="mside-menu" aria-label="Min side">
-        <a href="lagret.html">${H.icon('heart', 22)}<span><b>Lagret</b><span class="meta">${saved.length} ${saved.length === 1 ? 'frilanser' : 'frilansere'} · ${folders.length} ${folders.length === 1 ? 'mappe' : 'mapper'}</span></span></a>
-        <a href="mine-oppdrag.html">${H.icon('clipboard', 22)}<span><b>Mine oppdrag</b><span class="meta">Bestillinger, annonser og tilbud</span></span></a>
-        <a href="meldinger.html">${H.icon('chat', 22)}<span><b>Meldinger</b><span class="meta">Samtaler med frilansere og kunder</span></span></a>
-        <a href="bli-frilanser.html">${H.icon('user', 22)}<span><b>Frilanserprofil</b><span class="meta">${S.profile ? 'Rediger profilen din' : 'Ta oppdrag selv'}</span></span></a>
-        <a href="#varsler">${H.icon('clock', 22)}<span><b>Varsler</b><span class="meta">Push og e-post</span></span></a>
-        <a href="#data">${H.icon('lock', 22)}<span><b>Personvern og data</b><span class="meta">Cookies, nedlasting og sletting</span></span></a>
-      </nav>
-
-      <section class="card">${H.photoPicker({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo, photoSrc: S.user.photoSrc })}</section>
-
-      <section class="card stack"><h2 style="font-size:20px">Frilanserprofil</h2>
-        ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div><a class="btn soft sm" href="frilanser.html?id=${S.profile.id}">Se</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul' : 'Publiser'}</button></div>`
+        ${tile('lagret.html', 'heart', 'Lagret', `${saved.length} ${saved.length === 1 ? 'frilanser' : 'frilansere'} · ${folders.length} ${folders.length === 1 ? 'mappe' : 'mapper'}`)}
+        ${tile('mine-oppdrag.html', 'clipboard', 'Mine oppdrag', 'Bestillinger, annonser og tilbud')}
+        ${tile('meldinger.html', 'chat', 'Meldinger', 'Samtaler med frilansere og kunder')}
+        ${tile('min-side.html?vis=frilanser', 'user', 'Frilanserprofil', S.profile ? (S.profile.published ? 'Publisert og synlig i søk' : 'Skjult fra søk') : 'Ta oppdrag selv', 'frilanser')}
+        ${tile('min-side.html?vis=konto', 'camera', 'Profilbilde og konto', S.user.photo ? 'Bytt eller juster bildet' : 'Legg til et profilbilde', 'konto')}
+        ${tile('min-side.html?vis=varsler', 'clock', 'Varsler', 'Push og e-post', 'varsler')}
+        ${tile('min-side.html?vis=personvern', 'lock', 'Personvern og data', 'Cookies, nedlasting og sletting', 'personvern')}
+      </nav>`;
+  }
+  function view() {
+    if (vis === 'konto') return `<section class="card">${H.photoPicker(me())}</section>
+      <section class="card stack" style="gap:0">
+        <div class="toggle"><span><b style="font-size:15px">Navn</b><br><span class="muted small">${H.esc(S.user.name)}</span></span></div>
+        <div class="toggle"><span><b style="font-size:15px">Innlogging</b><br><span class="muted small">Verifisert med ${H.esc(S.user.method)}</span></span></div>
+        <div class="toggle" style="border-bottom:0"><span><b style="font-size:15px">Medlem siden</b><br><span class="muted small">${H.esc(S.user.since || H.today())}</span></span><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
+      </section>`;
+    if (vis === 'frilanser') return `<section class="card stack">
+        ${S.profile ? `<div class="row">${H.avatar(S.profile, 48)}<div class="grow stack" style="gap:0;min-width:0"><b>${H.esc(S.profile.role)}</b><span class="meta">${S.profile.published ? 'Publisert og synlig i søk' : 'Skjult'} · ${S.profile.pk.length} pakker</span></div></div>
+          <div class="row"><a class="btn soft sm" href="frilanser.html?id=${S.profile.id}">Se profilen</a><a class="btn soft sm" href="bli-frilanser.html">Rediger</a><button class="btn soft sm" data-a="togglePub">${S.profile.published ? 'Skjul fra søk' : 'Publiser'}</button></div>`
         : `<p class="muted">Vil du ta oppdrag selv? Lag en gratis profil.</p><a class="btn primary sm" style="align-self:flex-start" href="bli-frilanser.html">Bli frilanser</a>`}
-      </section>
-
-      <section class="stack" id="lagret"><div class="section-head"><h2 style="font-size:20px">Lagret</h2><a href="lagret.html">Se alt lagret</a></div>
-        <div class="chips">${folders.map((m) => `<a class="chip" href="lagret.html?mappe=${m.id}">${H.esc(m.name)} · ${m.items.length}</a>`).join('')}<a class="chip" href="lagret.html">${H.icon('plus', 14, 2.2)} Ny mappe</a></div>
-        ${saved.length ? `<div class="cards">${saved.slice(0, 4).map((f) => H.fCard(f)).join('')}</div>` : '<p class="muted">Trykk på hjertet på et kort for å lagre frilansere du liker.</p>'}</section>
-
-      <section class="card stack" style="gap:0" id="varsler"><h2 style="font-size:20px;margin-bottom:6px">Varsler</h2>
+      </section>`;
+    if (vis === 'varsler') return `<section class="card stack" style="gap:0">
         ${sw(S.notify.push, 'notify', 'push', 'Push-varsler', 'Nye meldinger, tilbud og leveranser.')}
         ${sw(S.notify.email, 'notify', 'email', 'E-post', 'Kvitteringer og viktige endringer.')}
-        ${sw(S.notify.jobs, 'notify', 'jobs', 'Nye oppdrag i ditt fagfelt', 'Bare for frilansere.')}</section>
-
-      <section class="card stack" style="gap:0" id="cookies"><h2 style="font-size:20px;margin-bottom:6px">Cookies</h2>
+        ${sw(S.notify.jobs, 'notify', 'jobs', 'Nye oppdrag i ditt fagfelt', 'Bare for frilansere.')}</section>`;
+    return `<section class="card stack" style="gap:0" id="cookies"><h2 style="font-size:20px;margin-bottom:6px">Cookies</h2>
         ${sw(true, '', '', 'Nødvendige', 'Innlogging, sikkerhet og betaling. Kan ikke slås av.', true)}
         ${sw(S.cookies.analyse, 'ck', 'analyse', 'Statistikk', 'Hjelper oss å forstå hvordan siden brukes.')}
         ${sw(S.cookies.ads, 'ck', 'ads', 'Markedsføring', 'Måler effekten av annonser på andre nettsider.')}
-        <p class="hint" style="margin-top:10px">Les mer i <a href="cookies.html">cookieerklæringen</a>.</p></section>
-
+        <p class="hint" style="margin-top:10px">Les mer i <a href="cookies.html">cookieerklæringen</a> og <a href="personvern.html">personvernerklæringen</a>.</p></section>
       <section class="card stack" id="data"><h2 style="font-size:20px">Dine data</h2>
         <p class="muted">Du kan laste ned alt vi har lagret om deg, eller slette kontoen. Kontoen slettes når aktive oppdrag er avsluttet. Kvitteringer lagres i 5 år fordi bokføringsloven krever det.</p>
         <div class="row"><button class="btn soft sm" data-a="export">Last ned mine data</button>
-        ${confirmDel ? `<span class="small">Er du sikker? Alt i denne nettleseren slettes.</span><button class="btn soft sm" data-a="noDel">Avbryt</button><button class="btn dark sm" data-a="del">Ja, slett</button>` : '<button class="btn ghost sm" data-a="askDel">Slett konto</button>'}</div></section>
-    </div>`;
+        ${confirmDel ? `<span class="small">Er du sikker? Alt i denne nettleseren slettes.</span><button class="btn soft sm" data-a="noDel">Avbryt</button><button class="btn dark sm" data-a="del">Ja, slett</button>` : '<button class="btn ghost sm" data-a="askDel">Slett konto</button>'}</div></section>`;
+  }
+  function render() {
+    document.title = (vis ? VIEWS[vis] + ' | ' : '') + 'Min side | Freelio';
+    document.getElementById('main').innerHTML = `<div class="wrap section">${vis
+      ? `<div class="mside-sub stack"><div class="crumbs" style="padding-top:0"><a href="min-side.html" data-vis="">Min side</a><span>/</span>${VIEWS[vis]}</div><h1 style="font-size:28px">${VIEWS[vis]}</h1>${view()}</div>`
+      : hub()}</div>`;
     H.bindPhotoPicker(render);
   }
+  // Bytter visning uten å laste siden på nytt. Tilbake-knappen i nettleseren fungerer som vanlig.
+  document.getElementById('main').addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-vis]'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    e.preventDefault(); vis = a.dataset.vis; confirmDel = false;
+    history.pushState(null, '', a.getAttribute('href')); render(); window.scrollTo(0, 0);
+  });
+  addEventListener('popstate', () => { vis = pickVis(); confirmDel = false; render(); });
   Object.assign(H.actions, {
     logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
     togglePub: () => { S.profile.published = !S.profile.published; H.save(); H.toast(S.profile.published ? 'Profilen er synlig igjen.' : 'Profilen er skjult fra søk.'); render(); },

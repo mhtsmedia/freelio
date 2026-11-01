@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=8c5d3f31">
+<link rel="stylesheet" href="css/style.css?v=760da67c">
 <link rel="stylesheet" href="css/ny.css?v=620a6d89" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -20,8 +20,8 @@
 <div id="site-header"></div>
 <main id="main">
   <div class="wrap">
-    <div class="feed-head"><h1>Utforsk</h1><p class="muted">Nytt arbeid som frilansere har delt. Trykk på et innlegg for å se hele profilen.</p><div class="chips scroll" id="chips" role="group" aria-label="Fagfelt"></div><div class="stack feed-compose" id="compose" style="gap:12px"></div></div>
-    <div class="feed" id="feed" data-skel="feed:2"></div>
+    <div class="feed-head"><h1>Utforsk</h1><p class="muted">Nytt arbeid som frilansere har delt. Trykk på et innlegg for å se det i fullskjerm.</p><div class="chips scroll" id="chips" role="group" aria-label="Fagfelt"></div><div class="stack feed-compose" id="compose" style="gap:12px"></div></div>
+    <div class="xgrid" id="feed" data-skel="cards:8"></div>
   </div>
 </main>
 <div id="site-footer"></div>
@@ -29,8 +29,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=66e90026"></script>
-<script src="js/cloud.js?v=ff7a73ba"></script>
+<script src="js/app.js?v=e64b764f"></script>
+<script src="js/cloud.js?v=a26e07f4"></script>
 <script type="text/freelio">
 let cat = 'alle';
 let draft = null, busy = '', caption = '';
@@ -50,26 +50,160 @@ function render() {
   document.getElementById('compose').innerHTML = composer();
   const fIn = document.getElementById('postFile'); if (fIn) fIn.addEventListener('change', () => pick(fIn));
   const cap = document.getElementById('postCap'); if (cap) cap.addEventListener('input', () => (caption = cap.value));
-  const posts = (H.S.posts || []).map((p) => ({ p, f: H.byId(p.fid) })).filter((x) => x.f && H.inCat(x.f, cat)).sort((a, b) => b.p.at - a.p.at);
-  const mineId = H.S.profile && H.S.profile.id;
-  document.getElementById('feed').innerHTML = posts.length ? posts.map(({ p, f }) => {
-    const key = 'p:' + p.id; const liked = H.S.liked.includes(key); const saved = H.isSavedItem('p', p.id);
-    return `<article class="post">
-      <div class="row" style="flex-wrap:nowrap;gap:8px"><a class="post-h grow" href="frilanser.html?id=${f.id}">${H.avatar(f, 42)}<span class="grow stack" style="gap:0"><b>${H.esc(f.name)} ${H.verified(f)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)} · ${ago(p.at)}</span></span></a>${p.fid === mineId ? `<button class="btn link small" data-a="delPost" data-v="${p.id}">Slett</button>` : `<span class="rate">${H.star()} ${H.ratingTxt(f)}</span>`}</div>
-      <div class="post-media">${p.type === 'video' ? `<video src="${H.esc(p.url)}" poster="${H.esc(p.thumb)}" controls playsinline preload="none"></video>` : `<a href="frilanser.html?id=${f.id}" aria-label="Se profilen til ${H.esc(f.name)}"><img src="${H.esc(p.url)}" alt="${H.esc(p.cap || 'Arbeid fra ' + f.name)}" loading="lazy"></a>`}</div>
-      <div class="row" style="gap:2px">
-        <button class="ibtn plain" data-a="like" data-v="${key}" aria-pressed="${liked}" aria-label="Lik" style="color:${liked ? 'var(--like)' : 'inherit'}">${H.icon('heart', 24, 1.8, liked ? 'currentColor' : 'none')}</button>
-        <button class="ibtn plain" data-a="folder" data-v="p:${p.id}" aria-pressed="${saved}" aria-label="${saved ? 'Lagret i mappe. Endre mapper' : 'Lagre innlegget i en mappe'}">${H.icon('save', 22, 1.8, saved ? 'currentColor' : 'none')}</button>
-        <a class="ibtn plain" href="meldinger.html?med=${f.id}" aria-label="Send melding til ${H.esc(f.name)}">${H.icon('chat', 22)}</a>
-        <span class="grow meta" style="padding-left:8px">${H.priceTxt(f)}</span>
-        <a class="btn dark sm" href="book.html?id=${f.id}">Book</a>
-      </div>
-      ${p.cap ? `<p style="margin:0"><b>${H.esc(f.name)}</b> ${H.esc(p.cap)}</p>` : ''}</article>`;
-  }).join('') : `<div class="empty"><b style="color:var(--fg)">Ingen innlegg ${cat === 'alle' ? 'ennå' : 'i denne kategorien ennå'}</b><span>Frilansere legger selv ut arbeid her.</span></div>`;
-  // En video stopper når du scroller videre til neste innlegg
-  if (vio) { vio.disconnect(); document.querySelectorAll('#feed video').forEach((v) => vio.observe(v)); }
+  const posts = visible();
+  document.getElementById('feed').innerHTML = posts.length ? posts.map(({ p, f }) => `<button class="xtile" data-a="openReel" data-v="${p.id}" aria-label="${p.type === 'video' ? 'Video' : 'Bilde'} fra ${H.esc(f.name)}${p.cap ? ': ' + H.esc(p.cap.slice(0, 80)) : ''}">
+      <img src="${H.esc(p.thumb || p.url)}" alt="" loading="lazy">${p.type === 'video' ? `<span class="xtile-play" aria-hidden="true">${H.icon('play', 18, 2, 'currentColor')}</span>` : ''}
+      <span class="xtile-by" aria-hidden="true">${H.avatar(f, 24)}<span>${H.esc(f.name)}</span></span></button>`).join('')
+    : `<div class="empty" style="grid-column:1/-1"><b style="color:var(--fg)">Ingen innlegg ${cat === 'alle' ? 'ennå' : 'i denne kategorien ennå'}</b><span>Frilansere legger selv ut arbeid her.</span></div>`;
+  if (reel) reel.paintAll();
 }
-const vio = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && !e.target.paused) e.target.pause(); }), { threshold: 0.35 }) : null;
+const visible = () => (H.S.posts || []).map((p) => ({ p, f: H.byId(p.fid) })).filter((x) => x.f && H.inCat(x.f, cat)).sort((a, b) => b.p.at - a.p.at);
+
+/* ---------- fullskjerm: ett innlegg om gangen, som Reels og TikTok ---------- */
+// Scroll, piltastene eller pilene for neste og forrige. Liker, kommentarer, lagring og deling på siden.
+const SHARE = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5l7 7-7 7"/><path d="M21 12H10a6 6 0 0 0-6 6v1"/></svg>';
+const SOUND = (on) => `<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/>${on ? '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6M22 9l-5 6"/>'}</svg>`;
+let reel = null, muted = false;
+const fmt = (n) => (n >= 1000 ? H.num((n / 1000).toFixed(n >= 10000 ? 0 : 1)) + ' k' : String(n));
+const loginToast = (what) => H.toast('Logg inn for å ' + what, { label: 'Logg inn', a: 'goLogin', v: '' });
+H.actions.goLogin = () => { location.href = 'logg-inn.html?neste=' + encodeURIComponent('utforsk.html' + (reel && reel.cur ? '?p=' + reel.cur : '')); };
+function openReel(startId) {
+  const list = visible(); if (!list.length) return;
+  const mineId = H.S.profile && H.S.profile.id;
+  const st = {};
+  const el = document.createElement('div');
+  el.className = 'reel'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Innlegg i fullskjerm');
+  el.innerHTML = `<button class="reel-round reel-close" data-r="close" aria-label="Lukk">${H.icon('close', 22, 2)}</button>
+    <button class="reel-round reel-sound" data-r="mute" aria-label="${muted ? 'Slå på lyd' : 'Slå av lyd'}">${SOUND(!muted)}</button>
+    <div class="reel-scroll">${list.map(({ p, f }) => {
+      const vid = p.type === 'video', ar = vid && p.w && p.h ? (p.w / p.h).toFixed(4) : vid ? '0.5625' : '0.8';
+      return `<section class="reel-item" data-id="${p.id}">
+        <div class="reel-stage" style="--ar:${ar}">
+          ${vid ? `<video src="${H.esc(p.url)}" poster="${H.esc(p.thumb)}" playsinline loop preload="none"></video><span class="reel-paused" aria-hidden="true">${H.icon('play', 34, 2, 'currentColor')}</span>` : `<img src="${H.esc(p.url)}" alt="${H.esc(p.cap || 'Arbeid fra ' + f.name)}">`}
+          <div class="reel-info">
+            <a class="reel-by" href="frilanser.html?id=${f.id}">${H.avatar(f, 40)}<span><b>${H.esc(f.name)} ${H.verified(f)}</b><span>${H.esc(f.role)} · ${H.esc(f.area)} · ${ago(p.at)}</span></span></a>
+            ${p.cap ? `<p class="reel-cap">${H.esc(p.cap)}</p>` : ''}
+            <div class="reel-btns"><a class="btn sm reel-light" href="frilanser.html?id=${f.id}">Se profil</a><a class="btn primary sm" href="book.html?id=${f.id}">Book · ${H.priceTxt(f)}</a>${p.fid === mineId ? '<button class="btn sm reel-light" data-r="del">Slett innlegget</button>' : ''}</div>
+          </div>
+        </div>
+        <div class="reel-actions">
+          <button class="reel-act" data-r="like" aria-pressed="false" aria-label="Lik"><span class="reel-ico">${H.icon('heart', 26, 1.8)}</span><span class="n" data-n="likes">0</span></button>
+          <button class="reel-act" data-r="comments" aria-label="Kommentarer"><span class="reel-ico">${H.icon('chat', 24, 1.8)}</span><span class="n" data-n="comments">0</span></button>
+          <button class="reel-act" data-r="save" aria-pressed="false" aria-label="Lagre i mappe"><span class="reel-ico">${H.icon('save', 24, 1.8)}</span><span>Lagre</span></button>
+          <button class="reel-act" data-r="share" aria-label="Del"><span class="reel-ico">${SHARE}</span><span>Del</span></button>
+          <a class="reel-act" href="frilanser.html?id=${f.id}" aria-label="Profilen til ${H.esc(f.name)}">${H.avatar(f, 44)}</a>
+        </div>
+      </section>`;
+    }).join('')}</div>
+    <div class="reel-nav"><button class="reel-round" data-r="prev" aria-label="Forrige innlegg">${H.icon('back', 22, 2)}</button><button class="reel-round" data-r="next" aria-label="Neste innlegg">${H.icon('back', 22, 2)}</button></div>
+    <aside class="reel-comments" hidden aria-label="Kommentarer"></aside>`;
+  const scroller = el.querySelector('.reel-scroll');
+  const items = () => [...el.querySelectorAll('.reel-item')];
+  const itemOf = (id) => el.querySelector(`.reel-item[data-id="${id}"]`);
+  const paint = (id) => {
+    const it = itemOf(id), s = st[id]; if (!it) return;
+    if (s) {
+      const lk = it.querySelector('[data-r="like"]'); lk.setAttribute('aria-pressed', !!s.liked); lk.setAttribute('aria-label', s.liked ? 'Fjern liker' : 'Lik');
+      it.querySelector('[data-n="likes"]').textContent = fmt(s.likes); it.querySelector('[data-n="comments"]').textContent = fmt(s.comments);
+    }
+    it.querySelector('[data-r="save"]').setAttribute('aria-pressed', H.isSavedItem('p', id));
+  };
+  const self = reel = { el, cur: null, paintAll: () => list.forEach(({ p }) => paint(p.id)) };
+  H.social.stats(list.map((x) => x.p.id)).then((s) => { Object.assign(st, s); self.paintAll(); }).catch(() => {});
+  // Spiller av videoen som er på skjermen, og stopper de andre
+  const play = (it) => {
+    el.querySelectorAll('video').forEach((v) => { if (!it.contains(v)) v.pause(); });
+    const v = it.querySelector('video'); if (!v) return;
+    v.muted = muted;
+    v.play().catch(() => { muted = true; v.muted = true; el.querySelector('[data-r="mute"]').innerHTML = SOUND(false); v.play().catch(() => {}); });
+  };
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    const id = e.target.dataset.id; self.cur = id;
+    history.replaceState(null, '', 'utforsk.html?p=' + id);
+    play(e.target); closeComments();
+  }), { root: scroller, threshold: 0.6 });
+  items().forEach((it) => io.observe(it));
+  el.querySelectorAll('video').forEach((v) => {
+    v.addEventListener('play', () => v.parentNode.classList.remove('is-paused'));
+    v.addEventListener('pause', () => v.parentNode.classList.add('is-paused'));
+  });
+  const step = (d) => scroller.scrollBy({ top: d * scroller.clientHeight, behavior: 'smooth' });
+  const close = () => {
+    io.disconnect(); el.querySelectorAll('video').forEach((v) => v.pause());
+    document.removeEventListener('keydown', key); el.remove(); document.body.style.overflow = ''; reel = null;
+    history.replaceState(null, '', 'utforsk.html');
+  };
+  /* kommentarer */
+  const panel = el.querySelector('.reel-comments');
+  function closeComments() { if (!panel.hidden) { panel.hidden = true; panel.innerHTML = ''; el.classList.remove('c-open'); } }
+  async function openComments(id) {
+    const cloud = window.Cloud && Cloud.on;
+    panel.hidden = false; el.classList.add('c-open');
+    panel.innerHTML = `<div class="reel-c-head"><b>Kommentarer</b><button class="ibtn" data-r="cclose" aria-label="Lukk kommentarer">${H.icon('close', 18, 2)}</button></div><div class="reel-c-list"><div class="hint">Henter kommentarer …</div></div>`;
+    const list = await H.social.comments(id);
+    if (panel.hidden || self.cur !== id) return;
+    const off = H.social.ready === false && cloud;
+    const canWrite = !off && (!cloud || H.S.user);
+    panel.innerHTML = `<div class="reel-c-head"><b>Kommentarer ${list.length ? '(' + list.length + ')' : ''}</b><button class="ibtn" data-r="cclose" aria-label="Lukk kommentarer">${H.icon('close', 18, 2)}</button></div>
+      <div class="reel-c-list">${list.length ? list.map((c) => `<div class="reel-c"><span class="av" style="width:32px;height:32px;background:#5B5F97;font-size:12px">${H.esc(String(c.name).slice(0, 1).toUpperCase())}</span><div class="grow stack" style="gap:2px;min-width:0"><span><b>${H.esc(c.name)}</b> <span class="meta">${ago(c.at)}</span></span><span style="white-space:pre-line;overflow-wrap:anywhere">${H.esc(c.text)}</span>${c.mine || c.canDel ? `<button class="btn link small" style="align-self:flex-start;padding:0" data-r="cdel" data-c="${c.id}">Slett</button>` : ''}</div></div>`).join('') : '<p class="muted">Ingen kommentarer ennå. Skriv den første.</p>'}</div>
+      ${off ? '<p class="hint" style="padding:12px 16px">Kommentarer er ikke slått på ennå. Kjør database/kommentarer.sql i Supabase.</p>'
+        : canWrite ? `<form class="reel-c-form" data-r="cform"><label class="sr" for="ctext">Skriv en kommentar</label><input id="ctext" class="inp" maxlength="1000" placeholder="Skriv en kommentar …" autocomplete="off"><button class="send" aria-label="Send kommentar">${H.icon('arrow', 20, 2)}</button></form>`
+        : `<div style="padding:12px 16px"><button class="btn primary block" data-r="login">Logg inn for å kommentere</button></div>`}`;
+    const l = panel.querySelector('.reel-c-list'); l.scrollTop = l.scrollHeight;
+    const inp = panel.querySelector('#ctext'); if (inp) inp.focus();
+  }
+  panel.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inp = panel.querySelector('#ctext'), text = inp.value.trim(), id = self.cur; if (!text) return;
+    inp.disabled = true;
+    try { await H.social.comment(id, text); st[id] = st[id] || { likes: 0, liked: false, comments: 0 }; st[id].comments++; paint(id); await openComments(id); }
+    catch (err) { inp.disabled = false; if (err.message === 'login') loginToast('kommentere'); else H.toast(err.message || 'Kunne ikke sende kommentaren'); }
+  });
+  /* knapper */
+  el.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-r]');
+    if (!b) { const v = e.target.closest('.reel-stage') && !e.target.closest('a,button') && e.target.closest('.reel-item').querySelector('video'); if (v) { v.paused ? v.play().catch(() => {}) : v.pause(); } return; }
+    const r = b.dataset.r, it = b.closest('.reel-item'), id = it ? it.dataset.id : self.cur;
+    if (r === 'close') close();
+    else if (r === 'next') step(1);
+    else if (r === 'prev') step(-1);
+    else if (r === 'mute') { muted = !muted; el.querySelectorAll('video').forEach((v) => (v.muted = muted)); b.innerHTML = SOUND(!muted); b.setAttribute('aria-label', muted ? 'Slå på lyd' : 'Slå av lyd'); }
+    else if (r === 'like') {
+      const s = st[id] = st[id] || { likes: 0, liked: false, comments: 0 }, on = !s.liked;
+      if (window.Cloud && Cloud.on && !H.S.user && H.social.ready !== false) { loginToast('like'); return; }
+      s.liked = on; s.likes = Math.max(0, s.likes + (on ? 1 : -1)); paint(id); if (on) H.popIn(`.reel-item[data-id="${id}"] [data-r="like"] svg`);
+      try { await H.social.like(id, on); } catch (err) { s.liked = !on; s.likes = Math.max(0, s.likes + (on ? -1 : 1)); paint(id); if (err.message === 'login') loginToast('like'); else H.toast(err.message || 'Kunne ikke lagre'); }
+    }
+    else if (r === 'comments') { if (!panel.hidden) closeComments(); else { self.cur = id; openComments(id); } }
+    else if (r === 'cclose') closeComments();
+    else if (r === 'login') H.actions.goLogin();
+    else if (r === 'cdel') { try { await H.social.uncomment(self.cur, b.dataset.c); st[self.cur].comments = Math.max(0, st[self.cur].comments - 1); paint(self.cur); openComments(self.cur); } catch (err) { H.toast(err.message || 'Kunne ikke slette'); } }
+    else if (r === 'save') H.pickFolder('p', id);
+    else if (r === 'share') {
+      const url = location.href.split('?')[0] + '?p=' + id;
+      try { if (navigator.share) await navigator.share({ title: 'Freelio', url }); else { await navigator.clipboard.writeText(url); H.toast('Lenken er kopiert'); } } catch (err) { /* avbrutt */ }
+    }
+    else if (r === 'del') {
+      if (!confirm('Vil du slette innlegget?')) return;
+      try { await H.removePost(id); it.remove(); H.toast('Innlegget er slettet'); if (!items().length) close(); render(); } catch (err) { H.toast(err.message || 'Kunne ikke slette'); }
+    }
+  });
+  const key = (e) => {
+    if (document.querySelector('.crop-wrap')) return;
+    if (e.target.closest && e.target.closest('input,textarea')) { if (e.key === 'Escape') closeComments(); return; }
+    if (e.key === 'Escape') { if (!panel.hidden) closeComments(); else close(); }
+    else if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); step(1); }
+    else if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); step(-1); }
+    else if (e.key === 'm') el.querySelector('[data-r="mute"]').click();
+  };
+  document.addEventListener('keydown', key);
+  document.body.appendChild(el); document.body.style.overflow = 'hidden';
+  const first = itemOf(startId) || items()[0];
+  scroller.scrollTop = first.offsetTop;
+  el.querySelector('[data-r="close"]').focus({ preventScroll: true });
+}
+H.actions.openReel = (v) => openReel(v);
 async function pick(input) {
   const file = input.files[0]; input.value = ''; if (!file) return;
   try {
@@ -87,7 +221,6 @@ async function pick(input) {
   busy = ''; render();
 }
 H.actions.cat = (v) => { cat = v; render(); };
-H.actions.like = (v) => { const i = H.S.liked.indexOf(v); i > -1 ? H.S.liked.splice(i, 1) : H.S.liked.push(v); H.save(); render(); H.popIn(`[data-a="like"][data-v="${v}"] svg`); };
 H.actions.cancelPost = () => { draft = null; caption = ''; render(); };
 H.actions.publish = async () => {
   if (!draft || busy) return;
@@ -111,7 +244,11 @@ H.actions.delPost = async (v) => {
   try { await H.removePost(v); H.toast('Innlegget er slettet'); } catch (e) { H.toast(e.message || 'Kunne ikke slette'); }
   render();
 };
-H.boot(render);
+H.boot(() => {
+  render();
+  // Lenke rett til et innlegg (?p=...) åpner det i fullskjerm
+  const pid = H.qs('p'); if (pid && (H.S.posts || []).some((p) => p.id === pid)) openReel(pid);
+});
 </script>
 </body>
 </html>

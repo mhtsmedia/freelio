@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
 
 ## Kjør lokalt
 
@@ -39,7 +39,7 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 | Side | Fil | Innlogging |
 | --- | --- | --- |
 | Forside med søk, kategorier, populære og nye oppdrag | `index.html` | Nei |
-| Feed med arbeid fra frilansere | `utforsk.html` | Nei |
+| Utforsk: rutenett med arbeid fra frilansere. Trykk på et innlegg for fullskjerm med liker, kommentarer, lagring og deling | `utforsk.html?p=` | Nei |
 | Søk med filter, sortering og sammenligning | `sok.html` | Nei |
 | Kart over frilansere i nærheten (OpenStreetMap, eller Google Maps med nøkkel i `js/config.js`) | `kart.html` | Nei |
 | Frilanserprofil med portefølje, pakker og omtaler | `frilanser.html?id=` | Nei |
@@ -54,7 +54,7 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 | Assistent | `assistent.html` | Nei |
 | Logg inn med Vipps eller BankID | `logg-inn.html` | |
 | Bli frilanser (lag og rediger profil) | `bli-frilanser.html` | Ja |
-| Min side (meny, lagret, varsler, cookies, data, slett konto) | `min-side.html` | Ja |
+| Min side: oversikt med fliser, og egne visninger for konto, frilanserprofil, varsler og personvern | `min-side.html?vis=` | Ja |
 | Lagret: mapper med frilansere, innlegg og oppdrag | `lagret.html?mappe=` | Nei |
 | Slik fungerer det, trygg betaling og priser | `slik-fungerer-det.html` | Nei |
 | Hjelpesenter med FAQ og kontaktskjema | `hjelp.html` | Nei |

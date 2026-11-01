@@ -282,6 +282,47 @@
     S.posts = S.posts.filter((x) => x.id !== id); H.saveLocal();
     H.dropImage(p.url); H.dropImage(p.thumb);
   };
+  /* ---------- liker og kommentarer på innlegg ---------- */
+  // Mangler tabellene (database/kommentarer.sql er ikke kjørt), lagres liker i nettleseren og kommentarer er av.
+  const localSocial = H.social;
+  const noTable = (e) => /does not exist|schema cache|PGRST205|42P01/i.test((e && (e.message || e.code)) || '');
+  const myPost = (pid) => { const p = (S.posts || []).find((x) => x.id === pid); return !!(p && S.profile && p.fid === S.profile.id); };
+  H.social = {
+    ready: null,
+    stats: async (ids) => {
+      const out = Object.fromEntries(ids.map((id) => [id, { likes: 0, liked: false, comments: 0 }]));
+      for (let i = 0; i < ids.length; i += 100) {
+        const part = ids.slice(i, i + 100);
+        const [l, c] = await Promise.all([sb.from('post_likes').select('post_id,user_id').in('post_id', part), sb.from('post_comments').select('post_id').in('post_id', part)]);
+        if (l.error || c.error) { H.social.ready = false; return localSocial.stats(ids); }
+        l.data.forEach((r) => { const o = out[r.post_id]; if (o) { o.likes++; if (r.user_id === C.uid) o.liked = true; } });
+        c.data.forEach((r) => { const o = out[r.post_id]; if (o) o.comments++; });
+      }
+      H.social.ready = true;
+      return out;
+    },
+    like: async (id, on) => {
+      if (H.social.ready === false) return localSocial.like(id, on);
+      if (!C.uid) throw new Error('login');
+      const r = on ? await sb.from('post_likes').insert({ post_id: id, user_id: C.uid }) : await sb.from('post_likes').delete().eq('post_id', id).eq('user_id', C.uid);
+      if (r.error && !/duplicate/i.test(r.error.message)) throw new Error(errText(r.error));
+    },
+    comments: async (id) => {
+      const r = await sb.from('post_comments').select('id,user_id,author_name,text,created_at').eq('post_id', id).order('created_at');
+      if (r.error) { if (noTable(r.error)) H.social.ready = false; return []; }
+      const own = myPost(id);
+      return r.data.map((x) => ({ id: x.id, name: x.author_name || 'Bruker', text: x.text, at: Date.parse(x.created_at), mine: x.user_id === C.uid, canDel: x.user_id === C.uid || own }));
+    },
+    comment: async (id, text) => {
+      if (H.social.ready === false) throw new Error('Kommentarer er ikke slått på ennå. Kjør database/kommentarer.sql i Supabase.');
+      if (!C.uid) throw new Error('login');
+      const name = (S.user && S.user.name) || '';
+      const r = await sb.from('post_comments').insert({ post_id: id, user_id: C.uid, author_name: name, text }).select('id,created_at').single();
+      if (r.error) throw new Error(noTable(r.error) ? 'Kommentarer er ikke slått på ennå. Kjør database/kommentarer.sql i Supabase.' : errText(r.error));
+      return { id: r.data.id, name: name || 'Deg', text, at: Date.parse(r.data.created_at), mine: true, canDel: true };
+    },
+    uncomment: async (id, cid) => { const r = await sb.from('post_comments').delete().eq('id', cid); if (r.error) throw new Error(errText(r.error)); }
+  };
   H.dropImage = async (url) => {
     const m = String(url || '').match(/\/object\/public\/profiles\/(.+)$/);
     if (m && C.uid) await sb.storage.from('profiles').remove([decodeURIComponent(m[1])]);
@@ -318,7 +359,7 @@
       console.error(e);
       const missing = /does not exist|schema cache|PGRST205|42P01/i.test((e && (e.message || e.code)) || '');
       C.on = false;
-      H.save = H.saveLocal; H.go = (url) => { location.href = url; }; H.flush = () => Promise.resolve();
+      H.save = H.saveLocal; H.go = (url) => { location.href = url; }; H.flush = () => Promise.resolve(); H.social = localSocial;
       Object.assign(S, H.load(true));
       H.prune();
       H.flashNow = missing ? 'Databasen er ikke satt opp ennå. Siden kjører i demo-modus.' : 'Fikk ikke kontakt med databasen. Siden kjører i demo-modus.';

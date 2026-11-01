@@ -88,7 +88,7 @@
     user: null, saved: [], liked: [], cmp: [],
     orders: [],
     myJobs: [], threads: {}, readThreads: {}, cookie: null, cookies: { analyse: false, ads: false },
-    extraReviews: {}, profile: null, sentOffers: {}, asst: [], posts: [], folders: []
+    extraReviews: {}, profile: null, sentOffers: {}, asst: [], posts: [], folders: [], comments: {}
   });
   let mem = null;
   H.load = (force) => {
@@ -224,6 +224,16 @@
   // Innlegg på Utforsk. Uten database lagres de bare i nettleseren. cloud.js bytter til Supabase.
   H.addPost = async (p) => { S.posts = S.posts || []; S.posts.unshift(Object.assign({}, p, { id: H.uid(), fid: S.profile.id, at: Date.now() })); H.save(); };
   H.removePost = async (id) => { S.posts = (S.posts || []).filter((x) => x.id !== id); H.save(); };
+  // Liker og kommentarer på innlegg. Uten database lagres de bare i nettleseren. cloud.js bytter til Supabase.
+  // ready: true når kommentarene lagres for alle, false når databasen mangler tabellene, null før vi vet.
+  H.social = {
+    ready: null,
+    stats: async (ids) => Object.fromEntries(ids.map((id) => { const liked = S.liked.includes('p:' + id); return [id, { likes: liked ? 1 : 0, liked, comments: ((S.comments || {})[id] || []).length }]; })),
+    like: async (id, on) => { const k = 'p:' + id, i = S.liked.indexOf(k); if (on && i < 0) S.liked.push(k); if (!on && i > -1) S.liked.splice(i, 1); H.save(); },
+    comments: async (id) => ((S.comments || {})[id] || []).slice(),
+    comment: async (id, text) => { S.comments = S.comments || {}; const c = { id: H.uid(), name: (S.user && S.user.name) || 'Deg', text, at: Date.now(), mine: true }; (S.comments[id] = S.comments[id] || []).push(c); H.save(); return c; },
+    uncomment: async (id, cid) => { S.comments = S.comments || {}; S.comments[id] = (S.comments[id] || []).filter((c) => c.id !== cid); H.save(); }
+  };
   // Redigering av profilbilde: dra for å flytte, zoom med glidebryter, hjul eller to fingre, roter 90 grader.
   // Gir tilbake et kvadratisk bilde (512 x 512) eller null hvis brukeren avbryter.
   // Beskjær et bilde. o.aspect er bredde/høyde (1 = kvadrat), o.round viser sirkel (profilbilde).

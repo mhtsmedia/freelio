@@ -566,18 +566,84 @@ button.ph{border:0;padding:0;cursor:pointer;display:block;width:100%}
 .fcard .tn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fcard > .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Utforsk: ett innlegg om gangen når du scroller, som Reels. Hvert innlegg fyller skjermen under toppmenyen. */
-:root:has(body[data-page="utforsk"]){scroll-snap-type:y mandatory;scroll-padding-top:65px}
-body[data-page="utforsk"] #site-header{position:sticky;top:0;z-index:50}
-body[data-page="utforsk"] .feed-head{scroll-snap-align:start}
-body[data-page="utforsk"] #feed.feed{gap:0;padding-block:0}
-body[data-page="utforsk"] #feed > .post{--chrome:220px;scroll-snap-align:start;scroll-snap-stop:always;box-sizing:border-box;min-height:calc(100vh - 65px);min-height:calc(100dvh - 65px);justify-content:center;padding-block:16px;width:min(100%,calc((100dvh - 65px - var(--chrome)) * .8));margin-inline:auto}
-body[data-page="utforsk"] #feed > .post > p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-body[data-page="utforsk"] #feed > .empty{scroll-snap-align:start}
-body[data-page="utforsk"] #site-footer{scroll-snap-align:end}
+/* Utforsk: rutenett med innlegg. Trykk på et innlegg for å se det i fullskjerm. */
+body[data-page="utforsk"] .feed-head{max-width:none;padding-bottom:4px}
+body[data-page="utforsk"] .feed-compose{max-width:640px}
+.xgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;padding-block:16px 40px}
+.xtile{position:relative;display:block;aspect-ratio:4/5;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--surface);cursor:pointer;color:#fff;font:inherit;text-align:left}
+.xtile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s var(--ease)}
+.xtile:hover img{transform:scale(1.04)}
+.xtile:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.xtile-play{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.45);display:grid;place-items:center}
+.xtile-play svg{margin-left:2px}
+.xtile-by{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:8px;padding:28px 10px 10px;background:linear-gradient(transparent,rgba(0,0,0,.6));font-size:13px;font-weight:700}
+.xtile-by > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:760px){
-  :root[data-design="ny"]:has(body[data-page="utforsk"]){scroll-padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
-  :root[data-design="ny"] body[data-page="utforsk"] #feed > .post{min-height:calc(100dvh - 129px - env(safe-area-inset-bottom,0px));width:min(100%,calc((100dvh - 129px - var(--chrome)) * .8))}
+  .xgrid{grid-template-columns:repeat(3,1fr);gap:3px;margin-inline:calc(-1 * clamp(16px,3vw,32px))}
+  .xtile{border-radius:0}
+  .xtile-by{display:none}
+  .xtile-play{top:6px;right:6px;width:24px;height:24px}
+}
+
+/* Fullskjerm: ett innlegg om gangen, som Reels og TikTok */
+.reel{--side:250px;position:fixed;inset:0;z-index:99;background:#0B0B0C;color:#fff;animation:fade .2s var(--ease)}
+.reel-scroll{position:absolute;inset:0;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none;container-type:size}
+.reel-scroll::-webkit-scrollbar{display:none}
+.reel-item{position:relative;height:100%;box-sizing:border-box;padding:16px;display:flex;align-items:center;justify-content:center;gap:16px;scroll-snap-align:start;scroll-snap-stop:always}
+.reel-stage{position:relative;flex:none;aspect-ratio:var(--ar);width:min(calc((100dvh - 32px) * var(--ar)),calc(100vw - var(--side)));width:min(calc((100cqh - 32px) * var(--ar)),calc(100cqw - var(--side)));max-height:100%;border-radius:14px;overflow:hidden;background:#000}
+.reel-stage > video,.reel-stage > img{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+.reel-paused{position:absolute;inset:0;margin:auto;width:72px;height:72px;border-radius:50%;background:rgba(0,0,0,.45);display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.reel-paused svg{margin-left:4px}
+.reel-stage.is-paused .reel-paused{opacity:1}
+.reel-info{position:absolute;left:0;right:0;bottom:0;padding:56px 16px 16px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(transparent,rgba(0,0,0,.78));pointer-events:none}
+.reel-info a,.reel-info button{pointer-events:auto}
+.reel-by{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;align-self:flex-start;max-width:100%}
+.reel-by:hover{color:#fff}
+.reel-by > span:last-child{display:flex;flex-direction:column;min-width:0}
+.reel-by b{font-size:15px}
+.reel-by > span:last-child > span{font-size:13px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reel-cap{margin:0;font-size:14px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.reel-btns{display:flex;gap:8px;flex-wrap:wrap}
+.reel .btn.reel-light{background:rgba(255,255,255,.16);color:#fff;border-color:transparent}
+.reel .btn.reel-light:hover{background:rgba(255,255,255,.26)}
+.reel-actions{flex:none;align-self:flex-end;display:flex;flex-direction:column;align-items:center;gap:14px;padding-bottom:8px}
+.reel-act{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:0;color:#fff;font:inherit;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer}
+.reel-act:hover{color:#fff}
+.reel-ico{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.13);display:grid;place-items:center;transition:background .2s,transform .15s var(--ease)}
+.reel-act:hover .reel-ico{background:rgba(255,255,255,.24)}
+.reel-act:active .reel-ico{transform:scale(.9)}
+.reel-act[aria-pressed="true"] svg{fill:currentColor}
+.reel-act[data-r="like"][aria-pressed="true"] .reel-ico{color:var(--like)}
+.reel-act .av{border:2px solid #fff}
+.reel-round{width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.13);color:#fff;display:grid;place-items:center;cursor:pointer;transition:background .2s}
+.reel-round:hover{background:rgba(255,255,255,.26)}
+.reel-close,.reel-sound{position:absolute;top:max(16px,env(safe-area-inset-top,0px));z-index:3}
+.reel-close{left:max(16px,env(safe-area-inset-left,0px))}
+.reel-sound{left:calc(max(16px,env(safe-area-inset-left,0px)) + 54px)}
+.reel-nav{position:absolute;right:24px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;z-index:3}
+.reel-nav [data-r="prev"] svg{transform:rotate(90deg)}
+.reel-nav [data-r="next"] svg{transform:rotate(-90deg)}
+.reel-comments{position:absolute;top:0;right:0;bottom:0;z-index:4;width:min(400px,100%);display:flex;flex-direction:column;background:var(--bg);color:var(--fg);box-shadow:-12px 0 40px rgba(0,0,0,.35);animation:fade .2s var(--ease)}
+.reel-comments[hidden]{display:none}
+.reel-c-head{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 12px 18px;border-bottom:1px solid var(--line)}
+.reel-c-list{flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+.reel-c{display:flex;gap:10px;font-size:14px}
+.reel-c .av{flex:none;color:#fff;font-weight:800}
+.reel-c-form{display:flex;gap:8px;align-items:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.reel-c-form .inp{flex:1;min-width:0}
+@media (min-width:1000px){
+  .reel.c-open{--side:112px}
+  .reel.c-open .reel-scroll{right:400px}
+  .reel.c-open .reel-nav{display:none}
+}
+@media (max-width:760px){
+  .reel-item{padding:0}
+  .reel-stage{width:100%;height:100%;aspect-ratio:auto;max-height:none;border-radius:0}
+  .reel-info{padding:80px 84px calc(18px + env(safe-area-inset-bottom,0px)) 14px}
+  .reel-actions{position:absolute;right:10px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:2;padding:0;gap:12px}
+  .reel-ico{background:rgba(0,0,0,.3)}
+  .reel-nav{display:none}
+  .reel-comments{top:auto;left:0;width:auto;height:min(70dvh,560px);border-radius:16px 16px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.35);animation:slide-up .25s var(--ease)}
 }
 
 /* Meny øverst på Min side */
@@ -587,6 +653,12 @@ body[data-page="utforsk"] #site-footer{scroll-snap-align:end}
 .mside-menu a > svg{flex:none;color:var(--accent-ink)}
 .mside-menu a > span{display:flex;flex-direction:column;gap:1px;min-width:0}
 .mside-menu b{font-size:15px}
+.mside-menu .chev{margin-left:auto;flex:none;display:flex;color:var(--muted)}
+.mside-head{margin-bottom:24px;flex-wrap:nowrap}
+.mside-head h1{font-size:28px;overflow-wrap:anywhere}
+@media (max-width:760px){.mside-head h1{font-size:22px}.mside-head .btn{padding:0 12px}}
+.mside-sub{max-width:760px;gap:16px}
+.mside-sub .card{margin:0}
 
 /* Eget bilde på kortet i søket */
 .card-pick{aspect-ratio:4/3;width:min(280px,100%);border-radius:12px;overflow:hidden;background:var(--surface);display:grid;place-items:center;text-align:center;padding:0}
