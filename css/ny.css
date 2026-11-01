@@ -15,14 +15,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--line-strong:#2E2E33;--star:#E9B949}}
 :root[data-theme="dark"]{--line-strong:#2E2E33;--star:#E9B949}
 
-/* oppsett: nettsiden bruker hele bredden på skjermen */
-.wrap{max-width:none;padding-left:max(clamp(16px,3vw,48px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,48px),env(safe-area-inset-right,0px))}
-body[data-page="min-side"] main .wrap,
-body[data-page="mine-oppdrag"] main .wrap,
-body[data-page="sammenlign"] main .wrap,
-body[data-page="annonse"] main .wrap,
-body[data-page="bestilling"] main .wrap,
-body[data-page="lagret"] main .wrap{max-width:none!important}
+/* oppsett: alt innhold ligger i én boks med samme bredde på alle sider, så venstrekanten
+   til logoen, overskriftene og innholdet står på linje overalt */
+.wrap{max-width:1280px;padding-left:max(clamp(16px,3vw,32px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,3vw,32px),env(safe-area-inset-right,0px))}
+main .wrap[style*="max-width"]{max-width:1280px!important}
+body[data-page="logg-inn"] main .wrap{max-width:460px!important}
 .section{padding-block:32px;gap:16px}
 h1{font-size:clamp(26px,3vw,34px);line-height:1.15}
 h2{font-size:20px}
@@ -117,6 +114,7 @@ h2{font-size:20px}
   body[data-page="index"] main > .wrap > section:nth-child(3){grid-column:2;grid-row:2;border:1px solid var(--line);border-radius:14px;padding:18px 18px 6px;gap:6px;margin-bottom:16px}
   body[data-page="index"] main > .wrap > section:nth-child(4){grid-column:2;grid-row:3;background:var(--surface);border-radius:14px;padding:18px;gap:14px}
   body[data-page="index"] main > .wrap > section:nth-child(5){grid-column:1/-1;grid-row:4}
+  body[data-page="index"] #popularF{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
   body[data-page="index"] main > .wrap > section:nth-child(3) h2,
   body[data-page="index"] main > .wrap > section:nth-child(4) h2{font-size:17px}
   body[data-page="index"] #jobs .jrow{padding-block:12px}
@@ -136,7 +134,8 @@ h2{font-size:20px}
 body[data-page="meldinger"]{height:100vh;height:100dvh;min-height:0;overflow:hidden}
 body[data-page="meldinger"] #site-footer{display:none}
 body[data-page="meldinger"] main{flex:1;min-height:0;display:flex;flex-direction:column;animation:none}
-body[data-page="meldinger"] main > .wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}
+body[data-page="meldinger"] main > .wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0;width:100%}
+@media (min-width:1281px){body[data-page="meldinger"] .inbox{border-left:1px solid var(--line)!important;border-right:1px solid var(--line)!important}}
 body[data-page="meldinger"] .inbox{flex:1;height:auto;min-height:0;margin:0;border:0;border-radius:0;grid-template-columns:minmax(280px,360px) minmax(0,1fr)}
 body[data-page="meldinger"] .threads{background:var(--bg2)}
 body[data-page="meldinger"] .thread-btn{background:transparent}

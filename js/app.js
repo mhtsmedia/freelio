@@ -382,7 +382,7 @@
       ${H.carousel(f, opts.cat) || H.ph(f, 'card', '', 'a', `href="frilanser.html?id=${f.id}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}"`)}
       <button class="ibtn heart" data-a="save" data-v="${f.id}" aria-pressed="${saved}" aria-label="${saved ? 'Fjern fra lagrede' : 'Lagre'} ${H.esc(f.name)}" style="color:${saved ? 'var(--like)' : 'var(--fg)'}">${H.icon('heart', 18, 1.8, saved ? 'currentColor' : 'none')}</button>
       ${opts.cmp ? `<button class="cmp" data-a="cmp" data-v="${f.id}" aria-pressed="${inCmp}">${H.icon(inCmp ? 'check' : 'plus', 13, 2.4)} Sammenlign</button>` : ''}
-      <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t">${H.esc(f.name)} ${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>
+      <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><a href="frilanser.html?id=${f.id}" class="t"><span class="tn">${H.esc(f.name)}</span>${H.verified(f)}</a><span class="rate">${H.star(12)} ${H.ratingTxt(f)}</span></div>
       <span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span>
       <span class="price">${H.priceTxt(f)}</span>
     </article>`;

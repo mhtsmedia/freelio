@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=a90bca84">
-<link rel="stylesheet" href="css/ny.css?v=37a20d11" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=8c5d3f31">
+<link rel="stylesheet" href="css/ny.css?v=620a6d89" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="frilanser">
@@ -24,7 +24,7 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=74832c34"></script>
+<script src="js/app.js?v=66e90026"></script>
 <script src="js/cloud.js?v=ff7a73ba"></script>
 <script type="text/freelio">
 const id = H.qs('id');
@@ -47,7 +47,7 @@ function render() {
   const pc = pcats.includes(pcat) ? pcat : 'alle';
   const tabs = { work: 'Portefølje', pk: 'Pakker og priser', rv: `Omtaler (${f.reviews})`, about: 'Om' };
   const body = {
-    work: (f.portfolio && f.portfolio.length) ? `${pcats.length > 1 ? `<div class="chips scroll" style="margin-bottom:14px">${['alle'].concat(pcats).map((c) => `<button class="chip" data-a="pcat" data-v="${c}" aria-pressed="${pc === c}">${c === 'alle' ? 'Alle' : H.cat(c).name}</button>`).join('')}</div>` : ''}<div class="gallery">${f.portfolio.map((x, i) => pc !== 'alle' && (x.cat || f.cat) !== pc ? '' : x.type === 'video' ? `<button class="ph has-img" data-a="playVid" data-v="${i}" aria-label="Spill av video ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb)}" alt="" loading="lazy"><span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span></button>` : `<a class="ph has-img" href="${H.esc(x.url)}" target="_blank" rel="noopener" aria-label="Åpne bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join('')}</div>`
+    work: (f.portfolio && f.portfolio.length) ? `${pcats.length > 1 ? `<div class="chips scroll" style="margin-bottom:14px">${['alle'].concat(pcats).map((c) => `<button class="chip" data-a="pcat" data-v="${c}" aria-pressed="${pc === c}">${c === 'alle' ? 'Alle' : H.cat(c).name}</button>`).join('')}</div>` : ''}<div class="gallery">${f.portfolio.map((x, i) => pc !== 'alle' && (x.cat || f.cat) !== pc ? '' : x.type === 'video' ? `<button class="ph has-img" data-a="viewPf" data-v="${i}" aria-label="Spill av video ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb)}" alt="" loading="lazy"><span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span></button>` : `<button class="ph has-img" data-a="viewPf" data-v="${i}" aria-label="Vis bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></button>`).join('')}</div>`
       : f.demo === false ? `<div class="empty">${H.esc(H.first(f.name))} har ikke lastet opp bilder ennå.</div>` : `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
     pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}
       <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
@@ -89,16 +89,39 @@ function render() {
 }
 H.actions.tab = (v) => { tab = v; render(); };
 H.actions.pcat = (v) => { pcat = v; render(); };
-// Spiller av video i fullskjerm-visning. Lukk med Esc, krysset eller klikk utenfor.
-H.actions.playVid = (v) => {
-  const x = (H.byId(id).portfolio || [])[+v]; if (!x) return;
-  const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-label', 'Video');
-  lb.innerHTML = `<div class="lb-top"><span></span><button class="ibtn" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div><div class="lb-stage"><video src="${H.esc(x.url)}" poster="${H.esc(x.thumb)}" controls autoplay playsinline></video></div>`;
-  const close = () => { lb.remove(); document.removeEventListener('keydown', key); };
-  const key = (e) => { if (e.key === 'Escape') close(); };
-  lb.addEventListener('click', (e) => { if (e.target === lb || e.target.closest('.lb-top .ibtn') || e.target.classList.contains('lb-stage')) close(); });
-  document.addEventListener('keydown', key); document.body.appendChild(lb);
+// Bla gjennom porteføljen i en visning på siden, uten å åpne ny fane.
+// Piler, piltastene eller sveip på mobil. Lukk med Esc, krysset eller klikk utenfor.
+H.actions.viewPf = (v) => {
+  const f = H.byId(id); const pfl = (f && f.portfolio) || []; if (!pfl[+v]) return;
+  const pcats = [...new Set(pfl.map((x) => x.cat || f.cat))];
+  const pc = pcats.includes(pcat) ? pcat : 'alle';
+  const list = pfl.map((x, i) => i).filter((i) => pc === 'alle' || (pfl[i].cat || f.cat) === pc);
+  let at = Math.max(0, list.indexOf(+v));
+  const last = document.activeElement;
+  const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', 'Porteføljen til ' + f.name);
+  const draw = () => {
+    const x = pfl[list[at]];
+    lb.innerHTML = `<div class="lb-top"><span class="small" aria-live="polite">${at + 1} / ${list.length}</span><button class="ibtn" data-lb="close" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div>
+      <div class="lb-stage">${x.type === 'video' ? `<video src="${H.esc(x.url)}" poster="${H.esc(x.thumb)}" controls autoplay playsinline></video>` : `<img src="${H.esc(x.url)}" alt="Bilde ${at + 1} av ${list.length} fra ${H.esc(f.name)}">`}
+      ${list.length > 1 ? `<button class="ibtn lb-nav prev" data-lb="prev" aria-label="Forrige">${H.icon('back', 22, 2)}</button><button class="ibtn lb-nav next" data-lb="next" aria-label="Neste">${H.icon('next', 22, 2)}</button>` : ''}</div>`;
+    // Henter nabobildene på forhånd, så neste bilde vises med en gang
+    [1, -1].forEach((d) => { const y = pfl[list[(at + d + list.length) % list.length]]; if (y && y.type !== 'video') new Image().src = y.url; });
+  };
+  const go = (d) => { if (list.length < 2) return; at = (at + d + list.length) % list.length; draw(); };
+  const close = () => { document.removeEventListener('keydown', key); lb.remove(); document.body.style.overflow = ''; if (last && last.focus) last.focus(); };
+  const key = (e) => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight') go(1); else if (e.key === 'ArrowLeft') go(-1); };
+  lb.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lb]');
+    if (b) { if (b.dataset.lb === 'close') close(); else go(b.dataset.lb === 'next' ? 1 : -1); return; }
+    if (e.target === lb || e.target.classList.contains('lb-stage')) close();
+  });
+  let sx = null;
+  lb.addEventListener('pointerdown', (e) => { sx = e.pointerType === 'touch' && e.target.tagName !== 'VIDEO' ? e.clientX : null; });
+  lb.addEventListener('pointerup', (e) => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1); });
+  draw(); document.addEventListener('keydown', key); document.body.appendChild(lb); document.body.style.overflow = 'hidden';
+  setTimeout(() => { const c = lb.querySelector('[data-lb="close"]'); if (c) c.focus(); }, 30);
 };
+H.actions.playVid = H.actions.viewPf;
 H.boot(render);
 </script>
 </body>
