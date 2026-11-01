@@ -129,14 +129,13 @@ h2{font-size:20px}
   body[data-page="index"] .steps3 p{font-size:14px}
 }
 
-/* profil: høyere banner som toner ut nederst og leder blikket videre ned på siden */
-.cover{height:clamp(200px,22vw,380px)}
+/* profil: banneret toner ut nederst og leder blikket videre ned på siden (formatet 3:1 settes i style.css) */
 .ph.cover::before{content:"";position:absolute;left:0;right:0;bottom:0;height:70%;background:linear-gradient(to bottom,transparent 0%,color-mix(in srgb,var(--bg) 55%,transparent) 55%,var(--bg) 100%);z-index:1;pointer-events:none}
 
 /* meldinger: hele skjermen under toppmenyen, ingen boks midt på siden */
 body[data-page="meldinger"]{height:100vh;height:100dvh;min-height:0;overflow:hidden}
 body[data-page="meldinger"] #site-footer{display:none}
-body[data-page="meldinger"] main{flex:1;min-height:0;display:flex;flex-direction:column}
+body[data-page="meldinger"] main{flex:1;min-height:0;display:flex;flex-direction:column;animation:none}
 body[data-page="meldinger"] main > .wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}
 body[data-page="meldinger"] .inbox{flex:1;height:auto;min-height:0;margin:0;border:0;border-radius:0;grid-template-columns:minmax(280px,360px) minmax(0,1fr)}
 body[data-page="meldinger"] .threads{background:var(--bg2)}
@@ -170,3 +169,4 @@ body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
   body[data-page="meldinger"] .inbox{grid-template-columns:minmax(0,1fr)}
   .foot{margin-top:32px}
 }
+

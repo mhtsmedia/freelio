@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2862206d">
-<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=a90bca84">
+<link rel="stylesheet" href="css/ny.css?v=37a20d11" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="bestilling">
@@ -21,19 +21,19 @@
 <main id="main" data-skel="page"></main>
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=20c19068"></script>
+<script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=0135080a"></script>
-<script src="js/cloud.js?v=681fd476"></script>
-<script src="js/media.js?v=ec198492"></script>
+<script src="js/app.js?v=74832c34"></script>
+<script src="js/cloud.js?v=ff7a73ba"></script>
+<script src="js/media.js?v=b46082c2"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   const o = H.orderById(H.qs('id'));
   let stars = 0, text = '', confirmDispute = false, reason = '', confirmCancel = false;
   // Originalene kan først lastes ned når kunden har godkjent. Da kan ingen laste ned og så nekte å betale.
   const LOCK_UNTIL_APPROVED = true;
-  let pending = [], busy = 0, note = '', lb = -1;
+  let pending = [], busy = 0, note = '', lb = -1, prog = '';
   const urls = {};
   const blobURL = async (id, kind) => { const x = (o.files || []).concat(pending).find((m) => m.id === id); return x ? Media.url(o.id, x, kind) : ''; };
   const total = (fs) => Media.size(fs.reduce((n, x) => n + x.size, 0));
@@ -84,7 +84,7 @@ if (H.requireLogin()) {
           <ol class="steps">${steps.map((s, i) => { const n = i + 1; const cls = st === 'dispute' && n === 3 ? 'warn' : n <= reached ? 'done' : n === reached + 1 ? 'cur' : ''; return `<li class="${cls}"><div class="rail"><span class="n">${cls === 'done' ? H.icon('check', 14, 3) : n}</span>${n < 4 ? '<span class="ln"></span>' : ''}</div><div class="t"><b>${s[0]}</b><span class="muted small">${s[1]}</span></div></li>`; }).join('')}</ol>
           ${(st === 'paid' || (st === 'dispute' && asFreelancer)) && canDeliver ? `<section class="card stack" style="gap:16px"><div class="row" style="justify-content:space-between"><b style="font-size:16px">Lever jobben</b>${asFreelancer ? '' : '<span class="pill">Frilanserens visning (demo)</span>'}</div>
             <label class="drop" id="drop"><input type="file" id="files" accept="image/*,video/*" multiple class="sr">${H.icon('plus', 22, 2)}<b>Last opp bilder eller video</b><span class="meta">Dra filene hit, eller klikk for å velge. Originalene lagres i full kvalitet. Kunden ser en komprimert forhåndsvisning.</span></label>
-            ${busy ? `<div class="row small muted"><span class="spin"></span>Komprimerer ${busy} ${busy === 1 ? 'fil' : 'filer'} …</div>` : ''}
+            ${busy ? `<div class="row small muted"><span class="spin"></span><span id="upProg">${prog ? H.esc(prog) : `Behandler ${busy} ${busy === 1 ? 'fil' : 'filer'} …`}</span></div>` : ''}
             ${pending.length ? `<div class="mlist">${pending.map((x, i) => tile(x, i, true)).join('')}</div><span class="meta">${pending.length} ${pending.length === 1 ? 'fil' : 'filer'} · originaler ${total(pending)} · forhåndsvisninger ${Media.size(pending.reduce((n, x) => n + x.psize, 0))}</span>` : ''}
             <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="dnote" rows="2" placeholder="F.eks. Her er de redigerte bildene. Si fra hvis du vil ha noe justert.">${H.esc(note)}</textarea></label>
             <div class="row"><button class="btn primary" data-a="sendDelivery" ${pending.length && !busy ? '' : 'disabled'}>Send leveranse</button>${asFreelancer ? '' : `<button class="btn link" data-a="sampleFiles" ${busy ? 'disabled' : ''}>Bruk eksempelbilder</button>`}</div>
@@ -136,9 +136,9 @@ if (H.requireLogin()) {
     if (!Media.supported) { H.toast('Nettleseren støtter ikke lagring av filer'); return; }
     busy += files.length; render();
     for (const file of files) {
-      try { pending.push(await Media.add(o.id, file)); }
+      try { pending.push(await Media.add(o.id, file, (t) => { prog = file.name + ': ' + t; const el = document.getElementById('upProg'); if (el) el.textContent = prog; })); }
       catch (e) { H.toast(file.name + ': ' + e.message); }
-      busy--; render();
+      busy--; prog = ''; render();
     }
   }
   function renderLightbox() {
@@ -166,7 +166,12 @@ if (H.requireLogin()) {
     if (e.key === 'ArrowRight') H.actions.nav(1);
     if (e.key === 'ArrowLeft') H.actions.nav(-1);
   });
-  async function dl(i) { const ok = await Media.save(o.id, o.files[i]); if (!ok) H.toast('Fant ikke filen. Prøv å laste inn siden på nytt.'); }
+  async function dl(i) {
+    const x = o.files[i];
+    if (x.parts) H.toast('Laster ned ' + x.name + ' … Stor fil, dette kan ta litt tid.');
+    const ok = await Media.save(o.id, x);
+    if (!ok) H.toast('Fant ikke filen. Prøv å laste inn siden på nytt.');
+  }
   const f0 = () => H.byId(o.fid);
   const upd = (msg) => { H.save(); H.mountHeader(); render(); if (msg) H.toast(msg); };
   Object.assign(H.actions, {

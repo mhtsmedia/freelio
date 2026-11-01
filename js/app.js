@@ -45,7 +45,7 @@
     drone: '<circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7 8l3 3M17 8l-3 3M7 16l3-3M17 16l-3-3"/><rect x="10" y="10" width="4" height="4" rx="1"/>',
     phone: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/>',
     rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
-    'c-bilder': '<path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2L9 3.5h6L16.5 6h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.8"/><path d="M17.5 9.5h.01"/>',
+    'c-automotiv': '<path d="M3.5 16.5H3v-3.2c0-.5.2-1 .6-1.3L6 9.8l1.6-2.6c.3-.5.9-.8 1.5-.8h5.6c.6 0 1.1.3 1.5.7l2.3 2.7 2.4.7c.7.2 1.1.8 1.1 1.5v3.3c0 .5-.4 1-1 1h-.5"/><path d="M10 16.5h4"/><circle cx="7" cy="16.5" r="2.3"/><circle cx="17" cy="16.5" r="2.3"/><path d="M6 9.8h12.5M12 6.4v3.4"/>',
     'c-bryllup': '<path d="M12 7.2c-1.5-1.1-2.6-1.9-2.6-3 0-1.1 1.5-1.6 2.6-.4 1.1-1.2 2.6-.7 2.6.4 0 1.1-1.1 1.9-2.6 3z"/><circle cx="7" cy="12" r="2.7"/><circle cx="17" cy="12" r="2.7"/><path d="M4.3 12c0 1.9.3 3.2.9 4M9.7 12c0 1.9-.3 3.2-.9 4"/><path d="M2 21.5c.4-2.5 2.4-4 5-4s4.6 1.5 5 4M12 21.5c.4-2.5 2.4-4 5-4s4.6 1.5 5 4"/><path d="m15.6 17.7 1.4 1.8 1.4-1.8"/>',
     'c-portrett': '<rect x="4" y="2.5" width="16" height="19" rx="2.5"/><circle cx="12" cy="10" r="3.2"/><path d="M7.5 21.5c.7-3 2.4-4.7 4.5-4.7s3.8 1.7 4.5 4.7"/>',
     'c-event': '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M7 13.5h.01M11 13.5h.01M7 17.5h.01"/><circle cx="16" cy="16" r="2.8"/><path d="m14.8 16.1.9.9 1.6-1.7"/>',
@@ -68,6 +68,15 @@
   H.pal = (i) => D.PAL[((i % D.PAL.length) + D.PAL.length) % D.PAL.length];
   H.phStyle = (i) => { const p = H.pal(i); return `--a:${p[0]};--b:${p[1]};--s:${p[2]}`; };
   H.inCat = (f, kat) => kat === 'alle' || f.cat === kat || (f.niches || []).includes(kat);
+  // Kategorien «Bilder» heter nå «Automotiv». Gamle profiler, bilder og innlegg flyttes over.
+  const OLD = { bilder: 'automotiv' };
+  H.fixCats = (f) => {
+    if (!f) return f;
+    if (OLD[f.cat]) f.cat = OLD[f.cat];
+    if (f.niches) f.niches = [...new Set(f.niches.map((n) => OLD[n] || n))];
+    (f.portfolio || []).forEach((x) => { if (OLD[x.cat]) x.cat = OLD[x.cat]; });
+    return f;
+  };
   H.cat = (id) => D.CATS.find((c) => c.id === id) || { id, name: id, icon: 'grid' };
   H.first = (name) => String(name).split(' ')[0];
   H.FEE = 0.05;
@@ -101,6 +110,7 @@
   H.all = () => {
     // Legger til ekte omtaler. Ekte frilansere får snitt bare av ekte omtaler. Demo-frilansere har et startgrunnlag.
     const withReviews = (f) => {
+      H.fixCats(f);
       const extra = (S.extraReviews || {})[f.id] || [];
       const real = f.demo === false || f.id === (S.profile && S.profile.id);
       const baseN = real ? 0 : f.reviews || 0, baseSum = real ? 0 : (f.rating || 0) * baseN;
@@ -180,10 +190,11 @@
   H.VID_MB = () => (window.Cloud && Cloud.on ? 50 : 3);
   // Komprimerer en video i nettleseren til den er under grensen. Bruker Mediabunny (WebCodecs).
   // Lastes bare inn når noen faktisk laster opp en video som er for stor.
-  H.fitVideo = async (file, onProgress) => {
-    const max = H.VID_MB() * 1048576;
+  // o.max er grensen i byte (standard er grensen for porteføljen), o.minBr er laveste bitrate vi godtar
+  H.fitVideo = async (file, onProgress, o = {}) => {
+    const max = o.max || H.VID_MB() * 1048576, mbTxt = Math.round(max / 1048576), minBr = o.minBr || 350000;
     if (file.size <= max) return file;
-    if (!window.VideoEncoder) throw new Error('Videoen er over ' + H.VID_MB() + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
+    if (!window.VideoEncoder) throw new Error('Videoen er over ' + mbTxt + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
     const MB = await import(new URL('js/vendor/mediabunny-1.61.4.min.mjs', document.baseURI).href);
     const input = new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) });
     const vt = await input.getPrimaryVideoTrack();
@@ -192,7 +203,7 @@
     const audioBr = 96000, dw = vt.displayWidth, dh = vt.displayHeight;
     // Sikter på 88 % av grensen. Blir filen likevel for stor, prøver den igjen med lavere kvalitet.
     let vbr = Math.min(6e6, Math.floor((max * 0.88 * 8) / Math.max(1, dur) - audioBr));
-    if (vbr < 350000) throw new Error(`Videoen er for lang til å bli under ${H.VID_MB()} MB i god kvalitet. Korte den ned til under ${Math.floor((max * 0.88 * 8) / 450000 / 60)} minutter.`);
+    if (vbr < minBr) throw new Error(`Videoen er for lang til å bli under ${mbTxt} MB i god kvalitet. Korte den ned til under ${Math.floor((max * 0.88 * 8) / (minBr + 100000) / 60)} minutter.`);
     for (let round = 0; round < 3; round++) {
       const long = vbr > 3.5e6 ? 1920 : vbr > 1.6e6 ? 1280 : vbr > 800000 ? 960 : 640;
       const k = Math.min(1, long / Math.max(dw, dh));
@@ -206,9 +217,9 @@
       const out = new Blob([output.target.buffer], { type: 'video/mp4' });
       if (out.size <= max) { if (onProgress) onProgress(100); return out; }
       vbr = Math.floor(vbr * ((max * 0.8) / out.size));
-      if (vbr < 250000) break;
+      if (vbr < minBr * 0.7) break;
     }
-    throw new Error(`Klarte ikke å få videoen under ${H.VID_MB()} MB. Korte den ned og prøv igjen.`);
+    throw new Error(`Klarte ikke å få videoen under ${mbTxt} MB. Korte den ned og prøv igjen.`);
   };
   // Innlegg på Utforsk. Uten database lagres de bare i nettleseren. cloud.js bytter til Supabase.
   H.addPost = async (p) => { S.posts = S.posts || []; S.posts.unshift(Object.assign({}, p, { id: H.uid(), fid: S.profile.id, at: Date.now() })); H.save(); };
@@ -251,7 +262,17 @@
       draw();
     };
     const load = new Image();
-    load.onload = () => setSource(load);
+    let rot = 0;
+    const rotate = () => {
+      const cv = document.createElement('canvas'); cv.width = ih; cv.height = iw;
+      const g = cv.getContext('2d'); g.translate(ih, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0); setSource(cv); rot = (rot + 1) % 4;
+    };
+    // o.state gjenoppretter et tidligere utsnitt, så du kan justere bildet uten å laste det opp på nytt
+    load.onload = () => {
+      setSource(load);
+      const st = o.state;
+      if (st) { for (let i = 0; i < (st.rot || 0); i++) rotate(); zoom = Math.min(4, Math.max(1, st.zoom || 1)); x = (st.rx || 0) * V; y = (st.ry || 0) * VH; draw(); }
+    };
     load.onerror = () => { H.toast('Kunne ikke lese bildet. Prøv JPG eller PNG.'); finish(null); };
     load.src = URL.createObjectURL(file);
     const setZoom = (z, cx = 0, cy = 0) => {
@@ -282,16 +303,15 @@
     wrap.addEventListener('click', (e) => {
       const c = e.target.closest('[data-c]'); if (!c) { if (e.target === wrap) finish(null); return; }
       if (c.dataset.c === 'cancel') finish(null);
-      if (c.dataset.c === 'rotate' && src) {
-        const cv = document.createElement('canvas'); cv.width = ih; cv.height = iw;
-        const g = cv.getContext('2d'); g.translate(ih, 0); g.rotate(Math.PI / 2); g.drawImage(src, 0, 0); setSource(cv);
-      }
+      if (c.dataset.c === 'rotate' && src) rotate();
       if (c.dataset.c === 'save' && src) {
         const cv = document.createElement('canvas'); cv.width = OUTW; cv.height = OUTH;
         const g = cv.getContext('2d'), k = OUTW / V, s = base * zoom * k;
         g.fillStyle = '#fff'; g.fillRect(0, 0, OUTW, OUTH);
         g.translate(OUTW / 2 + x * k, OUTH / 2 + y * k); g.scale(s, s); g.drawImage(src, -iw / 2, -ih / 2);
-        cv.toBlob((b) => (b && b.type === 'image/webp' ? finish(b) : cv.toBlob(finish, 'image/jpeg', 0.88)), 'image/webp', 0.88);
+        const state = { zoom, rx: x / V, ry: y / VH, rot };
+        const done = (b) => { if (b) b.cropState = state; finish(b); };
+        cv.toBlob((b) => (b && b.type === 'image/webp' ? done(b) : cv.toBlob(done, 'image/jpeg', 0.88)), 'image/webp', 0.88);
       }
     });
     setTimeout(() => view.focus(), 50);
@@ -303,11 +323,22 @@
         <b style="font-size:15px">Profilbilde</b>
         <p class="hint">${H.photoNote}</p>
         <label class="check"><input type="checkbox" id="photoOk"> <span>Bildet er av meg</span></label>
-        <div class="row"><label class="btn soft sm" for="photoFile" id="photoBtn">${who.photo ? 'Bytt bilde' : 'Last opp bilde'}</label><input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" class="sr">${who.photo ? '<button type="button" class="btn link small" data-a="photoRemove">Fjern bildet</button>' : ''}</div>
+        <div class="row"><label class="btn soft sm" for="photoFile" id="photoBtn">${who.photo ? 'Bytt bilde' : 'Last opp bilde'}</label><input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" class="sr">${who.photo && who.photoSrc ? '<button type="button" class="btn soft sm" data-a="photoEdit">Juster bildet</button>' : ''}${who.photo ? '<button type="button" class="btn link small" data-a="photoRemove">Fjern bildet</button>' : ''}</div>
         <span class="err-text" id="photoErr" role="alert"></span>
       </div>
     </div>`;
+  // Lagrer et nytt utsnitt av profilbildet. src er originalen (ny ved opplasting, samme ved justering).
+  H.setPhoto = async (blob, src) => {
+    const url = await H.storeImage('avatar', blob);
+    const old = S.user && S.user.photo, oldSrc = S.user && S.user.photoSrc;
+    if (S.user) Object.assign(S.user, { photo: url, photoSrc: src, photoCrop: blob.cropState || null });
+    if (S.profile) S.profile.photo = url;
+    H.save(); H.dropImage(old); if (oldSrc && oldSrc !== src) H.dropImage(oldSrc); H.mountHeader();
+    if (H.savePhotoMeta) H.savePhotoMeta(src, blob.cropState || null);
+  };
+  H.photoEditDone = null;
   H.bindPhotoPicker = (done) => {
+    H.photoEditDone = done;
     const inp = document.getElementById('photoFile'); if (!inp) return;
     const err = (t) => { document.getElementById('photoErr').textContent = t; };
     inp.addEventListener('click', (e) => { if (!document.getElementById('photoOk').checked) { e.preventDefault(); err('Kryss av for at bildet er av deg før du laster opp.'); } });
@@ -321,11 +352,9 @@
         const blob = await H.cropImage(file);
         if (!blob) { btn.textContent = S.user && S.user.photo ? 'Bytt bilde' : 'Last opp bilde'; return; }
         btn.textContent = 'Laster opp …';
-        const url = await H.storeImage('avatar', blob);
-        const old = S.user && S.user.photo;
-        if (S.user) S.user.photo = url;
-        if (S.profile) S.profile.photo = url;
-        H.save(); H.dropImage(old); H.mountHeader();
+        // Originalen lagres også, så bildet kan justeres senere uten ny opplasting
+        const orig = await H.resizeImage(file, 1600);
+        await H.setPhoto(blob, await H.storeImage('avatar-src', orig.blob));
         H.toast('Profilbildet er oppdatert'); done && done();
       } catch (e) { err(e.message || 'Kunne ikke laste opp bildet.'); btn.textContent = 'Last opp bilde'; }
     });
@@ -602,7 +631,17 @@
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
-    photoRemove: () => { const old = S.user && S.user.photo; if (S.user) S.user.photo = null; if (S.profile) S.profile.photo = null; H.save(); H.dropImage(old); H.mountHeader(); H.toast('Profilbildet er fjernet'); H.rerender(); },
+    photoEdit: async () => {
+      const src = S.user && S.user.photoSrc; if (!src) return;
+      try {
+        const file = await (await fetch(src)).blob();
+        const blob = await H.cropImage(file, { state: S.user.photoCrop });
+        if (!blob) return;
+        await H.setPhoto(blob, src);
+        H.toast('Profilbildet er oppdatert'); if (H.photoEditDone) H.photoEditDone();
+      } catch (e) { H.toast(e.message || 'Kunne ikke åpne bildet'); }
+    },
+    photoRemove: () => { const old = S.user && S.user.photo; H.dropImage(S.user && S.user.photoSrc); if (S.user) { S.user.photoSrc = null; S.user.photoCrop = null; } if (H.savePhotoMeta) H.savePhotoMeta(null, null); if (S.user) S.user.photo = null; if (S.profile) S.profile.photo = null; H.save(); H.dropImage(old); H.mountHeader(); H.toast('Profilbildet er fjernet'); H.rerender(); },
     cookie: (v) => {
       S.cookie = v; S.cookies = { analyse: v === 'yes', ads: v === 'yes' }; H.save();
       const c = document.getElementById('cookie'); if (c) { c.classList.add('out'); setTimeout(() => c.remove(), 300); }

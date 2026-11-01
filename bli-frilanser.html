@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2862206d">
-<link rel="stylesheet" href="css/ny.css?v=8a41b94b" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=a90bca84">
+<link rel="stylesheet" href="css/ny.css?v=37a20d11" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="bli-frilanser">
@@ -21,11 +21,11 @@
 <main id="main"></main>
 <div id="site-footer"></div>
 <script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=20c19068"></script>
+<script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=0135080a"></script>
-<script src="js/cloud.js?v=681fd476"></script>
+<script src="js/app.js?v=74832c34"></script>
+<script src="js/cloud.js?v=ff7a73ba"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
@@ -43,8 +43,25 @@ const CLOUD = !!(window.Cloud && Cloud.on);
 const PF_MAX = CLOUD ? 24 : 8;
 const VID_MB = H.VID_MB();
 let pfBusy = '', coverBusy = '', cardBusy = '', saving = false;
+// Velg nytt bakgrunnsbilde (file) eller juster det du har (uten file). Originalen lagres så du kan justere senere.
+async function editCover(file) {
+  const old = cover;
+  let src = old && old.src, input = file;
+  try {
+    if (!file) { if (!src) return; input = await (await fetch(src)).blob(); }
+    const blob = await H.cropImage(input, { aspect: 3, outW: CLOUD ? 1800 : 1200, state: file ? null : old.crop, title: 'Juster bakgrunnsbildet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Det vises bredt øverst på profilen din.' });
+    if (!blob) return;
+    coverBusy = 'Laster opp …'; form();
+    if (file) src = await H.storeImage('cover-src', (await H.resizeImage(file, CLOUD ? 2400 : 1400)).blob);
+    const b = await H.resizeImage(blob, 700);
+    cover = { url: await H.storeImage('cover', blob), thumb: await H.storeImage('thumb', b.blob), src, crop: blob.cropState || null };
+    if (old) { H.dropImage(old.url); H.dropImage(old.thumb); if (old.src && old.src !== src) H.dropImage(old.src); }
+  } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
+  coverBusy = ''; form();
+}
 function form() {
   const S = H.S; const p = Object.assign({}, S.profile || {}, draft);
+  H.fixCats(p);
   pkgs = pkgs || (p.pk ? p.pk.map((x) => x.slice()) : [['', '', '']]);
   pf = pf || (p.portfolio || []).slice();
   if (cover === undefined) cover = p.coverImg || null;
@@ -53,17 +70,16 @@ function form() {
   const mainCat = p.cat || HDATA.CATS[0].id;
   niches = niches || ((p.niches && p.niches.length) ? p.niches.slice() : [mainCat]);
   if (!niches.includes(mainCat)) niches.unshift(mainCat);
-  const offered = HDATA.CATS.filter((c) => niches.includes(c.id));
   if (!upCat || !niches.includes(upCat)) upCat = mainCat;
   pf.forEach((x) => { if (!x.cat || !niches.includes(x.cat)) x.cat = mainCat; });
-  const catOpts = (sel) => offered.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+  const catOpts = (sel) => HDATA.CATS.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
   document.getElementById('main').innerHTML = `<div class="wrap" style="max-width:1300px"><div class="two">
     <form class="stack" style="gap:20px" id="pform" novalidate>
       <div class="stack" style="gap:6px"><h1>${S.profile ? 'Rediger frilanserprofil' : 'Lag frilanserprofil'}</h1><p class="muted">Profilen vises i søk, på kart og i feeden når du publiserer.</p></div>
       <section class="card">${H.photoPicker(S.user)}</section>
       <section class="card stack" style="gap:10px"><b style="font-size:15px">Bakgrunnsbilde</b>
         <div class="cover-pick">${cover ? `<img src="${H.esc(cover.url)}" alt="Bakgrunnsbildet ditt">` : `<span class="hint">Ingen valgt. Det første bildet i porteføljen brukes.</span>`}</div>
-        <div class="row"><label class="btn soft sm" for="coverFile">${H.icon('plus', 16, 2.2)} ${cover ? 'Bytt bakgrunnsbilde' : 'Velg bakgrunnsbilde'}</label><input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp" class="sr">${cover ? '<button type="button" class="btn link small" data-a="rmCover">Fjern</button>' : ''}<span class="hint" id="coverStatus">${H.esc(coverBusy)}</span></div>
+        <div class="row"><label class="btn soft sm" for="coverFile">${H.icon('plus', 16, 2.2)} ${cover ? 'Bytt bakgrunnsbilde' : 'Velg bakgrunnsbilde'}</label><input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp" class="sr">${cover && cover.src ? '<button type="button" class="btn soft sm" data-a="editCover">Juster bildet</button>' : ''}${cover ? '<button type="button" class="btn link small" data-a="rmCover">Fjern</button>' : ''}<span class="hint" id="coverStatus">${H.esc(coverBusy)}</span></div>
         <span class="hint">Vises øverst på profilen din. Bruk et bredt bilde, gjerne 1600 piksler eller mer.</span></section>
       <section class="card stack" style="gap:10px"><b style="font-size:15px">Bilde på kortet</b>
         <div class="card-pick">${card ? `<img src="${H.esc(card.url)}" alt="Bildet på kortet ditt">` : `<span class="hint" style="padding:12px">Ingen valgt. ${cover ? 'Bakgrunnsbildet' : 'Det første bildet i porteføljen'} brukes.</span>`}</div>
@@ -86,9 +102,9 @@ function form() {
         ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
-        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB.${offered.length > 1 ? ' Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.' : ''}</p>
-        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${offered.length > 1 ? `<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>` : ''}</div>`).join('')}</div>` : ''}
-        <div class="row">${pf.length < PF_MAX && offered.length > 1 ? `<label class="row small" style="gap:6px"><span class="muted">Last opp til</span><select class="inp sm" id="upCat" style="width:auto;height:36px;padding:0 10px">${catOpts(upCat)}</select></label>` : ''}${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
+        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB. Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.</p>
+        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${`<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>`}</div>`).join('')}</div>` : ''}
+        <div class="row">${pf.length < PF_MAX ? `<label class="row small" style="gap:6px"><span class="muted">Last opp til</span><select class="inp sm" id="upCat" style="width:auto;height:36px;padding:0 10px">${catOpts(upCat)}</select></label>` : ''}${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
       </fieldset>
       <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
       <div id="err"></div>
@@ -120,19 +136,7 @@ function form() {
     pfBusy = ''; form();
   });
   const cIn = document.getElementById('coverFile');
-  cIn.addEventListener('change', async () => {
-    const file = cIn.files[0]; cIn.value = ''; if (!file) return;
-    const blob = await H.cropImage(file, { aspect: 3, outW: CLOUD ? 1800 : 1200, title: 'Juster bakgrunnsbildet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Det vises bredt øverst på profilen din.' });
-    if (!blob) return;
-    coverBusy = 'Laster opp …'; form();
-    try {
-      const a = { blob }, b = await H.resizeImage(blob, 700);
-      const old = cover;
-      cover = { url: await H.storeImage('cover', a.blob), thumb: await H.storeImage('thumb', b.blob) };
-      if (old) { H.dropImage(old.url); H.dropImage(old.thumb); }
-    } catch (e) { H.toast(e.message || 'Bildet kunne ikke lastes opp'); }
-    coverBusy = ''; form();
-  });
+  cIn.addEventListener('change', async () => { const file = cIn.files[0]; cIn.value = ''; if (file) editCover(file); });
   const kIn = document.getElementById('cardFile');
   kIn.addEventListener('change', async () => {
     const file = kIn.files[0]; kIn.value = ''; if (!file) return;
@@ -152,8 +156,9 @@ function form() {
   pf_.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.niche) { const id = t.dataset.niche; niches = t.checked ? niches.concat(id) : niches.filter((n) => n !== id); form(); return; }
-    if (t.dataset.pfcat) { pf[+t.dataset.pfcat].cat = t.value; return; }
-    if (t.id === 'upCat') { upCat = t.value; return; }
+    // Velger du et fagfelt du ikke har krysset av, blir det lagt til
+    if (t.dataset.pfcat) { pf[+t.dataset.pfcat].cat = t.value; if (!niches.includes(t.value)) { niches.push(t.value); form(); } return; }
+    if (t.id === 'upCat') { upCat = t.value; if (!niches.includes(t.value)) { niches.push(t.value); form(); } return; }
     if (t.id === 'cat') {
       // Bytter hovedområde: det gamle fjernes fra listen, det nye legges til
       const prev = draft.cat || (H.S.profile && H.S.profile.cat) || HDATA.CATS[0].id;
@@ -198,7 +203,8 @@ function form() {
   });
 }
 Object.assign(H.actions, {
-  rmCover: () => { if (cover) { H.dropImage(cover.url); H.dropImage(cover.thumb); } cover = null; form(); },
+  editCover: () => editCover(null),
+  rmCover: () => { if (cover) { H.dropImage(cover.url); H.dropImage(cover.thumb); H.dropImage(cover.src); } cover = null; form(); },
   rmCard: () => { if (card) { H.dropImage(card.url); H.dropImage(card.thumb); } card = null; form(); },
   rmPf: (v) => { const x = pf.splice(+v, 1)[0]; if (x) { H.dropImage(x.url); H.dropImage(x.thumb); } form(); },
   addPk: () => { pkgs.push(['', '', '']); form(); },
