@@ -89,12 +89,13 @@
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};
     let adopted = [];
     if (C.uid) {
-      const [prof, offers, orders, msgs, saved] = await Promise.all([
+      const [prof, offers, orders, msgs, saved, fo] = await Promise.all([
         sb.from('profiles').select('id,name,avatar_url,created_at').eq('id', C.uid).maybeSingle(),
         sb.from('offers').select('*'),
         sb.from('orders').select('*').order('created_at'),
         sb.from('messages').select('*').order('created_at'),
-        sb.from('saved').select('freelancer_id')
+        sb.from('saved').select('freelancer_id'),
+        sb.from('saved_folders').select('id,name,items,created_at').order('created_at')
       ]);
       const p = must(prof);
       S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
@@ -130,7 +131,6 @@
       S.saved = must(saved).map((r) => r.freelancer_id);
 
       // Mapper. Mangler tabellen, lagres mappene bare i nettleseren til database/mapper.sql er kjørt.
-      const fo = await sb.from('saved_folders').select('id,name,items,created_at').order('created_at');
       C.foldersReady = !fo.error;
       const local = (S.folders || []).filter((m) => !m.owner || m.owner === C.uid);
       if (fo.error) S.folders = local;

@@ -1,7 +1,6 @@
 /* Nytt design for Freelio. Lastes etter style.css og endrer bare utseendet: HTML og JS er de samme.
    Ryddigere oppsett, bedre bruk av bredden på PC og bunnmeny på mobil.
    Slås av for hele nettsiden i js/design.js (STANDARD = 'gammel'), eller for deg selv med ?design=gammel. */
-@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap");
 
 /* Farge: skifer, en dempet blågrå. Nøytralene har samme kjølige tone. */
 :root{
