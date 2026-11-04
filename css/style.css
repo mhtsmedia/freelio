@@ -653,6 +653,10 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .mside-menu a > svg{flex:none;color:var(--accent-ink)}
 .mside-menu a > span{display:flex;flex-direction:column;gap:1px;min-width:0}
 .mside-menu b{font-size:15px}
+/* pluss-knappen for «Legg ut oppdrag» vises bare på mobil i det nye designet (css/ny.css) */
+.add-sm{display:none}
+/* tilbake-pilen i toppmenyen finnes bare i det nye designet (css/ny.css) */
+.back-btn{display:none}
 .mside-menu .chev{margin-left:auto;flex:none;display:flex;color:var(--muted)}
 .mside-head{margin-bottom:24px;flex-wrap:nowrap}
 .mside-head h1{font-size:28px;overflow-wrap:anywhere}

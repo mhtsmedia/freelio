@@ -55,7 +55,8 @@
     'c-reklamefilm': '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9 2.4 5.6l16.8-3 .6 3.4"/><path d="M6.8 4.8 8.9 8M12 3.9l2.1 3.2"/><path d="M10.5 12.5v5l4-2.5z"/>',
     'c-some': '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 5h3"/><path d="M9 10.5c0-.8.6-1.5 1.5-1.5h3c.9 0 1.5.7 1.5 1.5v2c0 .8-.6 1.5-1.5 1.5h-2L10 15.5V14h0c-.6 0-1-.7-1-1.5z"/><path d="M8.5 18.5h7"/>',
     clipboard: '<rect x="4.5" y="4" width="15" height="17.5" rx="2.5"/><path d="M9 4V2.8h1.6a1.4 1.4 0 0 1 2.8 0H15V5.5H9z"/><path d="m7.5 10 1.2 1.2 2-2M7.5 14.5l1.2 1.2 2-2M13 10.2h3.5M13 14.7h3.5"/>',
-    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'
+    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+    compass: '<circle cx="12" cy="12" r="9"/><path d="m15.6 8.4-2.1 5.1-5.1 2.1 2.1-5.1z"/>'
   };
   H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${Math.round(w * 78) / 100}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
   H.star = (s = 14) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor">${ICON.star}</svg>`;
@@ -615,6 +616,7 @@
     const dark = H.isDark();
     el.innerHTML = `<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
       <div class="top-in">
+        ${page && page !== 'index' ? `<button class="ibtn back-btn" data-a="goBack" aria-label="Tilbake" title="Tilbake">${H.icon('back', 22, 2)}</button>` : ''}
         <a class="logo" href="index.html" aria-label="Freelio, til forsiden">${H.logo()}</a>
         <nav class="mainnav" aria-label="Hovedmeny">${nav.map(([h, t]) => `<a href="${h}" ${cur(h)}>${t}</a>`).join('')}</nav>
         <div class="usernav">
@@ -623,6 +625,7 @@
           <a class="ibtn lbl hide-sm" href="meldinger.html" aria-label="Meldinger${unread ? ', ' + unread + ' uleste' : ''}" title="Meldinger">${H.icon('chat', 19)}<span class="lbl-t">Meldinger</span>${unread ? '<span class="dot"></span>' : ''}</a>
           <a class="ibtn lbl hide-sm" href="mine-oppdrag.html" aria-label="Mine oppdrag${act ? ', ' + act + ' venter på deg' : ''}" title="Mine oppdrag">${H.icon('clipboard', 19)}<span class="lbl-t">Mine oppdrag</span>${act ? '<span class="dot"></span>' : ''}</a>
           <a class="ibtn lbl" href="${S.user ? 'min-side.html' : 'logg-inn.html'}" aria-label="${S.user ? 'Min side' : 'Logg inn'}" title="${S.user ? 'Min side' : 'Logg inn'}">${H.icon('user', 19)}<span class="lbl-t">${S.user ? 'Min side' : 'Logg inn'}</span></a>
+          <a class="ibtn add-sm" href="ny-annonse.html" aria-label="Legg ut oppdrag" title="Legg ut oppdrag">${H.icon('plus', 20, 2)}</a>
           <a class="btn primary sm hide-sm" href="ny-annonse.html" style="margin-left:8px">Legg ut oppdrag</a>
         </div>
         <button class="ibtn menu-btn" data-a="menu" aria-expanded="${!!wasOpen}" aria-label="Meny">${H.icon(wasOpen ? 'close' : 'menu', 20)}</button>
@@ -640,7 +643,9 @@
     let el = document.getElementById('tabbar');
     if (document.documentElement.dataset.design === 'gammel') { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('nav'); el.id = 'tabbar'; el.className = 'tabbar'; el.setAttribute('aria-label', 'Hurtigmeny'); document.body.appendChild(el); }
-    const items = [['index.html', 'home', 'Hjem'], ['sok.html', 'search', 'Finn'], ['ny-annonse.html', 'plus', 'Legg ut'], ['mine-oppdrag.html', 'clipboard', 'Mine oppdrag', act, 'venter på deg'], ['meldinger.html', 'chat', 'Meldinger', unread, 'uleste']];
+    else el.classList.add('ready'); // ikonet hopper bare første gang, ikke hver gang menyen tegnes på nytt
+    // Utforsk står i midten. «Legg ut oppdrag» ligger som pluss-knapp i toppmenyen på mobil.
+    const items = [['index.html', 'home', 'Hjem'], ['sok.html', 'search', 'Finn'], ['utforsk.html', 'compass', 'Utforsk'], ['mine-oppdrag.html', 'clipboard', 'Mine oppdrag', act, 'venter på deg'], ['meldinger.html', 'chat', 'Meldinger', unread, 'uleste']];
     el.innerHTML = items.map(([h, ic, t, n, why]) => `<a href="${h}" ${h.replace('.html', '') === page ? 'aria-current="page"' : ''}${n ? ` aria-label="${t}, ${n} ${why}"` : ''}>${H.icon(ic, 22)}${n ? '<span class="dot"></span>' : ''}<span>${t}</span></a>`).join('');
   };
   H.mountFooter = () => {
@@ -667,6 +672,13 @@
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
+    // Tilbake-pilen: forrige side hvis du kom fra Freelio, ellers forsiden
+    goBack: () => {
+      let fromHere = false;
+      try { fromHere = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) { /* ugyldig adresse */ }
+      if ((fromHere || location.search) && history.length > 1) history.back();
+      else H.go('index.html');
+    },
     photoEdit: async () => {
       const src = S.user && S.user.photoSrc; if (!src) return;
       try {
@@ -742,4 +754,58 @@
     if (sk.length) { sk.forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); }); setTimeout(go, H.LOAD_MS); }
     else go();
   };
+
+  /* ---------- animasjoner: innhold glir inn når det kommer til syne ----------
+     Bare i det nye designet, og ikke for dem som har slått av animasjoner i systemet.
+     Stilene ligger i css/ny.css (rv, in, ld, img-fade og scrolled). */
+  const REVEAL = '.fcard, .xtile, .jrow, .ptile, .ftile, .cat, .mside-menu > a, .card, .section-head, .steps3 > *, .empty';
+  const FADE_IMG = '.ph img.cover, .xtile img, .ptile-img img, .ftile-img img';
+  (function animate() {
+    const root = document.documentElement;
+    if (root.dataset.design === 'gammel' || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    root.classList.add('img-fade');
+    const t0 = performance.now();
+    const pending = new Set();
+    const show = (el, i) => {
+      io.unobserve(el); pending.delete(el);
+      el.style.setProperty('--rd', Math.min(i * 0.06, 0.36) + 's');
+      el.classList.add('in');
+      setTimeout(() => { el.classList.remove('rv', 'in'); el.style.removeProperty('--rd'); }, 1000);
+    };
+    const io = new IntersectionObserver((entries) => {
+      let i = 0;
+      entries.forEach((e) => { if (e.isIntersecting) show(e.target, i++); });
+    }, { rootMargin: '0px 0px -32px 0px' });
+    // Sikring: noe som er på skjermen men ikke har glidd inn etter et sekund (for eksempel hvis nettleseren
+    // ikke har meldt fra), vises likevel, så innhold aldri blir liggende usynlig
+    setInterval(() => {
+      let i = 0;
+      pending.forEach((el) => {
+        if (!el.isConnected) { pending.delete(el); io.unobserve(el); return; }
+        const r = el.getBoundingClientRect();
+        if (r.top < innerHeight && r.bottom > 0) show(el, i++);
+      });
+    }, 1000);
+    const scan = () => {
+      const main = document.getElementById('main'); if (!main) return;
+      // Det som vises i starten, glir inn. Når en liste tegnes på nytt senere (filter, liker), vises det som
+      // allerede er på skjermen med en gang, så siden ikke blinker. Det som ligger lenger ned, glir inn når du scroller.
+      const early = performance.now() - t0 < 2500;
+      main.querySelectorAll(REVEAL).forEach((el) => {
+        if (el.dataset.rv) return; el.dataset.rv = '1';
+        const r = el.getBoundingClientRect();
+        if (!early && r.top < innerHeight && r.bottom > 0) return;
+        el.classList.add('rv'); pending.add(el); io.observe(el);
+      });
+      document.querySelectorAll(FADE_IMG).forEach((img) => { if (!img.classList.contains('ld') && img.complete) img.classList.add('ld'); });
+    };
+    let queued = false;
+    new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; scan(); }); } }).observe(document.body, { childList: true, subtree: true });
+    const loaded = (e) => { const t = e.target; if (t && t.tagName === 'IMG') t.classList.add('ld'); };
+    document.addEventListener('load', loaded, true);
+    document.addEventListener('error', loaded, true);
+    const onScroll = () => root.classList.toggle('scrolled', scrollY > 8);
+    addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    scan();
+  })();
 })();
