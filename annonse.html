@@ -46,7 +46,7 @@ function render() {
   let side;
   if (j.mine) {
     side = `<div class="card stack"><b>Din annonse</b><span class="muted small">Lagt ut ${H.esc(j.postedTxt || 'nå')}. ${j.status === 'booked' ? 'Oppdraget er booket.' : 'Frilansere i nærheten har fått varsel.'}</span>
-      ${confirmDelete ? `<span class="small">Vil du slette annonsen? Tilbudene forsvinner.</span><div class="row"><button class="btn soft sm grow" data-a="noDelete">Avbryt</button><button class="btn dark sm grow" data-a="delete">Slett</button></div>` : `<button class="btn soft block" data-a="askDelete" ${j.status === 'booked' ? 'disabled' : ''}>Slett annonsen</button>`}</div>`;
+      ${confirmDelete ? `<span class="small">${j.status === 'booked' ? 'Vil du slette annonsen? Den forsvinner fra Oppdrag, men bestillingen og betalingen blir stående.' : 'Vil du slette annonsen? Tilbudene forsvinner.'}</span><div class="row"><button class="btn soft sm grow" data-a="noDelete">Avbryt</button><button class="btn dark sm grow" data-a="delete">Slett</button></div>` : `<button class="btn soft block" data-a="askDelete">Slett annonsen</button>`}</div>`;
   } else if (sent) {
     side = `<div class="card stack"><span class="pill ok" style="align-self:flex-start">${H.icon('check', 14, 3)} Tilbud sendt</span><span>Du tilbød <b>${H.kr(sent.price)}</b>.</span><span class="muted small">«${H.esc(sent.msg)}»</span><span class="muted small">Du får beskjed når ${H.esc(j.by)} svarer.</span><button class="btn soft sm" data-a="withdraw">Trekk tilbudet</button></div>`;
   } else if (!S.user) {
