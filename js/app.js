@@ -77,7 +77,32 @@
     (f.portfolio || []).forEach((x) => { if (OLD[x.cat]) x.cat = OLD[x.cat]; });
     return f;
   };
-  H.cat = (id) => D.CATS.find((c) => c.id === id) || { id, name: id, icon: 'grid' };
+  // Ukjente fagfelt kan komme fra databasen, så navnet gjøres trygt før det havner i siden
+  H.cat = (id) => D.CATS.find((c) => c.id === id) || { id, name: H.esc(id), icon: 'grid' };
+  // Frilanserdata kan i prinsippet være endret av hvem som helst via databasen. Tall gjøres til tall,
+  // tekst til tekst og ukjente fagfelt byttes ut, så ingenting kan bryte ut av HTML-en der det vises.
+  const isCat = (id) => D.CATS.some((c) => c.id === id);
+  const num = (v) => (Number.isFinite(+v) ? +v : 0);
+  const str = (v) => (v == null ? '' : String(v));
+  H.clean = (f) => {
+    ['from', 'km', 'mx', 'my', 'jobs', 'years', 'reviews', 'rating', 'respH', 'delD', 'reach', 'pal'].forEach((k) => { if (k in f) f[k] = num(f[k]); });
+    ['lat', 'lng'].forEach((k) => { if (f[k] != null) f[k] = Number.isFinite(+f[k]) ? +f[k] : null; });
+    ['name', 'ini', 'role', 'area', 'bio', 'sum', 'cap', 'resp', 'unit', 'joined'].forEach((k) => { if (k in f) f[k] = str(f[k]); });
+    if (f.photo != null && typeof f.photo !== 'string') f.photo = null;
+    ['coverImg', 'cardImg'].forEach((k) => {
+      const v = f[k]; if (v == null) return;
+      f[k] = typeof v === 'object' && !Array.isArray(v) ? Object.assign({}, v, { url: str(v.url), thumb: v.thumb == null ? v.thumb : str(v.thumb) }) : null;
+    });
+    if (f.col != null && !/^#[0-9a-f]{3,8}$/i.test(f.col)) f.col = '#5B5F97';
+    if (!isCat(f.cat)) f.cat = D.CATS[0].id;
+    f.niches = Array.isArray(f.niches) ? f.niches.filter(isCat) : [];
+    f.tags = Array.isArray(f.tags) ? f.tags.map(str) : [];
+    f.pk = Array.isArray(f.pk) ? f.pk.filter(Array.isArray).map((x) => [str(x[0]), x[1] === '' ? '' : num(x[1]), str(x[2])]) : [];
+    f.portfolio = Array.isArray(f.portfolio) ? f.portfolio.filter((x) => x && typeof x === 'object').map((x) => Object.assign({}, x, { url: str(x.url), thumb: x.thumb == null ? x.thumb : str(x.thumb), w: num(x.w), h: num(x.h), cat: x.cat == null || isCat(x.cat) ? x.cat : f.cat })) : [];
+    if ('verified' in f) f.verified = f.verified === true;
+    if ('free' in f) f.free = f.free === true;
+    return f;
+  };
   H.first = (name) => String(name).split(' ')[0];
   H.FEE = 0.05;
   H.today = () => new Date().toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -110,7 +135,7 @@
   H.all = () => {
     // Legger til ekte omtaler. Ekte frilansere får snitt bare av ekte omtaler. Demo-frilansere har et startgrunnlag.
     const withReviews = (f) => {
-      H.fixCats(f);
+      H.clean(H.fixCats(f));
       const extra = (S.extraReviews || {})[f.id] || [];
       const real = f.demo === false || f.id === (S.profile && S.profile.id);
       const baseN = real ? 0 : f.reviews || 0, baseSum = real ? 0 : (f.rating || 0) * baseN;
@@ -139,9 +164,9 @@
     return H.byId(key);
   };
   H.ratingTxt = (f) => (f.reviews > 0 ? H.num((+f.rating).toFixed(1)) : 'Ny');
-  H.priceTxt = (f) => 'fra ' + H.kr(f.from) + (f.unit || '');
+  H.priceTxt = (f) => 'fra ' + H.kr(f.from) + H.esc(f.unit || '');
   // Standardfargen fra Bli frilanser (#0B6E5F) følger fargen i designet som er i bruk
-  H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col === '#0B6E5F' ? 'var(--av-default,#0B6E5F)' : f.col || '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
+  H.avatar = (f, s = 40) => `<span class="av" style="width:${s}px;height:${s}px;background:${f.col === '#0B6E5F' ? 'var(--av-default,#0B6E5F)' : /^#[0-9a-f]{3,8}$/i.test(f.col) ? f.col : '#5B5F97'};font-size:${Math.round(s * 0.36)}px">${f.photo ? `<img src="${H.esc(f.photo)}" alt="" loading="lazy">` : H.esc(f.ini || '?')}</span>`;
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
   // i = 'cover' gir bakgrunnsbildet (eller første bilde i porteføljen)
   // i = 'card' gir bildet på kortet i søket: eget kortbilde, ellers bakgrunnsbildet, ellers første bilde i porteføljen

@@ -25,7 +25,7 @@
     <section class="section">
       <h1>Hjelpesenter</h1>
       <label class="sr" for="fq">Søk i hjelpesenteret</label>
-      <input class="inp" id="fq" type="search" placeholder="Søk, f.eks. avbestilling" style="height:52px">
+      <input class="inp" id="fq" type="search" maxlength="100" placeholder="Søk, f.eks. avbestilling" style="height:52px">
       <div class="faq" id="faq">
         <h2 style="font-size:20px;margin-top:8px">Kunde</h2>
         <details><summary>Når blir pengene trukket?</summary><p>Når du booker eller godtar et tilbud. Pengene holdes av betalingspartneren til du har godkjent leveransen.</p></details>
@@ -47,9 +47,9 @@
     <section class="section" style="padding-top:0">
       <h2>Kontakt oss</h2>
       <form class="card stack" id="cform" novalidate>
-        <div class="grid2"><label class="field"><span class="label">Navn</span><input class="inp" id="cn" autocomplete="name"></label><label class="field"><span class="label">E-post</span><input class="inp" id="ce" type="email" autocomplete="email"></label></div>
+        <div class="grid2"><label class="field"><span class="label">Navn</span><input class="inp" id="cn" maxlength="80" autocomplete="name"></label><label class="field"><span class="label">E-post</span><input class="inp" id="ce" type="email" maxlength="254" autocomplete="email"></label></div>
         <label class="field"><span class="label">Gjelder det en bestilling?</span><select class="inp" id="co"><option>Nei</option></select></label>
-        <label class="field"><span class="label">Melding</span><textarea class="inp" id="cm" rows="5"></textarea></label>
+        <label class="field"><span class="label">Melding</span><textarea class="inp" id="cm" rows="5" maxlength="2000"></textarea></label>
         <span class="err-text" id="cerr"></span>
         <button class="btn primary" style="align-self:flex-start" type="submit">Send</button>
       </form>
@@ -62,8 +62,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const $ = (id) => document.getElementById(id);
 $('fq').addEventListener('input', (e) => {

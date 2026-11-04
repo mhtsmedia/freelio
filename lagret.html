@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const S = H.S, esc = H.esc;
 let confirmDel = false, renaming = false;
@@ -85,7 +85,7 @@ function folderView(m) {
     ${note()}
     ${items.length ? '' : `<div class="empty"><b style="color:var(--fg)">Mappen er tom</b><span>Lagre frilansere med hjertet, og innlegg og oppdrag med lagre-knappen. Da kan du velge denne mappen.</span><div class="row" style="justify-content:center"><a class="btn primary sm" href="sok.html">Finn frilansere</a><a class="btn soft sm" href="utforsk.html">Se innlegg</a><a class="btn soft sm" href="oppdrag.html">Se oppdrag</a></div></div>`}
     ${fr.length ? `<section class="stack"><h2>Frilansere (${fr.length})</h2><div class="cards">${fr.map(({ x, it }) => `<div class="stack" style="gap:6px">${H.fCard(it)}${rm(x)}</div>`).join('')}</div></section>` : ''}
-    ${po.length ? `<section class="stack"><h2>Innlegg og videoer (${po.length})</h2><div class="ptiles">${po.map(({ x, it }) => { const f = H.byId(it.fid); return `<div class="ptile"><a class="ptile-img" href="frilanser.html?id=${it.fid}" aria-label="${f ? 'Innlegg fra ' + esc(f.name) : 'Innlegg'}"><img src="${esc(it.thumb || it.url)}" alt="" loading="lazy">${it.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</a>${f ? `<a href="frilanser.html?id=${f.id}" class="small" style="font-weight:700;color:var(--fg)">${esc(f.name)}</a>` : ''}${it.cap ? `<span class="meta" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(it.cap)}</span>` : ''}${rm(x)}</div>`; }).join('')}</div></section>` : ''}
+    ${po.length ? `<section class="stack"><h2>Innlegg og videoer (${po.length})</h2><div class="ptiles">${po.map(({ x, it }) => { const f = H.byId(it.fid); return `<div class="ptile"><a class="ptile-img" href="frilanser.html?id=${encodeURIComponent(it.fid || '')}" aria-label="${f ? 'Innlegg fra ' + esc(f.name) : 'Innlegg'}"><img src="${esc(it.thumb || it.url)}" alt="" loading="lazy">${it.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</a>${f ? `<a href="frilanser.html?id=${f.id}" class="small" style="font-weight:700;color:var(--fg)">${esc(f.name)}</a>` : ''}${it.cap ? `<span class="meta" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(it.cap)}</span>` : ''}${rm(x)}</div>`; }).join('')}</div></section>` : ''}
     ${jo.length ? `<section class="stack"><h2>Oppdrag (${jo.length})</h2><div class="stack list">${jo.map(({ x, it }) => `<div class="row" style="flex-wrap:nowrap;gap:8px"><div class="grow" style="min-width:0">${H.jobRow(it)}</div>${rm(x)}</div>`).join('')}</div></section>` : ''}
   </div>`;
 }

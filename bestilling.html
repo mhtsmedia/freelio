@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script src="js/media.js?v=b46082c2"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
@@ -88,7 +88,7 @@ if (H.requireLogin()) {
             <label class="drop" id="drop"><input type="file" id="files" accept="image/*,video/*" multiple class="sr">${H.icon('plus', 22, 2)}<b>Last opp bilder eller video</b><span class="meta">Dra filene hit, eller klikk for å velge. Originalene lagres i full kvalitet. Kunden ser en komprimert forhåndsvisning.</span></label>
             ${busy ? `<div class="row small muted"><span class="spin"></span><span id="upProg">${prog ? H.esc(prog) : `Behandler ${busy} ${busy === 1 ? 'fil' : 'filer'} …`}</span></div>` : ''}
             ${pending.length ? `<div class="mlist">${pending.map((x, i) => tile(x, i, true)).join('')}</div><span class="meta">${pending.length} ${pending.length === 1 ? 'fil' : 'filer'} · originaler ${total(pending)} · forhåndsvisninger ${Media.size(pending.reduce((n, x) => n + x.psize, 0))}</span>` : ''}
-            <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="dnote" rows="2" placeholder="F.eks. Her er de redigerte bildene. Si fra hvis du vil ha noe justert.">${H.esc(note)}</textarea></label>
+            <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="dnote" rows="2" maxlength="1000" placeholder="F.eks. Her er de redigerte bildene. Si fra hvis du vil ha noe justert.">${H.esc(note)}</textarea></label>
             <div class="row"><button class="btn primary" data-a="sendDelivery" ${pending.length && !busy ? '' : 'disabled'}>Send leveranse</button>${asFreelancer ? '' : `<button class="btn link" data-a="sampleFiles" ${busy ? 'disabled' : ''}>Bruk eksempelbilder</button>`}</div>
           </section>` : ''}
           ${['delivered', 'approved', 'dispute'].includes(st) ? (o.files && o.files.length ? `<section class="card stack" style="gap:16px">
@@ -98,10 +98,10 @@ if (H.requireLogin()) {
             <div class="mgrid">${o.files.map((x, i) => tile(x, i, false)).join('')}</div>
             <span class="meta">Visningen her er komprimert så siden laster raskt. ${locked() ? 'Originalene kan lastes ned etter godkjenning.' : 'Last ned for å få originalene i full kvalitet.'}</span></section>`
             : `<div class="card stack"><b>Leveranse</b><div class="gallery" style="grid-template-columns:repeat(4,minmax(0,1fr))">${[0, 1, 2, 3].map((i) => `<span class="ph" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div><span class="muted small">${H.esc(o.delivered)}</span></div>`) : ''}
-          ${st === 'delivered' && confirmDispute ? `<div class="card stack"><b>Hva er ikke som avtalt?</b><textarea class="inp" id="reason" rows="3" placeholder="Beskriv kort hva som mangler eller er feil">${H.esc(reason)}</textarea><div class="row"><button class="btn soft sm" data-a="cancelDispute">Avbryt</button><button class="btn dark sm" data-a="dispute">Send til ${fn}</button></div></div>` : ''}
+          ${st === 'delivered' && confirmDispute ? `<div class="card stack"><b>Hva er ikke som avtalt?</b><textarea class="inp" id="reason" rows="3" maxlength="1000" placeholder="Beskriv kort hva som mangler eller er feil">${H.esc(reason)}</textarea><div class="row"><button class="btn soft sm" data-a="cancelDispute">Avbryt</button><button class="btn dark sm" data-a="dispute">Send til ${fn}</button></div></div>` : ''}
           ${st === 'approved' && !o.reviewed && !asFreelancer ? `<div class="card stack"><h2 style="font-size:20px">Hvordan var ${fn}?</h2>
             <div class="stars" role="radiogroup" aria-label="Antall stjerner">${[1, 2, 3, 4, 5].map((k) => `<button role="radio" aria-checked="${k === stars}" aria-label="${k} stjerner" class="${k <= stars ? 'on' : ''}" data-a="stars" data-v="${k}">${H.star(24)}</button>`).join('')}</div>
-            <label class="field"><span class="label">Fortell andre om oppdraget</span><textarea class="inp" id="rtext" rows="4" placeholder="Hva var bra? Var noe annerledes enn avtalt?">${H.esc(text)}</textarea></label>
+            <label class="field"><span class="label">Fortell andre om oppdraget</span><textarea class="inp" id="rtext" rows="4" maxlength="1500" placeholder="Hva var bra? Var noe annerledes enn avtalt?">${H.esc(text)}</textarea></label>
             <p class="hint">Omtalen publiseres når ${fn} også har vurdert deg, eller etter 14 dager. Da kan ingen av dere svare på den andres omtale først.</p>
             <button class="btn primary" data-a="review" ${stars ? '' : 'disabled'}>Send omtale</button></div>` : ''}
         </div>
@@ -150,7 +150,7 @@ if (H.requireLogin()) {
     if (!el) { el = document.createElement('div'); el.id = 'lb'; el.className = 'lb'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
     document.body.style.overflow = 'hidden';
     el.setAttribute('aria-label', x.name);
-    el.innerHTML = `<div class="lb-top"><div class="stack" style="gap:0;min-width:0"><b class="mname">${H.esc(x.name)}</b><span class="small" style="opacity:.7">${lb + 1} av ${o.files.length} · original ${Media.size(x.size)}${x.w ? ` · ${x.w}×${x.h}` : ''}</span></div>
+    el.innerHTML = `<div class="lb-top"><div class="stack" style="gap:0;min-width:0"><b class="mname">${H.esc(x.name)}</b><span class="small" style="opacity:.7">${lb + 1} av ${o.files.length} · original ${Media.size(x.size)}${x.w ? ` · ${+x.w || 0}×${+x.h || 0}` : ''}</span></div>
         <div class="row" style="flex-wrap:nowrap">${locked() ? `<span class="small" style="opacity:.7">${H.icon('lock', 14, 2)} Godkjenn for å laste ned</span>` : `<button class="btn sm lb-dl" data-a="dl" data-v="${lb}">${H.icon('download', 16, 2)} Last ned original</button>`}<button class="ibtn lb-x" data-a="closeLb" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div></div>
       <div class="lb-stage">${x.type === 'video' ? `<video controls playsinline preload="metadata" id="lbmedia"></video>` : `<img id="lbmedia" alt="${H.esc(x.name)}">`}${locked() ? '<span class="lb-wm">Forhåndsvisning</span>' : ''}</div>
       ${o.files.length > 1 ? `<button class="ibtn lb-nav prev" data-a="nav" data-v="-1" aria-label="Forrige">${H.icon('back', 22, 2)}</button><button class="ibtn lb-nav next" data-a="nav" data-v="1" aria-label="Neste">${H.icon('next', 22, 2)}</button>` : ''}`;

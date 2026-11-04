@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const jid = H.qs('id');
 let confirmDelete = false, offerPrice = '', offerMsg = '';
@@ -55,8 +55,8 @@ function render() {
     side = `<div class="card stack"><b>Vil du ta oppdraget?</b><span class="muted small">Du trenger en frilanserprofil for å sende tilbud. Det tar rundt 3 minutter.</span><a class="btn primary block" href="bli-frilanser.html?neste=${encodeURIComponent('annonse.html?id=' + j.id)}">Lag frilanserprofil</a></div>`;
   } else {
     side = `<form class="card stack" id="oform" novalidate><b>Gi et tilbud</b>
-      <label class="field"><span class="label">Din pris</span><input class="inp" id="oprice" inputmode="numeric" placeholder="Maks ${H.kr(j.budget)}" value="${H.esc(offerPrice)}"></label>
-      <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="omsg" rows="4" placeholder="Hvorfor passer du til jobben? Hva er inkludert?">${H.esc(offerMsg)}</textarea></label>
+      <label class="field"><span class="label">Din pris</span><input class="inp" id="oprice" maxlength="9" inputmode="numeric" placeholder="Maks ${H.kr(j.budget)}" value="${H.esc(offerPrice)}"></label>
+      <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="omsg" rows="4" maxlength="1000" placeholder="Hvorfor passer du til jobben? Hva er inkludert?">${H.esc(offerMsg)}</textarea></label>
       <p class="hint">Du får ${offerPrice ? H.kr(+offerPrice.replace(/\D/g, '') * 0.95) : 'prisen minus 5 %'} utbetalt når kunden har godkjent leveransen.</p>
       <button class="btn primary block" type="submit">Send tilbud</button></form>`;
   }
@@ -72,7 +72,7 @@ function render() {
         ${j.mine ? `<section class="stack" aria-live="polite"><h2>Tilbud (${offers.length})</h2>
           ${offers.length ? offers.map((o, i) => { const f = H.byId(o.fid); return `<div class="card stack"><div class="row">${H.avatar(f, 48)}<div class="grow stack" style="gap:0"><a href="frilanser.html?id=${f.id}" style="font-weight:800;color:var(--fg)">${H.esc(f.name)}</a><span class="meta">${H.star(12)} ${H.ratingTxt(f)} · ${f.reviews} omtaler · ${f.km} km · svarer innen ${H.esc(f.resp)}</span></div><b style="font-size:18px">${H.kr(o.price)}</b></div>
             <p>${H.esc(o.msg)}</p>
-            ${j.status === 'open' ? `<div class="row"><a class="btn ghost sm" href="meldinger.html?med=${f.id}">Still spørsmål</a><a class="btn soft sm" href="frilanser.html?id=${f.id}">Se profil</a><button class="btn primary sm" data-a="accept" data-v="${i}" style="margin-left:auto">Godta og betal ${H.kr(o.price)}</button></div>` : (j.acceptedFid === o.fid ? `<a class="pill ok" style="align-self:flex-start;text-decoration:none" href="bestilling.html?id=${j.orderId}">Godtatt. Se bestillingen</a>` : '')}</div>`; }).join('')
+            ${j.status === 'open' ? `<div class="row"><a class="btn ghost sm" href="meldinger.html?med=${f.id}">Still spørsmål</a><a class="btn soft sm" href="frilanser.html?id=${f.id}">Se profil</a><button class="btn primary sm" data-a="accept" data-v="${i}" style="margin-left:auto">Godta og betal ${H.kr(o.price)}</button></div>` : (j.acceptedFid === o.fid ? `<a class="pill ok" style="align-self:flex-start;text-decoration:none" href="bestilling.html?id=${encodeURIComponent(j.orderId || '')}">Godtatt. Se bestillingen</a>` : '')}</div>`; }).join('')
           : `<div class="empty">Frilansere i nærheten har fått varsel. Tilbudene dukker opp her, vanligvis innen en time.</div>`}
           ${offers.length >= 2 && j.status === 'open' ? `<button class="btn soft" data-a="compareOffers">${H.icon('columns', 18)} Sammenlign frilanserne som har gitt tilbud</button>` : ''}</section>` : ''}
       </div>

@@ -26,9 +26,9 @@
     <p>Lokale fotografer og videografer. Se arbeidet, sammenlign og book. Pengene utbetales først når jobben er levert.</p>
     <form class="searchbox" action="sok.html" role="search">
       <label class="sr" for="q">Hva trenger du?</label>
-      <input class="inp" id="q" name="q" placeholder="Bryllup, portrett, drone …" autocomplete="off">
+      <input class="inp" id="q" name="q" maxlength="100" placeholder="Bryllup, portrett, drone …" autocomplete="off">
       <label class="sr" for="sted">Hvor?</label>
-      <input class="inp" id="sted" name="sted" placeholder="Hvor?">
+      <input class="inp" id="sted" name="sted" maxlength="60" placeholder="Hvor?">
       <button class="btn primary" type="submit">Søk</button>
     </form>
     <div class="chips" id="popular" style="justify-content:center"></div>
@@ -71,8 +71,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 H.boot(() => {
   document.getElementById('popular').innerHTML = ['Bryllupsfotograf', 'Dronefilm', 'Produktbilder', 'Reklamefilm'].map((t) => `<a class="chip" href="sok.html?q=${encodeURIComponent(t)}">${t}</a>`).join('');

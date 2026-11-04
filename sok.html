@@ -24,8 +24,8 @@
   <div class="wrap">
     <div class="crumbs"><a href="index.html">Forside</a><span>/</span><span>Finn frilanser</span></div>
     <form class="searchbox" id="sform" role="search" style="margin-top:16px;box-shadow:none;border:1px solid var(--line)">
-      <label class="sr" for="q">Hva trenger du?</label><input class="inp" id="q" name="q" placeholder="Bryllup, drone, produktbilder …" autocomplete="off">
-      <label class="sr" for="sted">Hvor?</label><input class="inp" id="sted" name="sted" placeholder="Sted">
+      <label class="sr" for="q">Hva trenger du?</label><input class="inp" id="q" name="q" maxlength="100" placeholder="Bryllup, drone, produktbilder …" autocomplete="off">
+      <label class="sr" for="sted">Hvor?</label><input class="inp" id="sted" name="sted" maxlength="60" placeholder="Sted">
       <button class="btn primary" type="submit">Søk</button>
     </form>
     <div class="with-side">
@@ -33,7 +33,7 @@
         <fieldset><legend>Fagfelt</legend><div id="fcat" class="stack" style="gap:0"></div></fieldset>
         <fieldset><legend id="distlabel">Avstand fra Sandvika</legend>
           <select class="inp" id="dist"><option value="5">Innen 5 km</option><option value="10">Innen 10 km</option><option value="25" selected>Innen 25 km</option><option value="999">Hele landet</option></select></fieldset>
-        <fieldset><legend>Maks startpris</legend><input class="inp" id="maxp" inputmode="numeric" placeholder="kr"></fieldset>
+        <fieldset><legend>Maks startpris</legend><input class="inp" id="maxp" maxlength="9" inputmode="numeric" placeholder="kr"></fieldset>
         <fieldset><legend>Vurdering</legend>
           <label class="check"><input type="radio" name="minr" value="0" checked> Alle</label>
           <label class="check"><input type="radio" name="minr" value="4.5"> 4,5 og over</label>
@@ -63,8 +63,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const F = { q: H.qs('q') || '', sted: H.qs('sted') || '', kat: H.qs('kat') || 'alle' };
 const $ = (id) => document.getElementById(id);

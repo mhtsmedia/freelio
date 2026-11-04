@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   const f = H.byId(H.qs('id') || '');
@@ -48,9 +48,9 @@ if (H.requireLogin()) {
             ${f.pk.map((x, i) => `<button type="button" class="card pkg ${i === pk ? 'on' : ''}" data-a="pk" data-v="${i}" aria-pressed="${i === pk}"><span class="pkg-top"><span>${H.esc(x[0])}</span><span>${H.kr(x[1])}</span></span><span class="muted">${H.esc(x[2])}</span></button>`).join('')}</fieldset>
           <div class="grid2">
             <label class="field"><span class="label">Dato *</span><input class="inp ${miss('date') ? 'err' : ''}" id="date" type="date" value="${H.esc(form.date)}" min="2026-10-29"></label>
-            <label class="field"><span class="label">Sted *</span><input class="inp ${miss('place') ? 'err' : ''}" id="place" value="${H.esc(form.place)}" placeholder="Adresse eller sted"></label>
+            <label class="field"><span class="label">Sted *</span><input class="inp ${miss('place') ? 'err' : ''}" id="place" maxlength="120" value="${H.esc(form.place)}" placeholder="Adresse eller sted"></label>
           </div>
-          <label class="field"><span class="label">Melding til ${H.esc(H.first(f.name))}</span><textarea class="inp" id="note" rows="3" placeholder="Hva er viktig for deg? Tidspunkt, ønsker, praktisk info">${H.esc(form.note)}</textarea></label>
+          <label class="field"><span class="label">Melding til ${H.esc(H.first(f.name))}</span><textarea class="inp" id="note" rows="3" maxlength="1000" placeholder="Hva er viktig for deg? Tidspunkt, ønsker, praktisk info">${H.esc(form.note)}</textarea></label>
           <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Betalingsmåte</legend>
             <label class="check card" style="padding:12px 14px"><input type="radio" name="m" value="vipps" ${method === 'vipps' ? 'checked' : ''}> Vipps</label>
             <label class="check card" style="padding:12px 14px"><input type="radio" name="m" value="kort" ${method === 'kort' ? 'checked' : ''}> Bankkort</label></fieldset>

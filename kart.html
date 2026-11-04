@@ -42,8 +42,8 @@
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 let cat = H.qs('kat') || 'alle', sel = null;
 const CFG = window.FREELIO_CONFIG || {};
@@ -66,7 +66,7 @@ function render() {
   if (!list.find((f) => f.id === sel)) sel = list[0] ? list[0].id : null;
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'Alle' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
   document.getElementById('list').innerHTML = list.length ? list.map((f) => `<button class="li ${f.id === sel ? 'on' : ''}" data-a="sel" data-v="${f.id}">${f.photo ? H.avatar(f, 56) : H.ph(f)}<span class="stack grow" style="gap:2px"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small">${H.star(12)} ${H.ratingTxt(f)} · ${H.priceTxt(f)}</span></span></button>`).join('') : '<div class="empty">Ingen i denne kategorien i nærheten.</div>';
-  document.getElementById('pins').innerHTML = M.kind ? '' : list.map((f) => `<button class="pin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${priceTag(f)}${f.unit ? '<span class="sr">' + f.unit + '</span>' : ''}</button>`).join('');
+  document.getElementById('pins').innerHTML = M.kind ? '' : list.map((f) => `<button class="pin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${priceTag(f)}${f.unit ? '<span class="sr">' + H.esc(f.unit) + '</span>' : ''}</button>`).join('');
   const f = sel && H.byId(sel);
   document.getElementById('mcard').innerHTML = f ? `<div class="mapcard">${f.photo ? H.avatar(f, 72) : H.ph(f)}<div class="stack grow" style="gap:2px;min-width:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small"><b>${H.ratingTxt(f)}</b> · ${H.priceTxt(f)}</span></div><a class="btn dark sm" href="frilanser.html?id=${f.id}">Se profil</a></div>` : '';
   drawPins(list);

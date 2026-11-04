@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
@@ -87,21 +87,21 @@ function form() {
         <div class="card-pick">${card ? `<img src="${H.esc(card.url)}" alt="Bildet på kortet ditt">` : `<span class="hint" style="padding:12px">Ingen valgt. ${cover ? 'Bakgrunnsbildet' : 'Det første bildet i porteføljen'} brukes.</span>`}</div>
         <div class="row"><label class="btn soft sm" for="cardFile">${H.icon('plus', 16, 2.2)} ${card ? 'Bytt bilde på kortet' : 'Velg bilde på kortet'}</label><input type="file" id="cardFile" accept="image/jpeg,image/png,image/webp" class="sr">${card ? '<button type="button" class="btn link small" data-a="rmCard">Fjern</button>' : ''}<span class="hint" id="cardStatus">${H.esc(cardBusy)}</span></div>
         <span class="hint">Vises på kortet ditt i søket og på forsiden. Velg gjerne et annet bilde enn bakgrunnsbildet, så hvert bilde passer sitt format.</span></section>
-      <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" value="${H.esc(p.name || S.user.name)}"></label>
+      <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" maxlength="60" value="${H.esc(p.name || S.user.name)}"></label>
       <label class="field"><span class="label">Hovedområde *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
-      <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
-      <div class="grid2"><label class="field"><span class="label">Område *</span><input class="inp" id="area" value="${H.esc(p.area || '')}" placeholder="F.eks. Sandvika"></label>
+      <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" maxlength="60" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
+      <div class="grid2"><label class="field"><span class="label">Område *</span><input class="inp" id="area" maxlength="60" value="${H.esc(p.area || '')}" placeholder="F.eks. Sandvika"></label>
       <label class="field"><span class="label">Hvor langt reiser du?</span><select class="inp" id="reach">${[5, 10, 25, 50].map((k) => `<option value="${k}" ${p.reach == k ? 'selected' : ''}>Inntil ${k} km</option>`).join('')}</select></label></div>
       <div class="grid2"><label class="field"><span class="label">Års erfaring *</span><input class="inp" id="years" type="number" min="0" max="60" inputmode="numeric" value="${H.esc(p.years != null ? p.years : '')}" placeholder="F.eks. 3"></label>
       <label class="field"><span class="label">Hvor raskt svarer du?</span><select class="inp" id="respH">${RESP.map(([h, t]) => `<option value="${h}" ${(p.respH || 1) == h ? 'selected' : ''}>Innen ${t}</option>`).join('')}</select></label></div>
       <div class="grid2"><label class="field"><span class="label">Vanlig leveringstid</span><select class="inp" id="delD">${DEL.map(([d, t]) => `<option value="${d}" ${(p.delD != null ? p.delD : 7) == d ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
       <label class="field"><span class="label">Hvor ledig er du?</span><select class="inp" id="free"><option value="1" ${p.free === false || p.free === '0' ? '' : 'selected'}>Ledig kapasitet</option><option value="0" ${p.free === false || p.free === '0' ? 'selected' : ''}>Få ledige datoer</option></select></label></div>
-      <label class="field"><span class="label">Om deg *</span><textarea class="inp" id="bio" rows="4" placeholder="Hva er du god på, og hva kan kunden forvente?">${H.esc(p.bio || '')}</textarea></label>
+      <label class="field"><span class="label">Om deg *</span><textarea class="inp" id="bio" rows="4" maxlength="1500" placeholder="Hva er du god på, og hva kan kunden forvente?">${H.esc(p.bio || '')}</textarea></label>
       <fieldset style="border:0;padding:0;margin:0" class="field"><legend class="label" style="margin-bottom:6px">Fagfelt du tilbyr *</legend>
         <div class="niche-grid">${HDATA.CATS.map((c) => `<label class="check"><input type="checkbox" data-niche="${c.id}" ${niches.includes(c.id) ? 'checked' : ''} ${c.id === mainCat ? 'disabled' : ''}> ${c.name}</label>`).join('')}</div>
         <span class="hint">Kryss av alt du tar oppdrag innen. Hovedområdet er alltid med. Du vises i søket for hvert fagfelt du krysser av.</span></fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
-        ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
+        ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" maxlength="40" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" maxlength="7" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" maxlength="200" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
         <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB. Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.</p>

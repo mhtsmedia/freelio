@@ -28,16 +28,16 @@
         <div class="field"><div class="row small" style="justify-content:space-between;font-weight:800"><span id="pcount"></span><span class="muted">Felt merket * er påkrevd</span></div><div class="progress"><i id="pbar"></i></div></div>
         <fieldset style="border:0;padding:0;margin:0" class="field"><legend class="label" style="margin-bottom:6px">Kategori *</legend><div class="chips" id="cats"></div></fieldset>
         <label class="field"><span class="label">Hva skal gjøres? *</span><input class="inp" id="title" maxlength="80" placeholder="F.eks. Bryllupsfotograf, halv dag"><span class="hint">En kort overskrift som sier hva du trenger.</span></label>
-        <label class="field"><span class="label">Beskrivelse *</span><textarea class="inp" id="desc" rows="6" placeholder="Beskriv jobben, stilen du ønsker, omfang og det som er viktig for deg."></textarea><span class="hint" id="desccount"></span></label>
+        <label class="field"><span class="label">Beskrivelse *</span><textarea class="inp" id="desc" rows="6" maxlength="3000" placeholder="Beskriv jobben, stilen du ønsker, omfang og det som er viktig for deg."></textarea><span class="hint" id="desccount"></span></label>
         <div class="grid2">
-          <label class="field"><span class="label">Maks budsjett *</span><input class="inp" id="budget" inputmode="numeric" placeholder="kr"><span class="hint">Frilansere svarer oftere når de ser rammen.</span></label>
-          <label class="field"><span class="label">Dato eller frist *</span><input class="inp" id="date" placeholder="F.eks. 14.11.2026 eller Fleksibel"></label>
+          <label class="field"><span class="label">Maks budsjett *</span><input class="inp" id="budget" maxlength="9" inputmode="numeric" placeholder="kr"><span class="hint">Frilansere svarer oftere når de ser rammen.</span></label>
+          <label class="field"><span class="label">Dato eller frist *</span><input class="inp" id="date" maxlength="40" placeholder="F.eks. 14.11.2026 eller Fleksibel"></label>
         </div>
         <div class="grid2">
-          <label class="field"><span class="label">Område *</span><input class="inp" id="area" placeholder="Sted eller postnummer"></label>
-          <label class="field"><span class="label">Omfang</span><input class="inp" id="scope" placeholder="F.eks. 5 timer, 20 m², 40 produkter"></label>
+          <label class="field"><span class="label">Område *</span><input class="inp" id="area" maxlength="60" placeholder="Sted eller postnummer"></label>
+          <label class="field"><span class="label">Omfang</span><input class="inp" id="scope" maxlength="120" placeholder="F.eks. 5 timer, 20 m², 40 produkter"></label>
         </div>
-        <label class="field"><span class="label">Hva skal leveres?</span><input class="inp" id="delivery" placeholder="F.eks. 200 redigerte bilder i høy oppløsning"><span class="hint">Dette er det betalingen frigjøres mot. Jo tydeligere, jo tryggere for begge.</span></label>
+        <label class="field"><span class="label">Hva skal leveres?</span><input class="inp" id="delivery" maxlength="200" placeholder="F.eks. 200 redigerte bilder i høy oppløsning"><span class="hint">Dette er det betalingen frigjøres mot. Jo tydeligere, jo tryggere for begge.</span></label>
         <label class="field"><span class="label">Referansebilder</span><input class="inp" id="files" type="file" accept="image/*" multiple style="padding-top:10px"><span class="hint" id="filenames">Valgfritt. Vis stilen du liker.</span></label>
         <label class="check"><input type="checkbox" id="own"> Frilanseren må ha med eget utstyr</label>
         <div id="errors"></div>
@@ -60,8 +60,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   const $ = (id) => document.getElementById(id);

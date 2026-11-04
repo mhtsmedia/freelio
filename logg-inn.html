@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
 const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
@@ -38,7 +38,7 @@ function render() {
   if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, verifisert med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (step === 'name') {
     box.innerHTML = `<h1>Velkommen!</h1><p class="muted">Navnet ditt er bekreftet med ${H.esc(busy)}. Hvilket navn vil du vise til frilanserne?</p>
-      <form class="stack" id="nform"><label class="field"><span class="label">Visningsnavn</span><input class="inp" id="name" value="${H.esc(name)}" autocomplete="name"></label>
+      <form class="stack" id="nform"><label class="field"><span class="label">Visningsnavn</span><input class="inp" id="name" maxlength="60" value="${H.esc(name)}" autocomplete="name"></label>
       <label class="check"><input type="checkbox" id="terms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
       <span class="err-text" id="err"></span><button class="btn primary" type="submit">Opprett konto</button></form>`;
     document.getElementById('nform').addEventListener('submit', (e) => {
@@ -67,9 +67,9 @@ function renderCloud(box) {
   box.innerHTML = `<h1>${up ? 'Opprett konto' : 'Logg inn'}</h1>
     <div class="seg" style="align-self:flex-start"><button aria-pressed="${!up}" data-a="mode" data-v="in">Logg inn</button><button aria-pressed="${up}" data-a="mode" data-v="up">Ny konto</button></div>
     <form class="stack" id="aform" novalidate>
-      ${up ? '<label class="field"><span class="label">Navn</span><input class="inp" id="aname" autocomplete="name" required></label>' : ''}
-      <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" autocomplete="email" required></label>
-      <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" autocomplete="${up ? 'new-password' : 'current-password'}" minlength="6" required>${up ? '<span class="hint">Minst 6 tegn.</span>' : ''}</label>
+      ${up ? '<label class="field"><span class="label">Navn</span><input class="inp" id="aname" maxlength="60" autocomplete="name" required></label>' : ''}
+      <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" maxlength="254" autocomplete="email" required></label>
+      <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" maxlength="72" autocomplete="${up ? 'new-password' : 'current-password'}" minlength="6" required>${up ? '<span class="hint">Minst 6 tegn.</span>' : ''}</label>
       ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
       <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
       <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>

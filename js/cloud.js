@@ -244,6 +244,7 @@
   const errText = (e) => {
     const m = (e && (e.message || e.error_description)) || String(e);
     if (/row-level security/i.test(m)) return 'Du har ikke tilgang til å gjøre dette.';
+    if (/check constraint|value too long/i.test(m)) return 'Teksten er for lang, eller noe i den er ikke tillatt.';
     if (/Failed to fetch|NetworkError/i.test(m)) return 'Fikk ikke kontakt med serveren. Sjekk nettet og prøv igjen.';
     return m;
   };

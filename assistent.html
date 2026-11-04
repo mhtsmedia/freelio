@@ -25,7 +25,7 @@
   <div class="card" style="padding:0;display:flex;flex-direction:column;height:min(620px,calc(100vh - 260px));min-height:440px">
     <div class="msgs" id="msgs"></div>
     <div class="chips scroll" id="sug" style="padding:8px 12px 0"></div>
-    <form class="composer" id="aform"><label class="sr" for="q">Spørsmål</label><input id="q" placeholder="Spør om hva som helst …" autocomplete="off"><button class="send" aria-label="Send"></button></form>
+    <form class="composer" id="aform"><label class="sr" for="q">Spørsmål</label><input id="q" maxlength="500" placeholder="Spør om hva som helst …" autocomplete="off"><button class="send" aria-label="Send"></button></form>
   </div>
   <p class="hint" style="margin-top:12px">I den ferdige appen bruker assistenten en språkmodell og data fra oppdrag på Freelio. Svarene her er forhåndsskrevne eksempler.</p>
 </div></main>
@@ -34,8 +34,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=5f5f374c"></script>
-<script src="js/cloud.js?v=336c40cd"></script>
+<script src="js/app.js?v=7c0cabe6"></script>
+<script src="js/cloud.js?v=9fea91a5"></script>
 <script type="text/freelio">
 const S = H.S;
 let typing = false;
