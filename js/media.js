@@ -24,14 +24,33 @@ window.Media = (function () {
   const canvasBlob = (cv, q) => new Promise((res) => cv.toBlob((b) => (b && b.type === 'image/webp' ? res(b) : cv.toBlob(res, 'image/jpeg', q)), 'image/webp', q));
   const fit = (w, h, max) => { const k = Math.min(1, max / Math.max(w, h)); return [Math.round(w * k), Math.round(h * k)]; };
   const draw = (src, w, h, max) => { const [cw, ch] = fit(w, h, max); const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; cv.getContext('2d').drawImage(src, 0, 0, cw, ch); return cv; };
+  // Vannmerke på forhåndsvisningene kunden ser før godkjenning. Det brennes inn i bildet, så det
+  // ikke kan fjernes ved å laste ned forhåndsvisningen. Originalen er urørt og låses opp ved godkjenning.
+  const WM_TEXT = 'FREELIO · FORHÅNDSVISNING';
+  const watermark = (cv) => {
+    const g = cv.getContext('2d'), w = cv.width, h = cv.height;
+    const size = Math.max(11, Math.round(Math.min(w, h) / 16));
+    g.save();
+    g.translate(w / 2, h / 2); g.rotate(-Math.PI / 7);
+    g.font = `800 ${size}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineJoin = 'round'; g.lineWidth = Math.max(1, size / 12);
+    g.strokeStyle = 'rgba(0,0,0,0.28)'; g.fillStyle = 'rgba(255,255,255,0.42)';
+    const tw = g.measureText(WM_TEXT).width + size * 2.5, lh = size * 3.4, r = Math.hypot(w, h) / 2 + tw;
+    for (let row = 0, y = -r; y <= r; row++, y += lh) {
+      for (let x = -r + (row % 2) * tw / 2; x <= r; x += tw) { g.strokeText(WM_TEXT, x, y); g.fillText(WM_TEXT, x, y); }
+    }
+    g.restore();
+    return cv;
+  };
 
   async function fromImage(file) {
     let bmp;
     try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
     catch (e) { bmp = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
     const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
-    const preview = await canvasBlob(draw(bmp, w, h, PREVIEW_MAX), 0.8);
-    const thumb = await canvasBlob(draw(bmp, w, h, THUMB_MAX), 0.72);
+    const preview = await canvasBlob(watermark(draw(bmp, w, h, PREVIEW_MAX)), 0.8);
+    const thumb = await canvasBlob(watermark(draw(bmp, w, h, THUMB_MAX)), 0.72);
     return { type: 'image', w, h, preview, thumb };
   }
 
@@ -44,8 +63,8 @@ window.Media = (function () {
       v.onloadedmetadata = () => { v.currentTime = Math.min(1, (v.duration || 2) * 0.1); };
       v.onseeked = async () => {
         const w = v.videoWidth, h = v.videoHeight;
-        const preview = await canvasBlob(draw(v, w, h, 1280), 0.78);
-        const thumb = await canvasBlob(draw(v, w, h, THUMB_MAX), 0.7);
+        const preview = await canvasBlob(watermark(draw(v, w, h, 1280)), 0.78);
+        const thumb = await canvasBlob(watermark(draw(v, w, h, THUMB_MAX)), 0.7);
         URL.revokeObjectURL(url);
         res({ type: 'video', w, h, duration: v.duration, preview, thumb });
       };

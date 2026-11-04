@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=c3e653b9">
+<link rel="stylesheet" href="css/style.css?v=6aa677d6">
 <link rel="stylesheet" href="css/ny.css?v=6cc8e390" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -168,6 +168,10 @@ function form() {
       pf.forEach((x) => { if (x.cat === prev) x.cat = t.value; }); form(); return;
     }
     if (t.tagName === 'SELECT') draft[t.id] = t.value;
+  });
+  // Enter i et tekstfelt skal ikke publisere profilen. Profilen lagres bare med knappen.
+  pf_.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && !['checkbox', 'radio', 'file', 'submit', 'button'].includes(e.target.type)) e.preventDefault();
   });
   pf_.addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -151,8 +151,9 @@ select.inp{padding-right:8px}
 .ph{background:radial-gradient(circle at 72% 32%,var(--s) 0 8%,transparent 8.6%),linear-gradient(to bottom,var(--a) 0 57%,var(--b) 57% 100%);position:relative;overflow:hidden;display:block;filter:saturate(.55)}
 .ph::after{content:"";position:absolute;left:-10%;right:30%;bottom:43%;height:22%;background:var(--b);opacity:.55;border-radius:50% 50% 0 0}
 .ph > *{position:relative;z-index:1}
-:root[data-theme="dark"] .ph{filter:saturate(.5) brightness(.82)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ph{filter:saturate(.5) brightness(.82)}}
+/* bare de tegnede plassholderne dempes i mørk modus, ikke ekte bilder */
+:root[data-theme="dark"] .ph:not(.has-img){filter:saturate(.5) brightness(.82)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ph:not(.has-img){filter:saturate(.5) brightness(.82)}}
 
 /* kort */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:32px 20px}
