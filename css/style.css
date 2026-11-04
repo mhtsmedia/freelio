@@ -665,6 +665,17 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .mside-sub{max-width:760px;gap:16px}
 .mside-sub .card{margin:0}
 
+/* Henting fra portefølje på nett (Bli frilanser) */
+.imp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.imp-pick{position:relative;aspect-ratio:1;border:2px solid transparent;border-radius:10px;overflow:hidden;padding:0;background:var(--surface);cursor:pointer;transition:border-color .2s,transform .15s var(--ease)}
+.imp-pick:active{transform:scale(.96)}
+.imp-pick img{width:100%;height:100%;object-fit:cover;display:block}
+.imp-pick[aria-pressed="true"]{border-color:var(--accent)}
+.imp-pick[hidden]{display:none}
+.imp-check{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;opacity:0;transition:opacity .2s}
+.imp-pick:hover .imp-check{opacity:.7}
+.imp-pick[aria-pressed="true"] .imp-check{opacity:1;background:var(--accent);color:var(--on-accent)}
+
 /* Eget bilde på kortet i søket */
 .card-pick{aspect-ratio:4/3;width:min(280px,100%);border-radius:12px;overflow:hidden;background:var(--surface);display:grid;place-items:center;text-align:center;padding:0}
 .card-pick img{width:100%;height:100%;object-fit:cover;display:block}
