@@ -1,6 +1,7 @@
 // Freelio: hent navn, beskrivelse og bilder fra en portefølje på nett.
 // Legges inn i Supabase: Edge Functions -> Deploy a new function -> Via Editor.
-// Navn: hent-portefolje. La «Verify JWT» stå på, så bare innloggede brukere kan bruke den.
+// Navn: hent-portefolje. Erstatt hele eksempelkoden med denne filen. Funksjonen sjekker selv at
+// brukeren er logget inn, så «Verify JWT» kan stå på eller av.
 //
 // To bruksmåter (POST med JSON):
 //   { "url": "https://min-portefolje.no" }   -> { title, description, images: [adresser] }
@@ -143,11 +144,25 @@ function readPage(html: string, base: URL) {
   return { title, description, images: found.slice(0, MAX_IMAGES) };
 }
 
+// ---------- bare innloggede brukere ----------
+// Sjekkes her i tillegg til «Verify JWT», så funksjonen er trygg selv om den bryteren er av.
+async function signedIn(req: Request) {
+  const auth = req.headers.get("authorization") || "";
+  const base = Deno.env.get("SUPABASE_URL");
+  const key = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
+  if (!base || !/^Bearer\s+\S+/i.test(auth)) return false;
+  const r = await fetch(`${base}/auth/v1/user`, { headers: { Authorization: auth, apikey: key }, signal: AbortSignal.timeout(6000) }).catch(() => null);
+  if (!r) return false;
+  const user = await r.json().catch(() => null);
+  return r.ok && !!(user && user.id);
+}
+
 // ---------- svar ----------
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Bruk POST" }, 405);
+  if (!(await signedIn(req))) return json({ error: "Logg inn for å hente fra porteføljen." }, 401);
   let body: { url?: string; image?: string };
   try { body = await req.json(); } catch { return json({ error: "Ugyldig forespørsel" }, 400); }
   try {

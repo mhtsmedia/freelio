@@ -24,8 +24,8 @@ Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lag
 På «Bli frilanser» kan frilansere lime inn en lenke til porteføljen sin, så hentes beskrivelse og bilder automatisk. Det krever en liten funksjon i Supabase, fordi nettleseren ikke får lese andre nettsider:
 
 1. I Supabase: **Edge Functions**, så **Deploy a new function**, så **Via Editor**.
-2. Gi den navnet `hent-portefolje`, lim inn hele `supabase/functions/hent-portefolje/index.ts` og trykk **Deploy**.
-3. La **Verify JWT** stå på, så bare innloggede brukere kan bruke den.
+2. Gi den navnet `hent-portefolje`, slett eksempelkoden («Hello …»), lim inn hele `supabase/functions/hent-portefolje/index.ts` og trykk **Deploy**.
+3. Funksjonen sjekker selv at brukeren er logget inn, så **Verify JWT** kan stå på eller av.
 
 Funksjonen henter bare vanlige nettsider (aldri interne adresser), har tidsfrist og maks størrelse, og bildene lastes opp i frilanserens egen mappe. Uten funksjonen viser skjemaet «Henting fra portefølje er ikke slått på ennå».
 
