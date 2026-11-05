@@ -248,7 +248,10 @@ create policy "lagrede egne" on public.saved for all to authenticated using (use
 
 -- Tilgang for nettsiden (reglene over bestemmer hvilke rader)
 grant usage on schema public to anon, authenticated;
-grant select on public.freelancers, public.jobs, public.reviews to anon;
+grant select on public.freelancers to anon;
+-- Uinnlogget får ikke interne id-er (jobs.owner_id, reviews.author_id/order_id)
+grant select (id, demo, status, data, created_at) on public.jobs to anon;
+grant select (id, freelancer_id, author_name, stars, text, job_label, created_at) on public.reviews to anon;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 
 -- ============================================================

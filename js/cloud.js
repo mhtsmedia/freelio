@@ -61,8 +61,11 @@
 
     const [fr, rv, jobs, posts] = await Promise.all([
       sb.from('freelancers').select('id,user_id,demo,published,data').order('created_at'),
-      sb.from('reviews').select('*').order('created_at', { ascending: false }),
-      sb.from('jobs').select('id,owner_id,demo,status,data,created_at').order('created_at', { ascending: false }),
+      // author_id og order_id hentes bare når du er logget inn (de trengs for å kjenne igjen og slette egne omtaler).
+      // Uinnlogget får dem ikke, så interne id-er ikke lekkes til folk som skraper siden.
+      sb.from('reviews').select('id,freelancer_id,author_name,stars,text,job_label,created_at' + (C.uid ? ',author_id,order_id' : '')).order('created_at', { ascending: false }),
+      // owner_id (hvem som la ut oppdraget) hentes bare når du er logget inn, så det ikke lekkes til uinnlogget
+      sb.from('jobs').select('id,demo,status,data,created_at' + (C.uid ? ',owner_id' : '')).order('created_at', { ascending: false }),
       sb.from('posts').select('id,freelancer_id,data,created_at').order('created_at', { ascending: false }).limit(300)
     ]);
     const frRows = must(fr), rvRows = must(rv), jobRows = must(jobs);

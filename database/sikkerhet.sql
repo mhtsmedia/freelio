@@ -293,3 +293,11 @@ begin
     create trigger post_likes_rate before insert on public.post_likes for each row execute function public.limit_rate('user_id::text = $1', '60', '1 minute');
   end if;
 end $$;
+
+-- ---------- uinnlogget skal ikke se interne id-er ----------
+-- Omtaler og oppdrag er offentlige, men author_id, order_id og owner_id er interne id-er
+-- som ikke trenger å være synlige for folk som ikke er logget inn.
+revoke select on public.jobs from anon;
+grant select (id, demo, status, data, created_at) on public.jobs to anon;
+revoke select on public.reviews from anon;
+grant select (id, freelancer_id, author_name, stars, text, job_label, created_at) on public.reviews to anon;
