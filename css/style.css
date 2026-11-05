@@ -759,7 +759,8 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 /* Kart: prikker med forsidebilde, og bobler med antall når flere står tett */
 .lpin-wrap{display:grid;place-items:center}
 .mdot{display:block;box-sizing:border-box;width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--accent);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s var(--ease),border-color .2s;animation:mpop .3s var(--ease)}
-.mdot img{width:100%;height:100%;object-fit:cover;display:block}
+/* Leaflet setter width:auto på bilder i kartnålene, så bildet må tvinges til å fylle sirkelen */
+.mdot img{width:100%!important;height:100%!important;max-width:none;object-fit:cover;object-position:center;display:block}
 .mdot b{display:grid;place-items:center;width:100%;height:100%;color:var(--on-accent);font:700 16px var(--f-body)}
 .mdot:hover{transform:scale(1.1)}
 .mdot.on{border-color:var(--accent);transform:scale(1.2);box-shadow:0 0 0 3px #fff,0 6px 16px rgba(0,0,0,.35)}
