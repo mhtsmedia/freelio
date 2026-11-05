@@ -513,7 +513,9 @@
   H.jobRow = (j) => {
     const c = H.cat(j.cat);
     const n = j.mine ? H.jobOffers(j).length : j.offers + (S.sentOffers[j.id] ? 1 : 0);
-    const tags = (j.mine ? '<span class="pill acc">Din annonse</span>' : '') + (S.sentOffers[j.id] ? '<span class="pill ok">Tilbud sendt</span>' : '') + (j.status === 'booked' ? '<span class="pill ok">Booket</span>' : '');
+    // Nye tilbud du ikke har sett ennå, på dine egne annonser
+    const fresh = j.mine && (j.status || 'open') === 'open' ? H.jobOffers(j).filter((o) => !o.seen).length : 0;
+    const tags = (fresh ? `<span class="pill new">${fresh} ${fresh === 1 ? 'nytt tilbud' : 'nye tilbud'}</span>` : '') + (j.mine ? '<span class="pill acc">Din annonse</span>' : '') + (S.sentOffers[j.id] ? '<span class="pill ok">Tilbud sendt</span>' : '') + (j.status === 'booked' ? '<span class="pill ok">Booket</span>' : '');
     return `<a class="jrow" href="annonse.html?id=${j.id}"><span class="ico">${H.icon(c.icon, 22, 1.6)}</span>
       <div class="grow stack" style="gap:2px"><b style="font-size:15px;font-weight:700">${H.esc(j.title)}</b><span class="meta">${c.name} · ${H.esc(j.area)} · ${H.esc(j.date)} · ${n} tilbud</span>${tags ? `<span class="row" style="gap:6px;margin-top:4px">${tags}</span>` : ''}</div>
       <span class="budget">${H.kr(j.budget)}</span></a>`;

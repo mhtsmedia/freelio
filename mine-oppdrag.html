@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=48aa08d5">
+<link rel="stylesheet" href="css/style.css?v=e78aa819">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -26,11 +26,14 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c568e9b8"></script>
+<script src="js/app.js?v=1a1e87f1"></script>
 <script src="js/cloud.js?v=eff5e214"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
-  let tab = H.qs('fane') || 'bestillinger';
+  // Nye tilbud på annonsene dine som du ikke har sett
+  const freshOffers = () => H.S.myJobs.reduce((n, j) => n + ((j.status || 'open') === 'open' ? H.jobOffers(j).filter((o) => !o.seen).length : 0), 0);
+  // Har du fått nye tilbud, åpnes annonsene først
+  let tab = H.qs('fane') || (freshOffers() ? 'annonser' : 'bestillinger');
   const pill = (o) => ({ paid: o.role === 'freelancer' ? (H.needsAccept(o) ? '<span class="pill warn">Godta avtalen</span>' : '<span class="pill warn">Lever jobben</span>') : (H.needsAccept(o) ? '<span class="pill acc">Venter på frilanseren</span>' : '<span class="pill acc">Venter på levering</span>'), delivered: o.role === 'freelancer' ? '<span class="pill acc">Venter på godkjenning</span>' : '<span class="pill warn">Levert, se over</span>', approved: o.reviewed || o.role === 'freelancer' ? '<span class="pill ok">Fullført</span>' : '<span class="pill warn">Gi omtale</span>', dispute: '<span class="pill bad">Meldt feil</span>', cancelled: '<span class="pill">Avbestilt</span>' }[o.status]);
   function render() {
     const S = H.S;
@@ -38,7 +41,7 @@ if (H.requireLogin()) {
     const jobs = S.myJobs.slice().reverse();
     const sent = Object.keys(S.sentOffers).map((id) => Object.assign({ job: H.jobById(id) }, S.sentOffers[id])).filter((x) => x.job);
     // «Tilbud jeg har sendt» gjelder bare frilansere
-    const tabs = [['bestillinger', `Bestillinger (${orders.length})`], ['annonser', `Mine annonser (${jobs.length})`]].concat(S.profile || sent.length ? [['tilbud', `Tilbud jeg har sendt (${sent.length})`]] : []);
+    const tabs = [['bestillinger', `Bestillinger (${orders.length})`], ['annonser', `Mine annonser (${jobs.length})${freshOffers() ? ` <span class="count" style="margin-left:6px" aria-label="${freshOffers()} nye tilbud">${freshOffers()}</span>` : ''}`]].concat(S.profile || sent.length ? [['tilbud', `Tilbud jeg har sendt (${sent.length})`]] : []);
     let body = '';
     if (tab === 'bestillinger') body = orders.length ? orders.map((o) => { const mine = o.role === 'freelancer'; const f = mine ? H.partner('c:' + o.customerId) : H.byId(o.fid); return `<a class="jrow" href="bestilling.html?id=${o.id}">${H.avatar(f, 52)}<div class="grow stack" style="gap:4px"><b style="font-size:16px">${H.esc(o.title)}</b><span class="meta">${mine ? 'Kunde: ' : ''}${H.esc(f.name)} · ${H.esc(o.date)}</span><span class="row" style="gap:6px">${mine ? '<span class="pill acc">Til deg</span>' : ''}${pill(o)}</span></div><span class="budget">${H.kr(o.price)}</span></a>`; }).join('')
       : `<div class="empty">Du har ingen bestillinger ennå.<a class="btn primary sm" href="sok.html">Finn en frilanser</a></div>`;

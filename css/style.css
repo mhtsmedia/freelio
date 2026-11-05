@@ -127,6 +127,7 @@ p{margin:0}
 .chip.on,.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
 .pill{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:11px;font-size:11px;font-weight:700;background:var(--surface);white-space:nowrap;color:var(--muted);letter-spacing:.01em}
 .pill.acc{background:var(--accent-soft);color:var(--accent-ink)}
+.pill.new{background:var(--accent);color:var(--on-accent)}
 .pill.ok{background:var(--ok-soft);color:var(--ok)}
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.bad{background:var(--bad-soft);color:var(--bad)}
