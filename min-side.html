@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=aeb46486">
-<link rel="stylesheet" href="css/ny.css?v=6cc8e390" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=2036611e">
+<link rel="stylesheet" href="css/ny.css?v=fa36046d" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
 <body data-page="min-side">
@@ -26,7 +26,7 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=a6b1c38c"></script>
+<script src="js/app.js?v=c268a637"></script>
 <script src="js/cloud.js?v=0fa8c3dc"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
@@ -41,17 +41,48 @@ if (H.requireLogin()) {
   const me = () => ({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo, photoSrc: S.user.photoSrc });
   const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
   const tile = (href, icon, title, sub, v) => `<a href="${href}"${v ? ` data-vis="${v}"` : ''}>${H.icon(icon, 22)}<span><b>${title}</b><span class="meta">${sub}</span></span><i class="chev" aria-hidden="true">${H.icon('next', 18)}</i></a>`;
+  // Bestillinger og annonser der noen venter på deg
+  function todos() {
+    const out = [];
+    S.orders.forEach((o) => {
+      const f = o.role === 'freelancer' ? H.partner('c:' + o.customerId) : H.byId(o.fid); if (!f) return;
+      let what = '';
+      if (o.role === 'freelancer') what = o.status === 'paid' ? (H.needsAccept(o) ? 'Godta avtalen' : 'Lever jobben') : o.status === 'dispute' ? 'Kunden har meldt fra om feil' : '';
+      else what = o.status === 'delivered' ? 'Se over og godkjenn leveransen' : o.status === 'approved' && !o.reviewed ? 'Gi en omtale' : '';
+      if (what) out.push({ href: 'bestilling.html?id=' + encodeURIComponent(o.id), f, title: o.title, what });
+    });
+    S.myJobs.forEach((j) => { const n = H.jobOffers(j).filter((x) => !x.seen).length; if (j.status === 'open' && n) out.push({ href: 'annonse.html?id=' + encodeURIComponent(j.id), icon: H.cat(j.cat).icon, title: j.title, what: `${n} ${n === 1 ? 'nytt tilbud' : 'nye tilbud'}` }); });
+    return out;
+  }
+  function todoHTML() {
+    const list = todos();
+    if (!list.length) return '';
+    return `<section class="card mside-todo"><b class="mside-todo-h">${H.icon('clock', 18)} Venter på deg (${list.length})</b>
+      ${list.slice(0, 4).map((t) => `<a href="${t.href}">${t.f ? H.avatar(t.f, 40) : `<span class="ico">${H.icon(t.icon, 22)}</span>`}<span><b>${H.esc(t.title)}</b><span class="meta">${H.esc(t.what)}</span></span><i class="chev" aria-hidden="true">${H.icon('next', 18)}</i></a>`).join('')}
+      ${list.length > 4 ? '<a class="mside-all" href="mine-oppdrag.html">Se alt i Mine oppdrag</a>' : ''}</section>`;
+  }
+  function activeTxt() {
+    const n = S.orders.filter((o) => ['paid', 'delivered', 'dispute'].includes(o.status)).length;
+    return n ? `${n} ${n === 1 ? 'aktiv bestilling' : 'aktive bestillinger'}` : 'Bestillinger, annonser og tilbud';
+  }
   function hub() {
     const saved = S.saved.map(H.byId).filter(Boolean), folders = H.folders();
     return `<div class="row mside-head">${H.avatar(me(), 64)}<div class="stack grow" style="gap:2px;min-width:0"><h1>${H.esc(S.user.name)}</h1><span class="muted">Verifisert med ${H.esc(S.user.method)} · medlem siden ${H.esc(S.user.since || H.today())}</span></div><button class="btn soft sm" data-a="logout">${H.icon('logout', 18)} Logg ut</button></div>
-      <nav class="mside-menu" aria-label="Min side">
+      ${todoHTML()}
+      <h2 class="mside-h">Mitt Freelio</h2>
+      <nav class="mside-menu mside-big" aria-label="Mitt Freelio">
+        ${tile('mine-oppdrag.html', 'clipboard', 'Mine oppdrag', activeTxt())}
+        ${tile('meldinger.html', 'chat', 'Meldinger', H.unread() ? `${H.unread()} ${H.unread() === 1 ? 'ulest samtale' : 'uleste samtaler'}` : 'Samtaler med frilansere og kunder')}
         ${tile('lagret.html', 'heart', 'Lagret', `${saved.length} ${saved.length === 1 ? 'frilanser' : 'frilansere'} · ${folders.length} ${folders.length === 1 ? 'mappe' : 'mapper'}`)}
-        ${tile('mine-oppdrag.html', 'clipboard', 'Mine oppdrag', 'Bestillinger, annonser og tilbud')}
-        ${tile('meldinger.html', 'chat', 'Meldinger', 'Samtaler med frilansere og kunder')}
+      </nav>
+      <h2 class="mside-h">Profil og innstillinger</h2>
+      <nav class="mside-list" aria-label="Profil og innstillinger">
         ${tile('min-side.html?vis=frilanser', 'user', 'Frilanserprofil', S.profile ? (S.profile.published ? 'Publisert og synlig i søk' : 'Skjult fra søk') : 'Ta oppdrag selv', 'frilanser')}
         ${tile('min-side.html?vis=konto', 'camera', 'Profilbilde og konto', S.user.photo ? 'Bytt eller juster bildet' : 'Legg til et profilbilde', 'konto')}
         ${tile('min-side.html?vis=varsler', 'clock', 'Varsler', 'Push og e-post', 'varsler')}
         ${tile('min-side.html?vis=personvern', 'lock', 'Personvern og data', 'Cookies, nedlasting og sletting', 'personvern')}
+        <button type="button" data-a="theme">${H.icon(H.isDark() ? 'sun' : 'moon', 22)}<span><b>${H.isDark() ? 'Lys modus' : 'Mørk modus'}</b><span class="meta">Bytt utseende</span></span><i class="chev" aria-hidden="true">${H.icon('next', 18)}</i></button>
+        ${tile('hjelp.html', 'shield', 'Hjelp og kontakt', 'Spørsmål om booking, betaling og avtalen')}
       </nav>`;
   }
   function view() {

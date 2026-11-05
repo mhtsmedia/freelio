@@ -660,6 +660,28 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .back-btn{display:none}
 .mside-menu .chev{margin-left:auto;flex:none;display:flex;color:var(--muted)}
 .mside-head{margin-bottom:24px;flex-wrap:nowrap}
+/* Min side: «Venter på deg» øverst, de tre store valgene, og en liste med innstillinger (som «Min FINN») */
+.mside-h{font-size:15px;font-weight:700;color:var(--muted);margin:28px 0 10px}
+.mside-big{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.mside-big a{padding:20px}
+.mside-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.mside-list a,.mside-list button{display:flex;gap:14px;align-items:center;padding:14px 18px;border:0;border-top:1px solid var(--line);background:none;color:var(--fg);font:inherit;text-align:left;text-decoration:none;cursor:pointer;transition:background .2s}
+.mside-list > :first-child{border-top:0}
+.mside-list a:hover,.mside-list button:hover{background:var(--bg2);color:var(--fg)}
+.mside-list a > svg,.mside-list button > svg{flex:none;color:var(--accent-ink)}
+.mside-list a > span,.mside-list button > span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.mside-list b{font-size:15px}
+.mside-list .chev{margin-left:auto;flex:none;display:flex;color:var(--muted)}
+.mside-todo{display:flex;flex-direction:column;gap:0;padding:6px 0;border-color:var(--accent)}
+.mside-todo-h{display:flex;gap:8px;align-items:center;padding:10px 18px 6px;font-size:15px}
+.mside-todo-h svg{color:var(--accent-ink)}
+.mside-todo a{display:flex;gap:12px;align-items:center;padding:10px 18px;color:var(--fg);text-decoration:none}
+.mside-todo a:hover{background:var(--bg2);color:var(--fg)}
+.mside-todo a > span:not(.av):not(.ico){display:flex;flex-direction:column;min-width:0}
+.mside-todo b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mside-todo .ico{width:40px;height:40px;display:grid;place-items:center;color:var(--accent-ink);flex:none}
+.mside-todo .chev{margin-left:auto;flex:none;display:flex;color:var(--muted)}
+.mside-todo .mside-all{font-weight:700;font-size:14px;color:var(--accent-ink)}
 .mside-head h1{font-size:28px;overflow-wrap:anywhere}
 @media (max-width:760px){.mside-head h1{font-size:22px}.mside-head .btn{padding:0 12px}}
 .mside-sub{max-width:760px;gap:16px}

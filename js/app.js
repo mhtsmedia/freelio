@@ -636,8 +636,62 @@
 
   /* ---------- toppmeny og bunntekst ---------- */
   const page = document.body.dataset.page || '';
+  /* ---------- toppmeny i det nye designet ----------
+     PC: hovedvalgene til venstre, «Lagret», «Meldinger» og en Min side-meny til høyre (som «Min FINN»).
+     Mobil: tilbake, logo, pluss for å legge ut oppdrag og en gruppert meny. Resten ligger i bunnmenyen. */
+  const initials = (n) => String(n || '?').split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase();
+  const mountHeaderNy = (el) => {
+    const unread = H.unread(); const act = H.actionCount();
+    const wasOpen = el.querySelector('.top.open');
+    const dark = H.isDark();
+    const cur = (pages) => (pages.includes(page) ? 'aria-current="page"' : '');
+    const me = S.user ? { ini: initials(S.user.name), col: '#0A0A0B', photo: S.user.photo } : null;
+    const badge = (n) => (n ? `<span class="count">${n}</span>` : '');
+    const nav = [['sok.html', 'Finn frilanser', ['sok', 'frilanser', 'kart', 'sammenlign', 'book']], ['utforsk.html', 'Utforsk', ['utforsk']], ['oppdrag.html', 'Ledige oppdrag', ['oppdrag', 'annonse']], ['slik-fungerer-det.html', 'Slik fungerer det', ['slik-fungerer-det'], 'hide-lg']];
+    const profMenu = S.user ? `<div class="prof hide-sm">
+          <button class="prof-btn" data-a="profMenu" aria-expanded="false" aria-haspopup="true" aria-label="Min side${act ? ', ' + act + ' venter på deg' : ''}">${H.avatar(me, 28)}<span class="lbl-t">Min side</span>${act ? '<span class="dot"></span>' : ''}<span class="chev-d">${H.icon('back', 16, 2)}</span></button>
+          <div class="prof-menu" role="menu" hidden>
+            <a class="prof-head" href="min-side.html">${H.avatar(me, 40)}<span><b>${H.esc(S.user.name)}</b><span class="meta">Gå til Min side</span></span></a>
+            <a role="menuitem" href="mine-oppdrag.html">${H.icon('clipboard', 18)}Mine oppdrag${badge(act)}</a>
+            <a role="menuitem" href="meldinger.html">${H.icon('chat', 18)}Meldinger${badge(unread)}</a>
+            <a role="menuitem" href="lagret.html">${H.icon('heart', 18)}Lagret</a>
+            <a role="menuitem" href="${S.profile ? 'min-side.html?vis=frilanser' : 'bli-frilanser.html'}">${H.icon('user', 18)}${S.profile ? 'Frilanserprofil' : 'Bli frilanser'}</a>
+            <a role="menuitem" href="min-side.html?vis=konto">${H.icon('camera', 18)}Profilbilde og konto</a>
+            <hr>
+            <button role="menuitem" data-a="theme">${H.icon(dark ? 'sun' : 'moon', 18)}${dark ? 'Lys modus' : 'Mørk modus'}</button>
+            <a role="menuitem" href="hjelp.html">${H.icon('shield', 18)}Hjelp og kontakt</a>
+            <button role="menuitem" data-a="logout">${H.icon('logout', 18)}Logg ut</button>
+          </div></div>`
+      : `<a class="ibtn lbl hide-sm" href="logg-inn.html" aria-label="Logg inn" title="Logg inn">${H.icon('user', 19)}<span class="lbl-t">Logg inn</span></a>`;
+    const link = (h, ic, t, n) => `<a href="${h}">${H.icon(ic, 20)}<span>${t}</span>${badge(n)}</a>`;
+    el.innerHTML = `<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
+      <div class="top-in">
+        ${page && page !== 'index' ? `<button class="ibtn back-btn" data-a="goBack" aria-label="Tilbake" title="Tilbake">${H.icon('back', 22, 2)}</button>` : ''}
+        <a class="logo" href="index.html" aria-label="Freelio, til forsiden">${H.logo()}</a>
+        <nav class="mainnav" aria-label="Hovedmeny">${nav.map(([h, t, pages, cls]) => `<a href="${h}" ${cur(pages)}${cls ? ` class="${cls}"` : ''}>${t}</a>`).join('')}</nav>
+        <div class="usernav">
+          <a class="ibtn lbl hide-sm" href="lagret.html" aria-label="Lagret" title="Lagret" ${cur(['lagret'])}>${H.icon('heart', 19)}<span class="lbl-t">Lagret</span></a>
+          <a class="ibtn lbl hide-sm" href="meldinger.html" aria-label="Meldinger${unread ? ', ' + unread + ' uleste' : ''}" title="Meldinger" ${cur(['meldinger'])}>${H.icon('chat', 19)}<span class="lbl-t">Meldinger</span>${unread ? '<span class="dot"></span>' : ''}</a>
+          ${profMenu}
+          <a class="ibtn add-sm" href="ny-annonse.html" aria-label="Legg ut oppdrag" title="Legg ut oppdrag">${H.icon('plus', 20, 2)}</a>
+          <a class="btn primary sm hide-sm" href="ny-annonse.html">Legg ut oppdrag</a>
+        </div>
+        <button class="ibtn menu-btn" data-a="menu" aria-expanded="${!!wasOpen}" aria-label="Meny">${H.icon(wasOpen ? 'close' : 'menu', 20)}</button>
+      </div>
+      <nav class="drawer" aria-label="Meny"><div class="drawer-in">
+        ${S.user ? `<a class="drawer-me" href="min-side.html">${H.avatar(me, 40)}<span><b>${H.esc(S.user.name)}</b><span class="meta">Gå til Min side</span></span></a>` : '<a class="btn primary block drawer-login" href="logg-inn.html">Logg inn eller lag konto</a>'}
+        <div class="dgroup"><span class="dlabel">Finn og utforsk</span>${link('sok.html', 'search', 'Finn frilanser')}${link('utforsk.html', 'compass', 'Utforsk')}${link('kart.html', 'map', 'Kart')}</div>
+        <div class="dgroup"><span class="dlabel">Mitt Freelio</span>${link('ny-annonse.html', 'plus', 'Legg ut oppdrag')}${link('mine-oppdrag.html', 'clipboard', 'Mine oppdrag', act)}${link('meldinger.html', 'chat', 'Meldinger', unread)}${link('lagret.html', 'heart', 'Lagret')}</div>
+        <div class="dgroup"><span class="dlabel">For frilansere</span>${link('oppdrag.html', 'bag', 'Ledige oppdrag')}${link(S.profile ? 'min-side.html?vis=frilanser' : 'bli-frilanser.html', 'user', S.profile ? 'Frilanserprofil' : 'Bli frilanser')}</div>
+        <div class="dgroup"><span class="dlabel">Hjelp</span>${link('slik-fungerer-det.html', 'shield', 'Slik fungerer det')}${link('avtale.html', 'clipboard', 'Oppdragsavtalen')}${link('hjelp.html', 'chat', 'Hjelp og kontakt')}${link('assistent.html', 'spark', 'Assistent')}</div>
+        <div class="dgroup"><button data-a="theme">${H.icon(dark ? 'sun' : 'moon', 20)}<span>${dark ? 'Lys modus' : 'Mørk modus'}</span></button>${S.user ? `<button data-a="logout">${H.icon('logout', 20)}<span>Logg ut</span></button>` : ''}</div>
+      </div></nav>
+    </div></header>`;
+    H.mountTabbar(unread, act);
+  };
   H.mountHeader = () => {
     const el = document.getElementById('site-header'); if (!el) return;
+    if (document.documentElement.dataset.design !== 'gammel') { mountHeaderNy(el); return; }
     const nav = [['index.html', 'Hjem'], ['utforsk.html', 'Utforsk'], ['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag']];
     const cur = (href) => (href.replace('.html', '') === page ? 'aria-current="page"' : '');
     const unread = H.unread(); const act = H.actionCount();
@@ -673,9 +727,16 @@
     if (document.documentElement.dataset.design === 'gammel') { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('nav'); el.id = 'tabbar'; el.className = 'tabbar'; el.setAttribute('aria-label', 'Hurtigmeny'); document.body.appendChild(el); }
     else el.classList.add('ready'); // ikonet hopper bare første gang, ikke hver gang menyen tegnes på nytt
-    // Utforsk står i midten. «Legg ut oppdrag» ligger som pluss-knapp i toppmenyen på mobil.
-    const items = [['index.html', 'home', 'Hjem'], ['sok.html', 'search', 'Finn'], ['utforsk.html', 'compass', 'Utforsk'], ['mine-oppdrag.html', 'clipboard', 'Mine oppdrag', act, 'venter på deg'], ['meldinger.html', 'chat', 'Meldinger', unread, 'uleste']];
-    el.innerHTML = items.map(([h, ic, t, n, why]) => `<a href="${h}" ${h.replace('.html', '') === page ? 'aria-current="page"' : ''}${n ? ` aria-label="${t}, ${n} ${why}"` : ''}>${H.icon(ic, 22)}${n ? '<span class="dot"></span>' : ''}<span>${t}</span></a>`).join('');
+    // Som i FINN-appen: Utforsk i midten, og alt som er ditt (oppdrag, lagret, profil) under Min side.
+    // «Legg ut oppdrag» ligger som pluss-knapp i toppmenyen.
+    const items = [
+      ['index.html', 'home', 'Hjem', ['index']],
+      ['sok.html', 'search', 'Søk', ['sok', 'frilanser', 'kart', 'sammenlign', 'book']],
+      ['utforsk.html', 'compass', 'Utforsk', ['utforsk']],
+      ['meldinger.html', 'chat', 'Meldinger', ['meldinger'], unread, 'uleste'],
+      ['min-side.html', 'user', S.user ? 'Min side' : 'Logg inn', ['min-side', 'mine-oppdrag', 'lagret', 'bestilling', 'avtale', 'bli-frilanser', 'logg-inn'], act, 'venter på deg']
+    ];
+    el.innerHTML = items.map(([h, ic, t, pages, n, why]) => `<a href="${h}" ${pages.includes(page) ? 'aria-current="page"' : ''}${n ? ` aria-label="${t}, ${n} ${why}"` : ''}>${H.icon(ic, 22)}${n ? '<span class="dot"></span>' : ''}<span>${t}</span></a>`).join('');
   };
   H.mountFooter = () => {
     const el = document.getElementById('site-footer'); if (!el) return;
@@ -698,8 +759,13 @@
 
   /* ---------- felles handlinger ---------- */
   const popIn = (sel) => requestAnimationFrame(() => { const n = document.querySelector(sel); if (n) n.classList.add('pop'); });
+  const closeProf = () => document.querySelectorAll('.prof-menu:not([hidden])').forEach((m) => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.prof')) closeProf(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeProf(); });
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
+    profMenu: (v, el) => { const m = el.nextElementSibling; const open = m.hidden; m.hidden = !open; el.setAttribute('aria-expanded', open); if (open) { const f = m.querySelector('a,button'); if (f) f.focus(); } },
+    logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
     // Tilbake-pilen: forrige side hvis du kom fra Freelio, ellers forsiden
     goBack: () => {
