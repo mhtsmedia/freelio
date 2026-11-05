@@ -815,7 +815,11 @@
 
   const closeMenu = () => { const t = document.querySelector('.top.open'); if (!t) return; t.classList.remove('open'); const b = t.querySelector('.menu-btn'); b.setAttribute('aria-expanded', 'false'); b.innerHTML = H.icon('menu', 20); };
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
-  H.actions.car = (v, el) => { const t = el.closest('.fc-car').querySelector('.fc-track'); t.scrollBy({ left: +v * t.clientWidth, behavior: 'smooth' }); };
+  H.actions.car = (v, el) => {
+    const t = el.closest('.fc-car').querySelector('.fc-track'), n = t.children.length; if (!n) return;
+    const i = Math.max(0, Math.min(n - 1, Math.round(t.scrollLeft / t.clientWidth) + +v));
+    t.scrollTo({ left: t.scrollLeft + t.children[i].getBoundingClientRect().left - t.getBoundingClientRect().left, behavior: 'smooth' });
+  };
   document.addEventListener('scroll', (e) => {
     const t = e.target; if (!t.classList || !t.classList.contains('fc-track')) return;
     const n = t.children.length, i = Math.round(t.scrollLeft / t.clientWidth), car = t.parentElement;
