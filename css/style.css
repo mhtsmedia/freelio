@@ -794,3 +794,7 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .att-chip > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
 .att-chip button{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
 .att-chip button:hover{background:var(--line)}
+
+/* Forslag om å slå på varsler, på egne annonser */
+.push-cta{border:1px solid var(--accent);background:var(--accent-soft)}
+.push-cta .btn{align-self:flex-start}

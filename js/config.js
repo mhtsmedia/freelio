@@ -7,5 +7,7 @@ window.FREELIO_CONFIG = {
   // Kart-siden bruker OpenStreetMap. Lim inn en nøkkel fra Google Cloud (Maps JavaScript API) for å bruke Google Maps i stedet.
   // Begrens nøkkelen til nettadressen til nettsiden i Google Cloud. googleMapId er valgfri (Map ID fra Google Cloud).
   googleMapsKey: '',
-  googleMapId: ''
+  googleMapId: '',
+  // Offentlig nøkkel for push-varsler (VAPID). Den hemmelige delen ligger bare i Supabase (Edge Functions -> Secrets).
+  vapidPublicKey: 'BHBhcFT25yeBfj_MwEc9jSTtPBTMoMElCMMNi2lU1gPs7GVEN53Pp67b-rorKez3_doe10DvTnba34PH6N92bQI'
 };

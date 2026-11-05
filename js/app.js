@@ -6,6 +6,7 @@
 
   /* ---------- ikoner ---------- */
   const ICON = {
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
     clip: '<path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l8.6-8.6a4 4 0 0 1 5.6 5.7l-8.6 8.6a2 2 0 0 1-2.8-2.9l8.5-8.5"/>',
     file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
     home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
@@ -681,6 +682,79 @@
     polling = false;
   };
   setInterval(poll, 30000);
+
+  /* ---------- push-varsler, også når Freelio ikke er åpen ----------
+     Nettleseren gir et abonnement som lagres på kontoen (database/push.sql). Funksjonen «varsle» i Supabase
+     sender varselet når det kommer et nytt tilbud eller en ny melding, og sw.js viser det på enheten.
+     På iPhone virker det bare når Freelio er lagt til på Hjem-skjermen (Apple sin regel). */
+  const b64uBytes = (s) => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+  H.push = {
+    key: () => (window.FREELIO_CONFIG || {}).vapidPublicKey || '',
+    ios: () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+    installed: () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches,
+    supported: () => !!H.push.key() && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
+    async current() { try { const r = await navigator.serviceWorker.getRegistration(); return r ? await r.pushManager.getSubscription() : null; } catch (e) { return null; } },
+    // 'on', 'off', 'blocked', 'install' (iPhone uten Hjem-skjerm) eller 'unsupported'
+    async state() {
+      if (!H.push.supported()) return H.push.ios() && !H.push.installed() ? 'install' : 'unsupported';
+      if (Notification.permission === 'denied') return 'blocked';
+      return Notification.permission === 'granted' && (await H.push.current()) ? 'on' : 'off';
+    },
+    async save(sub) {
+      const j = sub.toJSON();
+      const r = await Cloud.sb.rpc('save_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 300) });
+      if (r.error) throw new Error(/function|schema cache|does not exist/i.test(r.error.message) ? 'Push-varsler er ikke slått på i databasen ennå (database/push.sql).' : r.error.message);
+    },
+    async enable() {
+      if (!H.push.supported()) throw new Error(H.push.ios() && !H.push.installed() ? 'På iPhone må Freelio ligge på Hjem-skjermen først: trykk Del-knappen i Safari, velg «Legg til på Hjem-skjerm», og åpne Freelio derfra.' : 'Denne nettleseren kan ikke vise push-varsler.');
+      if (!(window.Cloud && Cloud.on && Cloud.uid)) throw new Error('Logg inn for å slå på varsler.');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') throw new Error(perm === 'denied' ? 'Nettleseren blokkerer varsler fra Freelio. Tillat dem i innstillingene for nettstedet.' : 'Du må tillate varsler for å få beskjed.');
+      const reg = await navigator.serviceWorker.register('sw.js');
+      await navigator.serviceWorker.ready;
+      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uBytes(H.push.key()) }));
+      await H.push.save(sub);
+      try { sessionStorage.setItem('freelio:push', Cloud.uid); } catch (e) {}
+      S.notify = Object.assign(S.notify || {}, { push: true }); H.save();
+    },
+    async disable() {
+      const sub = await H.push.current();
+      if (!sub) return;
+      try { await Cloud.sb.rpc('forget_push', { p_endpoint: sub.endpoint }); } catch (e) {}
+      await sub.unsubscribe();
+    },
+    // Ved utlogging: enheten skal ikke få varsler for kontoen lenger
+    async forget() { try { const sub = await H.push.current(); if (sub && window.Cloud && Cloud.uid) await Cloud.sb.rpc('forget_push', { p_endpoint: sub.endpoint }); } catch (e) {} },
+    // Kobler enheten til kontoen som er logget inn nå (for eksempel etter at noen andre har brukt den)
+    async sync() {
+      try {
+        if (!H.push.supported() || Notification.permission !== 'granted' || !(window.Cloud && Cloud.on && Cloud.uid)) return;
+        if (sessionStorage.getItem('freelio:push') === Cloud.uid) return;
+        const sub = await H.push.current(); if (!sub) return;
+        await H.push.save(sub); sessionStorage.setItem('freelio:push', Cloud.uid);
+      } catch (e) {}
+    }
+  };
+  // Fyller [data-push] med status og knapper for denne enheten. data-push="full" i Min side > Varsler,
+  // data-push="kort" på egne annonser (skjules når varsler allerede er på).
+  H.pushFill = async () => {
+    const els = [...document.querySelectorAll('[data-push]')]; if (!els.length) return;
+    const st = await H.push.state();
+    const why = {
+      blocked: 'Nettleseren blokkerer varsler fra Freelio. Tillat dem i innstillingene for nettstedet (hengelåsen ved adressen), og last inn siden på nytt.',
+      install: 'På iPhone: trykk Del-knappen i Safari, velg «Legg til på Hjem-skjerm», og åpne Freelio derfra. Da kan du slå på varsler.',
+      unsupported: 'Denne nettleseren kan ikke vise push-varsler. Du får fortsatt varsel inne på Freelio.'
+    };
+    els.forEach((el) => {
+      if (el.dataset.push === 'kort') {
+        el.hidden = st === 'on' || st === 'unsupported' || !S.user;
+        el.innerHTML = `<b class="row" style="gap:8px">${H.icon('bell', 18)} Få varsel om nye tilbud</b><span class="muted small">${why[st] || 'Få beskjed på mobilen eller PC-en med en gang noen gir tilbud, også når Freelio ikke er åpen.'}</span>${st === 'off' ? '<button class="btn primary sm" data-a="pushOn">Slå på varsler</button>' : ''}`;
+        return;
+      }
+      el.innerHTML = `<span><b style="font-size:15px">Push-varsler</b><br><span class="muted small">Nye tilbud og meldinger, også når Freelio ikke er åpen. ${st === 'on' ? 'På for denne enheten.' : st === 'off' ? 'Av for denne enheten.' : why[st]}</span></span>
+        <span class="row" style="gap:6px;flex-wrap:nowrap">${st === 'on' ? '<button class="btn soft sm" data-a="pushTest">Send test</button><button class="btn soft sm" data-a="pushOff">Slå av</button>' : st === 'off' ? '<button class="btn primary sm" data-a="pushOn">Slå på</button>' : ''}</span>`;
+    });
+  };
   document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 
   /* ---------- tema ---------- */
@@ -842,7 +916,13 @@
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
     profMenu: (v, el) => { const m = el.nextElementSibling; const open = m.hidden; m.hidden = !open; el.setAttribute('aria-expanded', open); if (open) { const f = m.querySelector('a,button'); if (f) f.focus(); } },
-    logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
+    logout: async () => { await H.push.forget(); S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
+    pushOn: async () => { try { await H.push.enable(); H.toast('Varsler er på. Du får beskjed om nye tilbud og meldinger.'); } catch (e) { H.toast(e.message); } H.pushFill(); },
+    pushOff: async () => { await H.push.disable(); H.toast('Varsler er slått av for denne enheten.'); H.pushFill(); },
+    pushTest: async () => {
+      try { const r = await Cloud.sb.functions.invoke('varsle', { body: { type: 'test' } }); if (r.error) throw r.error; H.toast(r.data && r.data.sent ? 'Testvarselet er sendt. Det kommer om noen sekunder.' : 'Fant ingen enhet å sende til. Slå på varsler først.'); }
+      catch (e) { H.toast('Fikk ikke sendt testvarsel. Er funksjonen «varsle» lagt inn i Supabase?'); }
+    },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
     // Tilbake-pilen: forrige side hvis du kom fra Freelio, ellers forsiden
     goBack: () => {
@@ -926,7 +1006,7 @@
       setTimeout(() => document.body.classList.remove('reveal'), 1000);
       if (H.flashNow) { H.toast(H.flashNow); H.flashNow = null; }
       try { const f = sessionStorage.getItem('freelio:flash'); if (f) { sessionStorage.removeItem('freelio:flash'); H.toast(f); } } catch (e) {}
-      H.checkAlerts();
+      H.checkAlerts(); H.push.sync(); H.pushFill();
     };
     if (sk.length) { sk.forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); }); setTimeout(go, H.LOAD_MS); }
     else go();
