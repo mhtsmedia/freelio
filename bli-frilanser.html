@@ -274,20 +274,23 @@ Object.assign(H.actions, {
   impAdd: async () => {
     const f = imp.found; if (!f || imp.busy || !imp.sel.length) return;
     const list = imp.sel.slice(0, PF_MAX - pf.length).map((i) => f.images[i]);
-    let ok = 0;
+    let ok = 0, why = '';
     for (let i = 0; i < list.length; i++) {
       imp.busy = `Henter ${i + 1} av ${list.length} …`; form();
       try {
         const r = await Cloud.sb.functions.invoke('hent-portefolje', { body: { image: list[i] } });
         if (r.error) throw new Error(await fnError(r.error));
-        const blob = r.data instanceof Blob ? r.data : new Blob([r.data]);
+        // Funksjonen sender bildet som en vanlig fil. Typen settes til bilde, så det kan skaleres.
+        let blob = r.data instanceof Blob ? r.data : new Blob([r.data]);
+        const type = (r.response && r.response.headers.get('X-Image-Type')) || '';
+        if (!/^image\//.test(blob.type)) blob = new Blob([blob], { type: /^image\/(jpeg|png|webp|avif)$/.test(type) ? type : 'image/jpeg' });
         const a = await H.resizeImage(blob, 1600), b = await H.resizeImage(blob, 600);
         pf.push({ url: await H.storeImage('portfolio', a.blob), thumb: await H.storeImage('thumb', b.blob), w: a.w, h: a.h, cat: upCat });
         ok++;
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error(e); why = why || e.message || ''; }
     }
     impReset();
-    if (ok < list.length) imp.err = `${list.length - ok} av bildene kunne ikke hentes. Last dem opp selv om du vil ha dem med.`;
+    if (ok < list.length) imp.err = `${list.length - ok} av bildene kunne ikke hentes${why ? ` (${why})` : ''}. Last dem opp selv om du vil ha dem med.`;
     form();
     H.toast(ok ? `La til ${ok} ${ok === 1 ? 'bilde' : 'bilder'} i porteføljen. Husk å lagre profilen.` : 'Ingen av bildene kunne hentes.');
   },
