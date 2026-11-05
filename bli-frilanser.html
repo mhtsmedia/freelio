@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=f18ef82e">
+<link rel="stylesheet" href="css/style.css?v=aeb46486">
 <link rel="stylesheet" href="css/ny.css?v=6cc8e390" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -26,7 +26,7 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=2eb823ad"></script>
+<script src="js/app.js?v=a6b1c38c"></script>
 <script src="js/cloud.js?v=0fa8c3dc"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
@@ -130,6 +130,7 @@ function form() {
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
         ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" maxlength="40" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" maxlength="7" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" maxlength="200" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
+      <label class="field"><span class="label">Egne vilkår (valgfritt)</span><textarea class="inp" id="terms" rows="4" maxlength="3000" placeholder="F.eks. reisekostnader over 50 km, hvor mange runder med retting som er med, eller hvordan kunden kan bruke bildene.">${H.esc(p.terms || '')}</textarea><span class="hint">Vises på profilen din og legges inn i oppdragsavtalen ved hver booking (punkt 8). <a href="avtale.html" target="_blank">Freelios standardavtale</a> gjelder i tillegg, og går foran for betaling, avbestilling og reklamasjon.</span></label>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
         <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB. Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.</p>
         ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${`<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>`}</div>`).join('')}</div>` : ''}
@@ -230,7 +231,7 @@ function form() {
       saving = false;
     }
     S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
-      id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'),
+      id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'), terms: v('terms'),
       niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, cardImg: card, lat: pos ? pos[0] : null, lng: pos ? pos[1] : null, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();

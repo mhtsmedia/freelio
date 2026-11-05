@@ -676,6 +676,29 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .imp-pick:hover .imp-check{opacity:.7}
 .imp-pick[aria-pressed="true"] .imp-check{opacity:1;background:var(--accent);color:var(--on-accent)}
 
+/* Oppdragsavtale (booking, tilbud, bestilling og avtale.html) */
+.ctr{display:flex;flex-direction:column;gap:14px}
+.ctr-sec h3{font-size:15px;margin:0 0 4px}
+.ctr-sec p{margin:0;line-height:1.55;color:var(--fg)}
+.ctr-sec blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 8px 8px 0;white-space:pre-line}
+.ctr-more{border:1px solid var(--line);border-radius:10px;padding:0 14px}
+.ctr-more > summary{cursor:pointer;padding:12px 0;font-weight:700;font-size:14px;list-style:none;display:flex;align-items:center;justify-content:space-between}
+.ctr-more > summary::-webkit-details-marker{display:none}
+.ctr-more > summary::after{content:"+";font-size:18px;line-height:1;color:var(--muted)}
+.ctr-more[open] > summary::after{content:"2"}
+.ctr-more > .ctr{padding:4px 0 16px;max-height:420px;overflow:auto}
+.ctr-status{display:flex;flex-direction:column;gap:6px;font-size:13px;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.ctr-status > span{display:flex;gap:6px;align-items:center;color:var(--muted)}
+.ctr-status > span svg{flex:none;color:var(--accent-ink)}
+.ctr-status > a{font-weight:700;font-size:13px}
+.ctr-sign{margin:4px 0 8px}
+.ctr-doc .ctr-sec h3{font-size:17px}
+@media print{
+  #site-header,#site-footer,.tabbar,.no-print,.cookie,.toast{display:none!important}
+  body{padding:0!important;background:#fff!important;color:#000!important}
+  .ctr-doc{max-width:none}
+}
+
 /* Eget bilde på kortet i søket */
 .card-pick{aspect-ratio:4/3;width:min(280px,100%);border-radius:12px;overflow:hidden;background:var(--surface);display:grid;place-items:center;text-align:center;padding:0}
 .card-pick img{width:100%;height:100%;object-fit:cover;display:block}

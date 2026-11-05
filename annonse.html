@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=f18ef82e">
+<link rel="stylesheet" href="css/style.css?v=aeb46486">
 <link rel="stylesheet" href="css/ny.css?v=6cc8e390" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -26,11 +26,22 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=2eb823ad"></script>
+<script src="js/app.js?v=a6b1c38c"></script>
 <script src="js/cloud.js?v=0fa8c3dc"></script>
 <script type="text/freelio">
 const jid = H.qs('id');
 let confirmDelete = false, offerPrice = '', offerMsg = '';
+// Tilbudet kunden holder på å godta, og avtalen som må godtas først
+let acceptAt = -1, acTerms = '', acOk = false, acTried = false;
+const offerContract = (j, o, f) => H.makeContract(f, { title: j.title, price: o.price, desc: String(j.desc || '').slice(0, 1000), date: j.date, place: j.area, cTerms: acTerms.trim() });
+const confirmCard = (j, o, f) => `<div class="card stack ctr-box" style="gap:12px"><b style="font-size:16px">${H.icon('clipboard', 18)} Oppdragsavtale med ${H.esc(H.first(f.name))}</b>
+  <p class="hint" style="margin:0">Når du godtar, betaler du ${H.kr(o.price)}. Pengene holdes trygt til du har godkjent leveransen, og ${H.esc(H.first(f.name))} eier bildene frem til du godkjenner.</p>
+  ${f.terms ? `<div class="banner acc" style="margin:0">${H.icon('pen', 18)}<span>${H.esc(H.first(f.name))} har egne vilkår. De står i punkt 8 i avtalen.</span></div>` : ''}
+  <details class="ctr-more"><summary>Les hele avtalen</summary><div class="ctr">${H.contractHTML(offerContract(j, o, f))}</div></details>
+  <label class="field"><span class="label">Tillegg til avtalen (valgfritt)</span><textarea class="inp" id="acTerms" rows="2" maxlength="2000" placeholder="F.eks. Bildene skal ikke publiseres før 1. juni.">${H.esc(acTerms)}</textarea></label>
+  <label class="check"><input type="checkbox" id="acOk" ${acOk ? 'checked' : ''}> <span>Jeg har lest og godtar oppdragsavtalen og <a href="vilkar.html" target="_blank">brukervilkårene</a>.</span></label>
+  ${acTried && !acOk ? '<span class="err-text">Du må godta avtalen for å gå videre.</span>' : ''}
+  <div class="row"><button class="btn soft sm" data-a="noAccept">Avbryt</button><button class="btn primary sm" data-a="confirmAccept" style="margin-left:auto">Godta og betal ${H.kr(o.price)}</button></div></div>`;
 let lastCount = -1;
 function render() {
   const S = H.S;
@@ -72,12 +83,14 @@ function render() {
         ${j.mine ? `<section class="stack" aria-live="polite"><h2>Tilbud (${offers.length})</h2>
           ${offers.length ? offers.map((o, i) => { const f = H.byId(o.fid); return `<div class="card stack"><div class="row">${H.avatar(f, 48)}<div class="grow stack" style="gap:0"><a href="frilanser.html?id=${f.id}" style="font-weight:800;color:var(--fg)">${H.esc(f.name)}</a><span class="meta">${H.star(12)} ${H.ratingTxt(f)} · ${f.reviews} omtaler · ${f.km} km · svarer innen ${H.esc(f.resp)}</span></div><b style="font-size:18px">${H.kr(o.price)}</b></div>
             <p>${H.esc(o.msg)}</p>
-            ${j.status === 'open' ? `<div class="row"><a class="btn ghost sm" href="meldinger.html?med=${f.id}">Still spørsmål</a><a class="btn soft sm" href="frilanser.html?id=${f.id}">Se profil</a><button class="btn primary sm" data-a="accept" data-v="${i}" style="margin-left:auto">Godta og betal ${H.kr(o.price)}</button></div>` : (j.acceptedFid === o.fid ? `<a class="pill ok" style="align-self:flex-start;text-decoration:none" href="bestilling.html?id=${encodeURIComponent(j.orderId || '')}">Godtatt. Se bestillingen</a>` : '')}</div>`; }).join('')
+            ${j.status === 'open' ? acceptAt === i ? confirmCard(j, o, f) : `<div class="row"><a class="btn ghost sm" href="meldinger.html?med=${f.id}">Still spørsmål</a><a class="btn soft sm" href="frilanser.html?id=${f.id}">Se profil</a><button class="btn primary sm" data-a="accept" data-v="${i}" style="margin-left:auto">Godta og betal ${H.kr(o.price)}</button></div>` : (j.acceptedFid === o.fid ? `<a class="pill ok" style="align-self:flex-start;text-decoration:none" href="bestilling.html?id=${encodeURIComponent(j.orderId || '')}">Godtatt. Se bestillingen</a>` : '')}</div>`; }).join('')
           : `<div class="empty">Frilansere i nærheten har fått varsel. Tilbudene dukker opp her, vanligvis innen en time.</div>`}
           ${offers.length >= 2 && j.status === 'open' ? `<button class="btn soft" data-a="compareOffers">${H.icon('columns', 18)} Sammenlign frilanserne som har gitt tilbud</button>` : ''}</section>` : ''}
       </div>
       <aside>${side}<div class="banner acc">${H.icon('lock', 20)}<span>Betaling skjer i Freelio. Pengene holdes til jobben er levert og godkjent.</span></div></aside>
     </div></div>`;
+  const act = document.getElementById('acTerms'); if (act) act.addEventListener('input', () => (acTerms = act.value));
+  const aok = document.getElementById('acOk'); if (aok) aok.addEventListener('change', () => { acOk = aok.checked; if (acOk && acTried) { acTried = false; render(); } });
   const of = document.getElementById('oform');
   if (of) {
     of.addEventListener('input', () => { offerPrice = document.getElementById('oprice').value; offerMsg = document.getElementById('omsg').value; const h = of.querySelector('.hint'); const p = +offerPrice.replace(/\D/g, ''); h.textContent = `Du får ${p ? H.kr(p * 0.95) : 'prisen minus 5 %'} utbetalt når kunden har godkjent leveransen.`; });
@@ -93,10 +106,19 @@ function render() {
   if (j.mine && offers.length !== lastCount) { if (lastCount >= 0 && offers.length > lastCount) H.toast('Nytt tilbud fra ' + H.byId(offers[offers.length - 1].fid).name); lastCount = offers.length; H.mountHeader(); }
 }
 Object.assign(H.actions, {
+  // Først vises avtalen. Betalingen skjer når kunden har godtatt den.
   accept: (v) => {
     if (!H.S.user) { location.href = 'logg-inn.html'; return; }
-    const j = H.S.myJobs.find((x) => x.id === jid); const o = H.jobOffers(j)[+v];
-    const order = H.createOrder({ fid: o.fid, title: j.title, price: o.price, date: j.date, place: j.area, jobId: j.id });
+    acceptAt = +v; acOk = false; acTried = false; render();
+  },
+  noAccept: () => { acceptAt = -1; render(); },
+  confirmAccept: () => {
+    const j = H.S.myJobs.find((x) => x.id === jid); const o = H.jobOffers(j)[acceptAt];
+    if (!o) return;
+    if (!acOk) { acTried = true; render(); return; }
+    const f = H.byId(o.fid);
+    const order = H.createOrder({ fid: o.fid, title: j.title, price: o.price, date: j.date, place: j.area, jobId: j.id, contract: offerContract(j, o, f) });
+    acceptAt = -1;
     j.status = 'booked'; j.acceptedFid = o.fid; j.orderId = order.id; H.save();
     H.flash(`Tilbudet er godtatt. ${H.kr(o.price)} er betalt og holdes trygt.`);
     H.go('bestilling.html?id=' + order.id);

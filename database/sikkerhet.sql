@@ -153,49 +153,8 @@ drop trigger if exists freelancers_guard on public.freelancers;
 create trigger freelancers_guard before insert or update on public.freelancers
   for each row execute function public.guard_freelancer();
 
--- ---------- bestillinger: riktig rekkefølge, og pris og parter kan ikke endres ----------
--- Frilanseren leverer (betalt eller reklamert -> levert). Kunden godkjenner eller reklamerer (levert ->
--- godkjent eller reklamert), og kan avbestille før levering (betalt -> avbestilt).
-
-create or replace function public.guard_order()
-returns trigger language plpgsql security definer set search_path = public as $$
-declare
-  me uuid;
-  is_c boolean;
-  is_f boolean;
-  dm boolean;
-begin
-  me := auth.uid();
-  if me is null then
-    return new;
-  end if;
-  is_c := old.customer_id = me;
-  is_f := old.freelancer_id in (select public.my_freelancer_ids());
-  dm := public.is_demo_freelancer(old.freelancer_id);
-  if new.customer_id is distinct from old.customer_id
-     or new.freelancer_id is distinct from old.freelancer_id
-     or (new.job_id is distinct from old.job_id and new.job_id is not null)
-     or new.price is distinct from old.price
-     or new.title is distinct from old.title
-     or new.created_at is distinct from old.created_at then
-    raise exception 'Bestillingen kan ikke endres på den måten.' using errcode = '42501';
-  end if;
-  if new.status is distinct from old.status and not (
-       ((is_f or (is_c and dm)) and old.status in ('paid', 'dispute') and new.status = 'delivered')
-    or (is_c and old.status = 'delivered' and new.status in ('approved', 'dispute'))
-    or (is_c and old.status = 'paid' and new.status = 'cancelled')
-  ) then
-    raise exception 'Bestillingen kan ikke flyttes til denne statusen nå.' using errcode = '42501';
-  end if;
-  if new.reviewed is distinct from old.reviewed and not (is_c and new.reviewed and new.status = 'approved') then
-    raise exception 'Omtalen på bestillingen kan ikke endres slik.' using errcode = '42501';
-  end if;
-  return new;
-end $$;
-
-drop trigger if exists orders_guard on public.orders;
-create trigger orders_guard before update on public.orders
-  for each row execute function public.guard_order();
+-- ---------- bestillinger ----------
+-- Reglene for bestillinger (status, avtale og utbetaling) ligger i database/avtale.sql.
 
 -- ---------- tilbud: etter at tilbudet er sendt, kan bare «sett» endres ----------
 

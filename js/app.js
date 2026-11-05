@@ -88,7 +88,7 @@
   H.clean = (f) => {
     ['from', 'km', 'mx', 'my', 'jobs', 'years', 'reviews', 'rating', 'respH', 'delD', 'reach', 'pal'].forEach((k) => { if (k in f) f[k] = num(f[k]); });
     ['lat', 'lng'].forEach((k) => { if (f[k] != null) f[k] = Number.isFinite(+f[k]) ? +f[k] : null; });
-    ['name', 'ini', 'role', 'area', 'bio', 'sum', 'cap', 'resp', 'unit', 'joined'].forEach((k) => { if (k in f) f[k] = str(f[k]); });
+    ['name', 'ini', 'role', 'area', 'bio', 'sum', 'cap', 'resp', 'unit', 'joined', 'terms'].forEach((k) => { if (k in f) f[k] = str(f[k]); });
     if (f.photo != null && typeof f.photo !== 'string') f.photo = null;
     ['coverImg', 'cardImg'].forEach((k) => {
       const v = f[k]; if (v == null) return;
@@ -507,6 +507,35 @@
   };
 
   /* ---------- bestillinger ---------- */
+  /* ---------- oppdragsavtale ----------
+     Samme avtale for alle bestillinger (versjon 1). Den låses ved booking: databasen lagrer en kopi med
+     parter, pris, dato og begge parters egne vilkår, og styrer status og utbetaling (database/avtale.sql). */
+  H.APPROVE_DAYS = 5; H.FIX_DAYS = 3; H.MAX_DISPUTES = 2;
+  H.makeContract = (f, d) => ({
+    v: 1, title: d.title, price: d.price, date: d.date || '', place: d.place || '', desc: d.desc || '', delD: f.delD != null ? f.delD : 7,
+    freelancerName: f.name || '', customerName: (S.user && S.user.name) || '', fTerms: f.terms || '', cTerms: d.cTerms || '',
+    customerAt: new Date().toISOString(), freelancerAt: null
+  });
+  H.contractSections = (c) => {
+    const e = H.esc, price = +c.price || 0, fee = Math.round(price * H.FEE), dd = +c.delD;
+    const fn = e(c.freelancerName || 'Frilanseren'), cn = e(c.customerName || 'Kunden');
+    return [
+      ['1. Parter', `Avtalen gjelder mellom ${cn} (kunden) og ${fn} (frilanseren). Freelio formidler oppdraget og holder betalingen, men er ikke part i avtalen.`],
+      ['2. Oppdraget', `${e(c.title)}${c.desc ? ': ' + e(c.desc) : ''}. Dato: ${e(c.date || 'etter avtale')}. Sted: ${e(c.place || 'etter avtale')}. Pris: ${H.kr(price)}, med alle kostnadene frilanseren har.`],
+      ['3. Betaling og utbetaling', `Kunden betaler hele beløpet ved booking. Beløpet holdes av betalingspartneren og utbetales til frilanseren først når kunden har godkjent leveransen. Har kunden verken godkjent eller meldt fra om feil innen ${H.APPROVE_DAYS} dager etter levering, regnes leveransen som godkjent. Frilanseren får ${H.kr(price - fee)} etter Freelios avgift på 5 %. Betaling utenom Freelio er ikke tillatt.`],
+      ['4. Levering', `Frilanseren leverer filene i Freelio${Number.isFinite(dd) ? `, normalt innen ${dd} ${dd === 1 ? 'dag' : 'dager'} etter oppdraget` : ''}. Før godkjenning ser kunden bare forhåndsvisninger med vannmerke. Originalene låses opp når kunden godkjenner.`],
+      ['5. Eierskap og rettigheter', `Frilanseren eier alt materiale fra oppdraget, og alle rettigheter til det, frem til kunden har godkjent leveransen. Før det har kunden ikke rett til å bruke, kopiere, dele eller publisere noe av materialet, heller ikke forhåndsvisningene. Når kunden godkjenner, får kunden full og tidsubegrenset rett til å bruke, redigere og publisere de leverte filene, også kommersielt. Frilanseren beholder retten til å bli navngitt der det er naturlig, og kan vise materialet i egen portefølje, med mindre noe annet står i tilleggsvilkårene.`],
+      ['6. Feil og retting', `Er leveransen ikke som avtalt, melder kunden fra i Freelio innen ${H.APPROVE_DAYS} dager etter levering og beskriver hva som er feil. Frilanseren har da ${H.FIX_DAYS} dager på å rette opp og levere på nytt. Kunden kan melde fra om feil høyst ${H.MAX_DISPUTES} ganger. Blir partene ikke enige, avgjør Freelio hvordan beløpet fordeles, basert på avtalen og meldingene i Freelio.`],
+      ['7. Avbestilling og avlysning', 'Kunden kan avbestille før leveransen er sendt: gratis frem til 7 dager før avtalt dato, og med 50 % tilbake etter det. Avlyser frilanseren, får kunden hele beløpet tilbake. Når leveransen er sendt, kan oppdraget ikke avbestilles, bare reklameres etter punkt 6.'],
+      ['8. Tilleggsvilkår', `${c.fTerms ? `Frilanserens egne vilkår:<blockquote>${e(c.fTerms)}</blockquote>` : 'Frilanseren har ingen egne vilkår. '}${c.cTerms ? `Kundens tillegg:<blockquote>${e(c.cTerms)}</blockquote>` : 'Kunden har ikke lagt til noe. '}Tilleggsvilkårene gjelder i tillegg til denne avtalen. Ved motstrid gjelder denne avtalen for betaling, utbetaling, avbestilling og reklamasjon.`],
+      ['9. Når avtalen gjelder', 'Kunden godtar avtalen ved booking. Frilanseren godtar den før arbeidet leveres, og kan ikke sende leveransen uten å ha godtatt. Avtalen kan ikke endres etter booking. Freelio lagrer når hver av partene godtok.'],
+      ['10. Uenighet', 'Partene skal først prøve å løse uenighet i meldingene i Freelio. Partene kan i tillegg bruke Forbrukerrådet eller domstolene. Norsk lov gjelder.']
+    ];
+  };
+  H.contractHTML = (c) => H.contractSections(c).map(([t, b]) => `<section class="ctr-sec"><h3>${t}</h3><p>${b}</p></section>`).join('');
+  H.when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' kl.'); };
+  // Har bestillingen en avtale som frilanseren ikke har godtatt ennå? (Bestillinger fra før avtalen fantes, har ingen.)
+  H.needsAccept = (o) => !!(o && o.contract && typeof o.contract === 'object' && !o.contract.freelancerAt && ['paid', 'dispute'].includes(o.status));
   H.createOrder = (o) => {
     const order = Object.assign({ id: H.uid(), role: 'customer', status: 'paid', reviewed: false, delivered: '', created: Date.now() }, o);
     S.orders.push(order); H.save();
