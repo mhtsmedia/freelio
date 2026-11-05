@@ -651,7 +651,7 @@
     const profMenu = S.user ? `<div class="prof hide-sm">
           <button class="prof-btn" data-a="profMenu" aria-expanded="false" aria-haspopup="true" aria-label="Min side${act ? ', ' + act + ' venter på deg' : ''}">${H.avatar(me, 28)}<span class="lbl-t">Min side</span>${act ? '<span class="dot"></span>' : ''}<span class="chev-d">${H.icon('back', 16, 2)}</span></button>
           <div class="prof-menu" role="menu" hidden>
-            <a class="prof-head" href="min-side.html">${H.avatar(me, 40)}<span><b>${H.esc(S.user.name)}</b><span class="meta">Gå til Min side</span></span></a>
+            <a class="pm-head" href="min-side.html">${H.avatar(me, 40)}<span><b>${H.esc(S.user.name)}</b><span class="meta">Gå til Min side</span></span></a>
             <a role="menuitem" href="mine-oppdrag.html">${H.icon('clipboard', 18)}Mine oppdrag${badge(act)}</a>
             <a role="menuitem" href="meldinger.html">${H.icon('chat', 18)}Meldinger${badge(unread)}</a>
             <a role="menuitem" href="lagret.html">${H.icon('heart', 18)}Lagret</a>

@@ -179,9 +179,9 @@ body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
 .prof-menu svg{flex:none;color:var(--muted)}
 .prof-menu .count{margin-left:auto;background:var(--accent);color:var(--on-accent)}
 .prof-menu hr{border:0;border-top:1px solid var(--line);margin:6px 2px}
-.prof-menu .prof-head{gap:12px;padding:8px 10px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);border-radius:8px 8px 0 0}
-.prof-head > span{display:flex;flex-direction:column;min-width:0}
-.prof-head b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prof-menu .pm-head{gap:12px;padding:8px 10px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);border-radius:8px 8px 0 0}
+.pm-head > span{display:flex;flex-direction:column;min-width:0}
+.pm-head b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .drawer .drawer-in{display:flex;flex-direction:column}
 .drawer .drawer-me{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:0;color:var(--fg);text-decoration:none}
 .drawer-me > span{display:flex;flex-direction:column;min-width:0}
@@ -200,17 +200,23 @@ body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
 /* bunnmeny på mobil (lages i js/app.js) */
 .tabbar{display:none}
 @media (max-width:760px){
-  body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
-  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg);border-top:1px solid var(--line);padding:4px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px))}
+  /* Safari på iPhone setter allerede av plass til sin egen verktøylinje. Den sikre sonen nederst
+     begrenses derfor, så det ikke blir et stort tomt felt under fanene. */
+  :root{--tab-inset:min(env(safe-area-inset-bottom,0px),12px)}
+  body{padding-bottom:calc(64px + var(--tab-inset))}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg);border-top:1px solid var(--line);padding:4px max(4px,env(safe-area-inset-right,0px)) calc(6px + var(--tab-inset)) max(4px,env(safe-area-inset-left,0px))}
   .tabbar a{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;white-space:nowrap}
   .tabbar a:hover{color:var(--fg)}
   .tabbar a[aria-current="page"]{color:var(--accent-ink);font-weight:700}
-  .tabbar .dot{top:4px;right:auto;left:calc(50% + 6px)}
+  .tabbar .dot{top:3px;right:auto;left:calc(50% + 10px)}
+  /* Den aktive fanen får en boble rett rundt ikonet */
+  .tabbar a > svg{box-sizing:content-box;padding:4px 16px;border-radius:999px}
+  .tabbar a[aria-current="page"] > svg{background:var(--accent-soft)}
   .usernav .hide-sm,.usernav a[href="assistent.html"]{display:none}
   .usernav .add-sm{display:inline-flex;width:36px;height:36px;border-radius:50%;margin-inline:2px;background:var(--accent);color:var(--on-accent)}
   .usernav .add-sm:hover{background:var(--accent-hover);color:var(--on-accent)}
-  .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
-  .cookie{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .toast{bottom:calc(80px + var(--tab-inset))}
+  .cookie{bottom:calc(76px + var(--tab-inset))}
   .cmpbar{bottom:76px}
   body[data-page="meldinger"] .inbox{grid-template-columns:minmax(0,1fr)}
   .foot{margin-top:32px}
@@ -259,10 +265,7 @@ body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
   .section-head > a:hover{translate:3px 0}
 
   /* bunnmenyen: en myk boble bak den aktive fanen, og ikonet hopper litt */
-  .tabbar a::before{content:"";position:absolute;top:5px;left:50%;width:52px;height:30px;margin-left:-26px;border-radius:15px;background:var(--accent-soft);opacity:0;transform:scale(.5);transition:opacity .25s var(--ease),transform .35s var(--ease)}
-  .tabbar a[aria-current="page"]::before{opacity:1;transform:none}
-  .tabbar a > svg,.tabbar a > span{position:relative}
-  .tabbar a > svg{transition:transform .2s var(--ease)}
+  .tabbar a > svg{transition:transform .2s var(--ease),background .25s var(--ease)}
   .tabbar a[aria-current="page"] > svg{animation:pop .45s var(--ease)}
   .tabbar.ready a[aria-current="page"] > svg{animation:none}
   .tabbar a:active > svg{transform:scale(.85)}
