@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="css/style.css?v=57fd1bf4">
+<link rel="stylesheet" href="css/style.css?v=171c1b60">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -42,8 +42,8 @@
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="js/app.js?v=6da89ea4"></script>
-<script src="js/cloud.js?v=0fa8c3dc"></script>
+<script src="js/app.js?v=c568e9b8"></script>
+<script src="js/cloud.js?v=eff5e214"></script>
 <script type="text/freelio">
 let cat = H.qs('kat') || 'alle', sel = null;
 const CFG = window.FREELIO_CONFIG || {};
@@ -51,7 +51,6 @@ const CFG = window.FREELIO_CONFIG || {};
 // Går ingen av dem, vises det enkle kartet med nålene slik det var før.
 const M = { kind: null, map: null, layer: null, markers: {}, fitted: false, pos: {} };
 const current = () => H.all().filter((f) => H.inCat(f, cat)).sort((a, b) => a.km - b.km);
-const priceTag = (f) => H.kr(f.from).replace(' kr', '');
 // Flytter nålen litt, likt hver gang, så hjemmeadressen ikke vises nøyaktig
 const jitter = (id) => { let h = 7; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0; h >>>= 0; return [((h % 1000) / 1000 - 0.5) * 0.012, (((h >>> 10) % 1000) / 1000 - 0.5) * 0.02]; };
 const areaKey = (f) => String(f.area || '').trim().toLowerCase();
@@ -66,36 +65,74 @@ function render() {
   if (!list.find((f) => f.id === sel)) sel = list[0] ? list[0].id : null;
   document.getElementById('chips').innerHTML = [{ id: 'alle', name: 'Alle' }].concat(HDATA.CATS).map((c) => `<button class="chip" data-a="cat" data-v="${c.id}" aria-pressed="${cat === c.id}">${c.name}</button>`).join('');
   document.getElementById('list').innerHTML = list.length ? list.map((f) => `<button class="li ${f.id === sel ? 'on' : ''}" data-a="sel" data-v="${f.id}">${f.photo ? H.avatar(f, 56) : H.ph(f)}<span class="stack grow" style="gap:2px"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small">${H.star(12)} ${H.ratingTxt(f)} · ${H.priceTxt(f)}</span></span></button>`).join('') : '<div class="empty">Ingen i denne kategorien i nærheten.</div>';
-  document.getElementById('pins').innerHTML = M.kind ? '' : list.map((f) => `<button class="pin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${priceTag(f)}${f.unit ? '<span class="sr">' + H.esc(f.unit) + '</span>' : ''}</button>`).join('');
+  document.getElementById('pins').innerHTML = M.kind ? '' : list.map((f) => `<button class="pin dotpin ${f.id === sel ? 'on' : ''}" style="left:${f.mx}%;top:${f.my}%" data-a="sel" data-v="${f.id}" aria-label="${H.esc(f.name)}, ${H.priceTxt(f)}">${dotHTML(f, f.id === sel)}</button>`).join('');
   const f = sel && H.byId(sel);
   document.getElementById('mcard').innerHTML = f ? `<div class="mapcard">${f.photo ? H.avatar(f, 72) : H.ph(f)}<div class="stack grow" style="gap:2px;min-width:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(f.role)} · ${H.esc(f.area)}</span><span class="small"><b>${H.ratingTxt(f)}</b> · ${H.priceTxt(f)}</span></div><a class="btn dark sm" href="frilanser.html?id=${f.id}">Se profil</a></div>` : '';
   drawPins(list);
   locate(list);
 }
 
+// Nålene er runde prikker med bildet fra kortet på forsiden (ikke bannerbildet). Mangler det, brukes
+// profilbildet, så første bilde i porteføljen, og bannerbildet bare hvis det ikke finnes noe annet. Står flere tett når du har zoomet ut,
+// slås de sammen til en boble med antallet. Klikk på boblen, eller zoom inn, så sprer de seg igjen.
+const imgOf = (f) => { const u = (x) => x && (x.thumb || x.url); return u(f.cardImg) || f.photo || u((f.portfolio || []).find((p) => p.type !== 'video')) || u(f.coverImg) || ''; };
+const dotHTML = (f, on) => { const src = imgOf(f); return `<span class="mdot${on ? ' on' : ''}">${src ? `<img src="${H.esc(src)}" alt="" loading="lazy" draggable="false">` : `<b>${H.esc(String(f.name || '?').trim().charAt(0).toUpperCase())}</b>`}</span>`; };
+const countTxt = (n) => (n < 10 ? String(n) : Math.floor(n / 10) * 10 + '+');
+const cluHTML = (n, on) => `<span class="mclu${n >= 10 ? ' big' : ''}${on ? ' on' : ''}">${countTxt(n)}</span>`;
+// Posisjon i piksler på et zoomnivå (Web Mercator, det samme som kartene bruker)
+const px = (p, z) => { const s = 256 * 2 ** z, sin = Math.sin((p[0] * Math.PI) / 180); return [((p[1] + 180) / 360) * s, (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * s]; };
+const CLU_R = 56, CLU_MAXZ = 15;
+function groups(list, z) {
+  const items = list.map((f) => ({ f, p: posOf(f) })).filter((x) => x.p);
+  const out = [];
+  items.forEach((it) => {
+    if (z >= CLU_MAXZ) { out.push({ items: [it] }); return; }
+    const q = px(it.p, z), c = out.find((g) => Math.hypot(g.q[0] - q[0], g.q[1] - q[1]) < CLU_R);
+    if (c) c.items.push(it); else out.push({ q, items: [it] });
+  });
+  out.forEach((g) => { const n = g.items.length; g.p = [g.items.reduce((s, x) => s + x.p[0], 0) / n, g.items.reduce((s, x) => s + x.p[1], 0) / n]; g.on = g.items.some((x) => x.f.id === sel); });
+  return { items, groups: out };
+}
+
 function drawPins(list = current()) {
   if (!M.map) return;
   if (M.kind === 'osm') {
+    const all = list.map(posOf).filter(Boolean);
+    if (!M.fitted && all.length) { M.fitted = true; M.map.fitBounds(L.latLngBounds(all).pad(0.4), { maxZoom: 12, animate: false }); }
     M.layer.clearLayers();
-    const pts = [];
-    list.forEach((f) => {
-      const p = posOf(f); if (!p) return; pts.push(p);
-      const icon = L.divIcon({ className: 'lpin-wrap', html: `<span class="lpin${f.id === sel ? ' on' : ''}">${priceTag(f)}</span>`, iconSize: null });
-      L.marker(p, { icon, title: f.name + ', ' + H.priceTxt(f), alt: f.name, zIndexOffset: f.id === sel ? 1000 : 0 }).on('click', () => pick(f.id)).addTo(M.layer);
+    groups(list, M.map.getZoom()).groups.forEach((g) => {
+      if (g.items.length === 1) {
+        const f = g.items[0].f, on = f.id === sel;
+        const icon = L.divIcon({ className: 'lpin-wrap', html: dotHTML(f, on), iconSize: [44, 44], iconAnchor: [22, 22] });
+        L.marker(g.p, { icon, title: f.name + ', ' + H.priceTxt(f), alt: f.name, zIndexOffset: on ? 1000 : 0 }).on('click', () => pick(f.id)).addTo(M.layer);
+      } else {
+        const n = g.items.length, b = L.latLngBounds(g.items.map((x) => x.p));
+        const icon = L.divIcon({ className: 'lpin-wrap', html: cluHTML(n, g.on), iconSize: [52, 52], iconAnchor: [26, 26] });
+        L.marker(g.p, { icon, title: `${n} frilansere her. Klikk for å zoome inn`, alt: `${n} frilansere`, zIndexOffset: 500 })
+          .on('click', () => M.map.flyToBounds(b.pad(0.6), { maxZoom: CLU_MAXZ, duration: 0.6 })).addTo(M.layer);
+      }
     });
-    if (!M.fitted && pts.length) { M.fitted = true; M.map.fitBounds(L.latLngBounds(pts).pad(0.4), { maxZoom: 12 }); }
   } else if (M.kind === 'google') {
+    const all = list.map(posOf).filter(Boolean);
+    if (!M.fitted && all.length) {
+      M.fitted = true; const b = new google.maps.LatLngBounds(); all.forEach((p) => b.extend({ lat: p[0], lng: p[1] }));
+      M.map.fitBounds(b, 80); if (all.length === 1) M.map.setZoom(12);
+    }
     Object.values(M.markers).forEach((m) => { m.map = null; });
     M.markers = {};
-    const b = new google.maps.LatLngBounds(); let n = 0;
-    list.forEach((f) => {
-      const p = posOf(f); if (!p) return; n++; b.extend({ lat: p[0], lng: p[1] });
-      const el = document.createElement('span'); el.className = 'lpin g' + (f.id === sel ? ' on' : ''); el.textContent = priceTag(f);
-      const mk = new google.maps.marker.AdvancedMarkerElement({ map: M.map, position: { lat: p[0], lng: p[1] }, content: el, title: f.name + ', ' + H.priceTxt(f), zIndex: f.id === sel ? 1000 : 1 });
-      mk.addListener('click', () => pick(f.id));
-      M.markers[f.id] = mk;
+    groups(list, M.map.getZoom() || 10).groups.forEach((g, i) => {
+      const el = document.createElement('span'); el.className = 'gpin';
+      if (g.items.length === 1) {
+        const f = g.items[0].f; el.innerHTML = dotHTML(f, f.id === sel);
+        const mk = new google.maps.marker.AdvancedMarkerElement({ map: M.map, position: { lat: g.p[0], lng: g.p[1] }, content: el, title: f.name + ', ' + H.priceTxt(f), zIndex: f.id === sel ? 1000 : 1 });
+        mk.addListener('click', () => pick(f.id)); M.markers[f.id] = mk;
+      } else {
+        el.innerHTML = cluHTML(g.items.length, g.on);
+        const b = new google.maps.LatLngBounds(); g.items.forEach((x) => b.extend({ lat: x.p[0], lng: x.p[1] }));
+        const mk = new google.maps.marker.AdvancedMarkerElement({ map: M.map, position: { lat: g.p[0], lng: g.p[1] }, content: el, title: `${g.items.length} frilansere her`, zIndex: 500 });
+        mk.addListener('click', () => { M.map.fitBounds(b, 120); if ((M.map.getZoom() || 0) > CLU_MAXZ) M.map.setZoom(CLU_MAXZ); }); M.markers['c' + i] = mk;
+      }
     });
-    if (!M.fitted && n) { M.fitted = true; M.map.fitBounds(b, 80); if (n === 1) M.map.setZoom(12); }
   }
 }
 
@@ -119,7 +156,11 @@ function pick(id) {
   sel = id; render();
   const f = H.byId(id), p = f && posOf(f);
   if (!p || !M.map) return;
-  if (M.kind === 'osm') M.map.panTo(p); else M.map.panTo({ lat: p[0], lng: p[1] });
+  // Ligger frilanseren i en gruppe, zoomes det akkurat så langt inn at den står for seg selv
+  const z0 = M.map.getZoom() || 10; let z = z0;
+  while (z < CLU_MAXZ && groups(current(), z).groups.some((g) => g.on && g.items.length > 1)) z++;
+  if (M.kind === 'osm') { if (z > z0) M.map.flyTo(p, z, { duration: 0.6 }); else M.map.panTo(p); }
+  else { M.map.panTo({ lat: p[0], lng: p[1] }); if (z > z0) M.map.setZoom(z); }
 }
 
 function startOSM() {
@@ -128,6 +169,8 @@ function startOSM() {
   M.map = L.map(el, { scrollWheelZoom: true }).setView([59.89, 10.52], 10);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(M.map);
   M.layer = L.layerGroup().addTo(M.map);
+  // Grupperingen avhenger av zoomnivået, så nålene tegnes på nytt når du zoomer
+  M.map.on('zoomend', () => drawPins());
   M.kind = 'osm'; M.fitted = false;
   document.getElementById('map').classList.add('real');
   setTimeout(() => M.map.invalidateSize(), 200);
@@ -140,6 +183,7 @@ function startGoogle() {
     try {
       M.map = new google.maps.Map(document.getElementById('mapx'), { center: { lat: 59.89, lng: 10.52 }, zoom: 10, mapId: CFG.googleMapId || 'DEMO_MAP_ID', clickableIcons: false, streetViewControl: false });
       M.kind = 'google'; M.fitted = false;
+      let lastZ = null; M.map.addListener('idle', () => { const z = M.map.getZoom(); if (z !== lastZ) { lastZ = z; drawPins(); } });
       document.getElementById('map').classList.add('real');
       render();
     } catch (e) { fallback(); }

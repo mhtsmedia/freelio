@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=57fd1bf4">
+<link rel="stylesheet" href="css/style.css?v=171c1b60">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -26,8 +26,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=6da89ea4"></script>
-<script src="js/cloud.js?v=0fa8c3dc"></script>
+<script src="js/app.js?v=c568e9b8"></script>
+<script src="js/cloud.js?v=eff5e214"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   let confirmDel = false;
@@ -39,6 +39,16 @@ if (H.requireLogin()) {
   const pickVis = () => { const v = H.qs('vis') || OLD[location.hash.slice(1)] || ''; return VIEWS[v] ? v : ''; };
   let vis = pickVis();
   const me = () => ({ ini: S.user.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(), col: '#0A0A0B', photo: S.user.photo, photoSrc: S.user.photoSrc });
+  // Varsler fra nettleseren: må tillates én gang. På iPhone virker det bare når Freelio er lagt til på Hjem-skjermen.
+  const askPerm = async () => { if ('Notification' in window && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch (e) {} } };
+  const notifHint = () => {
+    if (!S.notify.push) return '';
+    const box = (t) => `<p class="hint" style="margin:4px 0 8px">${t}</p>`;
+    if (!('Notification' in window)) return box('Du får varsel på siden når et tilbud kommer inn. Denne nettleseren kan ikke vise varsler utenfor siden. På iPhone må Freelio legges til på Hjem-skjermen først.');
+    if (Notification.permission === 'granted') return box('Varsler i nettleseren er på. Du får beskjed om nye tilbud også når Freelio ligger i en fane i bakgrunnen.');
+    if (Notification.permission === 'denied') return box('Nettleseren blokkerer varsler fra Freelio. Tillat dem i innstillingene for nettstedet (hengelåsen ved adressen).');
+    return `<div style="margin:4px 0 10px"><button class="btn soft sm" data-a="askNotif">${H.icon('clock', 16)} Tillat varsler i nettleseren</button></div>`;
+  };
   const sw = (on, a, v, label, sub, dis) => `<div class="toggle"><span><b style="font-size:15px">${label}</b><br><span class="muted small">${sub}</span></span><button class="sw" role="switch" aria-checked="${!!on}" aria-label="${label}" data-a="${a}" data-v="${v}" ${dis ? 'disabled' : ''}></button></div>`;
   const tile = (href, icon, title, sub, v) => `<a href="${href}"${v ? ` data-vis="${v}"` : ''}>${H.icon(icon, 22)}<span><b>${title}</b><span class="meta">${sub}</span></span><i class="chev" aria-hidden="true">${H.icon('next', 18)}</i></a>`;
   // Bestillinger og annonser der noen venter på deg
@@ -100,7 +110,7 @@ if (H.requireLogin()) {
     if (vis === 'varsler') return `<section class="card stack" style="gap:0">
         ${sw(S.notify.push, 'notify', 'push', 'Push-varsler', 'Nye meldinger, tilbud og leveranser.')}
         ${sw(S.notify.email, 'notify', 'email', 'E-post', 'Kvitteringer og viktige endringer.')}
-        ${sw(S.notify.jobs, 'notify', 'jobs', 'Nye oppdrag i ditt fagfelt', 'Bare for frilansere.')}</section>`;
+        ${sw(S.notify.jobs, 'notify', 'jobs', 'Nye oppdrag i ditt fagfelt', 'Bare for frilansere.')}${notifHint()}</section>`;
     return `<section class="card stack" style="gap:0" id="cookies"><h2 style="font-size:20px;margin-bottom:6px">Cookies</h2>
         ${sw(true, '', '', 'Nødvendige', 'Innlogging, sikkerhet og betaling. Kan ikke slås av.', true)}
         ${sw(S.cookies.analyse, 'ck', 'analyse', 'Statistikk', 'Hjelper oss å forstå hvordan siden brukes.')}
@@ -128,7 +138,8 @@ if (H.requireLogin()) {
   Object.assign(H.actions, {
     logout: () => { S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
     togglePub: () => { S.profile.published = !S.profile.published; H.save(); H.toast(S.profile.published ? 'Profilen er synlig igjen.' : 'Profilen er skjult fra søk.'); render(); },
-    notify: (v) => { S.notify[v] = !S.notify[v]; H.save(); render(); },
+    notify: async (v) => { S.notify[v] = !S.notify[v]; if (v === 'push' && S.notify.push) await askPerm(); H.save(); render(); },
+    askNotif: async () => { await askPerm(); render(); },
     ck: (v) => { S.cookies[v] = !S.cookies[v]; S.cookie = 'custom'; H.save(); H.toast('Cookie-valget er lagret.'); render(); },
     export: () => {
       const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });

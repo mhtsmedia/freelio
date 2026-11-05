@@ -446,7 +446,7 @@ select.inp{padding-right:8px}
 .lb-dl{background:#fff;color:#0A0A0B}
 .lb-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 64px 24px;position:relative}
 .lb-stage img,.lb-stage video{max-width:100%;max-height:100%;border-radius:8px;animation:rise .35s var(--ease)}
-.lb-wm{position:absolute;right:76px;bottom:40px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.5);padding:6px 10px;border-radius:999px;pointer-events:none}
+.lb-wmov{position:absolute;inset:0 64px 24px;pointer-events:none;background-repeat:repeat;border-radius:8px}
 /* Pilene sentreres med top, ikke transform: knappene krymper med transform når de trykkes,
    og da hoppet pilen ned midt i klikket, så klikket havnet utenfor. */
 .lb-nav{position:absolute;top:calc(50% - 20px);z-index:2}
@@ -455,7 +455,7 @@ select.inp{padding-right:8px}
 .lb-nav.prev{left:12px}.lb-nav.next{right:12px}
 /* Mobil: pilene ligger midt på sidene, over bildet. Helt nederst på skjermen tar Safari på iPhone
    trykket selv (for å vise verktøylinjen igjen), så der virket de ikke. */
-@media (max-width:600px){.lb-stage{padding:0 8px calc(16px + env(safe-area-inset-bottom,0px))}.lb .lb-nav{width:44px;height:44px;top:calc(50% - 22px)}.lb-nav.prev{left:10px}.lb-nav.next{right:10px}.lb-wm{right:16px;bottom:calc(28px + env(safe-area-inset-bottom,0px))}}
+@media (max-width:600px){.lb-stage{padding:0 8px calc(16px + env(safe-area-inset-bottom,0px))}.lb .lb-nav{width:44px;height:44px;top:calc(50% - 22px)}.lb-nav.prev{left:10px}.lb-nav.next{right:10px}.lb-wmov{inset:0 8px calc(16px + env(safe-area-inset-bottom,0px))}}
 
 @keyframes drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .maplist > *{flex-shrink:0}
@@ -742,3 +742,53 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .lpin.on{background:var(--accent);color:var(--on-accent)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mapx .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}}
 :root[data-theme="dark"] .mapx .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
+
+/* Varsler (nye tilbud) */
+.ntf-box{position:fixed;top:76px;right:16px;z-index:150;display:flex;flex-direction:column;gap:8px;width:min(380px,calc(100vw - 32px));pointer-events:none}
+.ntf{pointer-events:auto;display:flex;align-items:center;gap:4px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:10px 6px 10px 12px;animation:ntf-in .35s var(--ease)}
+.ntf.out{opacity:0;transform:translateY(-6px);transition:opacity .25s,transform .25s}
+.ntf-main{display:flex;align-items:center;gap:12px;flex:1;min-width:0;color:inherit;text-decoration:none}
+.ntf-main > span{display:flex;flex-direction:column;min-width:0}
+.ntf-main b{font-size:14px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ntf-main .meta{font-size:13px}
+.ntf-ico{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft,var(--surface));color:var(--accent,var(--fg))}
+.ntf-x{flex:none;width:32px;height:32px}
+@keyframes ntf-in{from{opacity:0;transform:translateY(-8px)}}
+@media (max-width:600px){.ntf-box{top:calc(8px + env(safe-area-inset-top,0px));left:8px;right:8px;width:auto}}
+
+/* Kart: prikker med forsidebilde, og bobler med antall når flere står tett */
+.lpin-wrap{display:grid;place-items:center}
+.mdot{display:block;box-sizing:border-box;width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--accent);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s var(--ease),border-color .2s;animation:mpop .3s var(--ease)}
+.mdot img{width:100%;height:100%;object-fit:cover;display:block}
+.mdot b{display:grid;place-items:center;width:100%;height:100%;color:var(--on-accent);font:700 16px var(--f-body)}
+.mdot:hover{transform:scale(1.1)}
+.mdot.on{border-color:var(--accent);transform:scale(1.2);box-shadow:0 0 0 3px #fff,0 6px 16px rgba(0,0,0,.35)}
+.mclu{display:grid;place-items:center;box-sizing:border-box;width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);border:3px solid #fff;font:800 15px var(--f-body);box-shadow:0 0 0 5px rgba(255,255,255,.45),0 3px 12px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s var(--ease);animation:mpop .3s var(--ease)}
+.mclu.big{width:52px;height:52px;font-size:14px}
+.mclu:hover{transform:scale(1.08)}
+.mclu.on{box-shadow:0 0 0 4px var(--bg),0 0 0 7px var(--accent),0 3px 12px rgba(0,0,0,.3)}
+.gpin{display:block;transform:translateY(50%)}
+.pin.dotpin{padding:0;height:auto;background:none;box-shadow:none;border-radius:50%}
+.pin.dotpin.on{background:none}
+@keyframes mpop{from{transform:scale(.4);opacity:0}}
+@media (prefers-reduced-motion: reduce){.mdot,.mclu{animation:none}}
+
+/* Vedlegg i meldinger */
+.bubble.has-att{display:flex;flex-direction:column;gap:6px;padding:6px;white-space:normal}
+.att{display:flex;align-items:center;gap:10px;width:100%;min-width:210px;max-width:280px;text-align:left;padding:10px 12px;border-radius:12px;border:0;background:rgba(255,255,255,.18);color:inherit;cursor:pointer;font:inherit}
+.bubble.them .att{background:var(--bg)}
+.att:hover{filter:brightness(1.06)}
+.att > span{display:flex;flex-direction:column;min-width:0;flex:1}
+.att b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att .meta{color:inherit;opacity:.75}
+.att-img{display:block;padding:0;border:0;border-radius:12px;overflow:hidden;cursor:zoom-in;background:rgba(127,127,127,.15);max-width:260px}
+.att-img img{display:block;width:100%;min-width:160px;min-height:120px;max-height:320px;object-fit:cover}
+.att-img.gone{cursor:default;opacity:.5}
+.att-txt{padding:2px 8px 4px;white-space:pre-line}
+.att-btn{flex:none;width:44px;height:44px;border-radius:22px}
+.att-pending{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px 0;border-top:1px solid var(--line)}
+.att-pending + .composer{border-top:0}
+.att-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 4px 4px 10px;border-radius:999px;background:var(--surface);font-size:13px}
+.att-chip > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.att-chip button{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
+.att-chip button:hover{background:var(--line)}

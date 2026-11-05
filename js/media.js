@@ -24,24 +24,62 @@ window.Media = (function () {
   const canvasBlob = (cv, q) => new Promise((res) => cv.toBlob((b) => (b && b.type === 'image/webp' ? res(b) : cv.toBlob(res, 'image/jpeg', q)), 'image/webp', q));
   const fit = (w, h, max) => { const k = Math.min(1, max / Math.max(w, h)); return [Math.round(w * k), Math.round(h * k)]; };
   const draw = (src, w, h, max) => { const [cw, ch] = fit(w, h, max); const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; cv.getContext('2d').drawImage(src, 0, 0, cw, ch); return cv; };
-  // Vannmerke på forhåndsvisningene kunden ser før godkjenning. Det brennes inn i bildet, så det
-  // ikke kan fjernes ved å laste ned forhåndsvisningen. Originalen er urørt og låses opp ved godkjenning.
-  const WM_TEXT = 'FREELIO · FORHÅNDSVISNING';
-  const watermark = (cv) => {
-    const g = cv.getContext('2d'), w = cv.width, h = cv.height;
-    const size = Math.max(11, Math.round(Math.min(w, h) / 16));
-    g.save();
-    g.translate(w / 2, h / 2); g.rotate(-Math.PI / 7);
-    g.font = `800 ${size}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.lineJoin = 'round'; g.lineWidth = Math.max(1, size / 12);
-    g.strokeStyle = 'rgba(0,0,0,0.28)'; g.fillStyle = 'rgba(255,255,255,0.42)';
-    const tw = g.measureText(WM_TEXT).width + size * 2.5, lh = size * 3.4, r = Math.hypot(w, h) / 2 + tw;
-    for (let row = 0, y = -r; y <= r; row++, y += lh) {
-      for (let x = -r + (row % 2) * tw / 2; x <= r; x += tw) { g.strokeText(WM_TEXT, x, y); g.fillText(WM_TEXT, x, y); }
-    }
+  // Vannmerke på forhåndsvisningene kunden ser før godkjenning. Det brennes inn i bildet (og i hvert bilde
+  // i videoen), så det ikke kan fjernes ved å laste ned forhåndsvisningen. Originalen er urørt og låses opp
+  // ved godkjenning. Et lite Freelio-merke gjentas på skrå over hele flaten, pluss en liten etikett nede til høyre.
+  const LOGO = window.FREELIO_LOGO;
+  let P = null;
+  const paths = () => P || (P = LOGO && window.Path2D ? { m: new Path2D(LOGO.mark.d), w: new Path2D(LOGO.word.d) } : {});
+  // Ett stempel: merket og ordet «freelio» i hvitt med en tynn mørk kant under, så det synes både på lyse
+  // og mørke bilder. s er høyden på merket i piksler.
+  const stamp = (s) => {
+    const p = paths(), mw = (s * 852) / 1180, wh = s * 0.4, ww = (wh * 1137) / 293, gap = s * 0.22, pad = Math.ceil(s * 0.35);
+    const c = document.createElement('canvas'); c.width = Math.ceil(mw + gap + ww + pad * 2); c.height = Math.ceil(s + pad * 2);
+    const g = c.getContext('2d'), o = Math.max(1, s * 0.05);
+    const draw = (ox, oy) => {
+      if (!p.m) { g.font = `700 ${Math.round(s * 0.8)}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.fillText('freelio', pad + ox, c.height / 2 + oy); return; }
+      g.save(); g.translate(pad + ox, pad + oy); g.scale(s / 1180, s / 1180); g.fill(p.m, 'evenodd'); g.restore();
+      g.save(); g.translate(pad + mw + gap + ox, pad + s * 0.47 - wh / 2 + oy); g.scale(wh / 293, wh / 293); g.fill(p.w, 'evenodd'); g.restore();
+    };
+    g.fillStyle = 'rgba(0,0,0,0.5)'; g.filter = `blur(${Math.max(0.5, s * 0.04)}px)`; draw(o * 0.6, o);
+    g.filter = 'none'; g.fillStyle = '#fff'; draw(0, 0);
+    return c;
+  };
+  // Hele vannmerket som et gjennomsiktig lag i størrelsen w x h
+  const layer = (w, h) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'), m = Math.min(w, h);
+    const st = stamp(Math.max(8, Math.round(m * 0.042)));
+    const dx = st.width * 2.3, dy = st.height * 2.9, r = Math.hypot(w, h) / 2 + dx;
+    g.save(); g.globalAlpha = 0.42; g.translate(w / 2, h / 2); g.rotate(-Math.PI / 10);
+    for (let row = 0, y = -r; y <= r; row++, y += dy) for (let x = -r + (row % 2) * (dx / 2); x <= r; x += dx) g.drawImage(st, Math.round(x - st.width / 2), Math.round(y - st.height / 2));
     g.restore();
-    return cv;
+    // Etiketten. Den droppes på små miniatyrer, der den bare ville blitt støy.
+    if (m >= 400) {
+      const fs = Math.max(10, Math.round(m * 0.024)), padX = fs * 0.95, bh = Math.round(fs * 2.2), mk = fs * 1.1, mkw = (mk * 852) / 1180, gp = fs * 0.55, mg = Math.round(fs * 1.2);
+      g.font = `600 ${fs}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+      if ('letterSpacing' in g) g.letterSpacing = (fs * 0.12).toFixed(1) + 'px';
+      const label = 'FORHÅNDSVISNING', tw = g.measureText(label).width, p = paths();
+      const bw = Math.round(padX * 2 + (p.m ? mkw + gp : 0) + tw), bx = w - mg - bw, by = h - mg - bh;
+      g.fillStyle = 'rgba(12,12,14,0.6)'; g.beginPath();
+      if (g.roundRect) g.roundRect(bx, by, bw, bh, bh / 2); else g.rect(bx, by, bw, bh);
+      g.fill();
+      g.fillStyle = '#fff';
+      let tx = bx + padX;
+      if (p.m) { g.save(); g.translate(tx, by + (bh - mk) / 2 + mk * 0.04); g.scale(mk / 1180, mk / 1180); g.fill(p.m, 'evenodd'); g.restore(); tx += mkw + gp; }
+      g.textBaseline = 'middle'; g.fillText(label, tx, by + bh / 2 + fs * 0.06);
+    }
+    return c;
+  };
+  const watermark = (cv) => { cv.getContext('2d').drawImage(layer(cv.width, cv.height), 0, 0); return cv; };
+  // Mønsteret som en flis, til eldre videoer som ble lastet opp før vannmerket ble brent inn
+  let tileUrl = '';
+  const wmTile = () => {
+    if (tileUrl) return tileUrl;
+    const st = stamp(16), dx = Math.round(st.width * 2.3), dy = Math.round(st.height * 2.9);
+    const c = document.createElement('canvas'); c.width = dx; c.height = dy * 2;
+    const g = c.getContext('2d'); g.globalAlpha = 0.42; g.drawImage(st, 0, 0); g.drawImage(st, Math.round(dx / 2), dy);
+    return (tileUrl = c.toDataURL('image/png'));
   };
 
   async function fromImage(file) {
@@ -75,33 +113,40 @@ window.Media = (function () {
   async function add(orderId, file, onProgress) {
     const isVideo = file.type.startsWith('video/');
     if (!isVideo && !file.type.startsWith('image/')) throw new Error('Bare bilder og video kan lastes opp');
+    if (cloud() && file.size > MAX_FILE) throw new Error('Filen er større enn ' + size(MAX_FILE) + '. Del den opp eller send den på en annen måte.');
+    const say = (t) => onProgress && onProgress(t);
     const p = isVideo ? await fromVideo(file) : await fromImage(file);
+    // «stream» er videoen kunden ser før godkjenning: en mindre utgave med vannmerket brent inn i hvert bilde.
+    // Originalen lagres for seg og er låst til kunden har godkjent. wm = 1 betyr at videoen har vannmerke.
+    let stream = null, wm = 0;
+    if (isVideo) {
+      try { stream = await H.fitVideo(file, (pc) => say(`Legger vannmerke på videoen … ${pc} %`), { max: CHUNK, minBr: 150000, long: 1280, maxBr: 2500000, overlay: layer }); wm = 1; }
+      catch (e) {
+        // Nettleseren kan ikke lage vannmerke på video. Da vises vannmerket oppå videoen i stedet.
+        console.warn('Vannmerke på video:', e);
+        stream = file.size <= CHUNK ? file : await H.fitVideo(file, (pc) => say(`Lager forhåndsvisning … ${pc} %`), { max: CHUNK, minBr: 150000 });
+      }
+    }
     const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     let parts = 0;
     if (cloud()) {
-      if (file.size > MAX_FILE) throw new Error('Filen er større enn ' + size(MAX_FILE) + '. Del den opp eller send den på en annen måte.');
       const st = Cloud.sb.storage.from(BUCKET);
       const up = async (path, blob) => {
         const r = await st.upload(`${orderId}/${id}/${path}`, blob, { contentType: blob.type || file.type || 'application/octet-stream', upsert: false });
         if (r.error) throw new Error(r.error.message);
       };
-      const say = (t) => onProgress && onProgress(t);
       await up('thumb', p.thumb); await up('preview', p.preview);
-      if (isVideo) {
-        // «stream» er versjonen kunden ser før godkjenning. Store videoer får en mindre utgave.
-        const stream = file.size <= CHUNK ? file : await H.fitVideo(file, (pc) => say(`Lager forhåndsvisning … ${pc} %`), { max: CHUNK, minBr: 150000 });
-        say('Laster opp forhåndsvisning …'); await up('stream', stream);
-      }
+      if (isVideo) { say('Laster opp forhåndsvisning …'); await up('stream', stream); }
       // Originalen. Over 45 MB deles den i biter (Supabase gratis tar maks 50 MB per fil). Låst til kunden har godkjent.
-      if (!isVideo || file.size > CHUNK) {
-        if (file.size <= CHUNK) await up('original', file);
+      if (!isVideo || wm || file.size > CHUNK) {
+        if (file.size <= CHUNK) { say('Laster opp original …'); await up('original', file); }
         else {
           parts = Math.ceil(file.size / CHUNK);
           for (let i = 0; i < parts; i++) { say(`Laster opp original … ${Math.round((i / parts) * 100)} %`); await up(`original/${i}`, file.slice(i * CHUNK, (i + 1) * CHUNK, 'application/octet-stream')); }
         }
       }
-    } else await put({ id, orderId, name: file.name, mime: file.type, original: file, preview: p.preview, thumb: p.thumb });
-    return { id, name: file.name, type: p.type, mime: file.type, size: file.size, psize: p.preview.size, w: p.w, h: p.h, duration: p.duration || 0, parts };
+    } else await put({ id, orderId, name: file.name, mime: file.type, original: file, preview: p.preview, thumb: p.thumb, stream });
+    return { id, name: file.name, type: p.type, mime: file.type, size: file.size, psize: p.preview.size, w: p.w, h: p.h, duration: p.duration || 0, parts, wm };
   }
 
   // Lager eksempelfiler, så flyten kan testes uten egne bilder
@@ -135,7 +180,8 @@ window.Media = (function () {
   /* ---------- felles for demo (IndexedDB) og Supabase Storage ---------- */
   const BUCKET = 'deliveries', CHUNK = 45 * 1024 * 1024, MAX_FILE = 4 * 1024 * 1024 * 1024;
   const cloud = () => window.Cloud && Cloud.on && Cloud.sb;
-  const kindFor = (meta, kind) => (kind === 'original' && meta.type === 'video' ? 'stream' : kind);
+  // Eldre videoer (uten wm) hadde ingen egen original: der var «stream» selve originalen
+  const kindFor = (meta, kind) => (kind === 'original' && meta.type === 'video' && !meta.wm ? 'stream' : kind);
   const urlCache = {};
   // Adresse til en fil for visning: thumb, preview eller original
   async function url(orderId, meta, kind) {
@@ -147,7 +193,7 @@ window.Media = (function () {
       return (urlCache[k] = r.data.signedUrl);
     }
     const rec = await get(meta.id);
-    return rec ? (urlCache[k] = URL.createObjectURL(rec[kind])) : '';
+    return rec ? (urlCache[k] = URL.createObjectURL(rec[kind] || rec.original)) : '';
   }
   // Last ned originalen i full kvalitet
   async function save(orderId, meta, onProgress) {
@@ -166,7 +212,7 @@ window.Media = (function () {
       return true;
     }
     if (cloud()) {
-      const r = await Cloud.sb.storage.from(BUCKET).createSignedUrl(`${orderId}/${meta.id}/${meta.type === 'video' ? 'stream' : 'original'}`, 300, { download: meta.name });
+      const r = await Cloud.sb.storage.from(BUCKET).createSignedUrl(`${orderId}/${meta.id}/${kindFor(meta, 'original')}`, 300, { download: meta.name });
       if (r.error) return false;
       const a = document.createElement('a'); a.href = r.data.signedUrl; a.download = meta.name; document.body.appendChild(a); a.click(); a.remove();
       return true;
@@ -178,11 +224,11 @@ window.Media = (function () {
   }
   async function discard(orderId, meta) {
     if (cloud()) {
-      const paths = ['thumb', 'preview', meta.type === 'video' ? 'stream' : 'original'].concat(Array.from({ length: meta.parts || 0 }, (_, i) => 'original/' + i));
+      const paths = ['thumb', 'preview', 'stream', 'original'].concat(Array.from({ length: meta.parts || 0 }, (_, i) => 'original/' + i));
       await Cloud.sb.storage.from(BUCKET).remove(paths.map((k) => `${orderId}/${meta.id}/${k}`)); return;
     }
     return remove(meta.id);
   }
 
-  return { add, sample, get, byOrder, remove, removeOrder, url, save, discard, size, dur, download, supported: 'indexedDB' in window || !!cloud() };
+  return { add, sample, get, byOrder, remove, removeOrder, url, save, discard, size, dur, download, wmLayer: layer, wmTile, supported: 'indexedDB' in window || !!cloud() };
 })();

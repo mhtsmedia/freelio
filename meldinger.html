@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=57fd1bf4">
+<link rel="stylesheet" href="css/style.css?v=171c1b60">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -26,12 +26,26 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=a40d434d"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=6da89ea4"></script>
-<script src="js/cloud.js?v=0fa8c3dc"></script>
+<script src="js/app.js?v=c568e9b8"></script>
+<script src="js/cloud.js?v=eff5e214"></script>
+<script src="js/vedlegg.js?v=d6cbec62"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   let cur = H.qs('med');
   let typing = false;
+  // Vedlegg som er valgt men ikke sendt, teksten du holder på å skrive, og status mens filene lastes opp
+  let pending = [], draft = '', sending = '';
+  const canAttach = () => !!(window.Cloud && Cloud.on && window.Vedlegg);
+  const kb = (b) => (b >= 1e6 ? (b / 1e6).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round((b || 0) / 1e3)) + ' kB');
+  // En melding. Med vedlegg vises bilder rett i samtalen og andre filer som et kort du kan laste ned.
+  const bubble = (m, i) => {
+    const files = window.Vedlegg ? (m.files || []).filter(Vedlegg.valid) : [];
+    if (!files.length) return `<div class="bubble ${m.who}">${H.esc(m.text)}</div>`;
+    const onlyFiles = m.text === Vedlegg.label(files);
+    return `<div class="bubble ${m.who} has-att">${files.map((x, k) => Vedlegg.isImage(x)
+      ? `<button type="button" class="att-img" data-a="att" data-v="${i}:${k}" aria-label="Åpne bildet ${H.esc(x.n)}"><img data-att="${i}:${k}" alt=""></button>`
+      : `<button type="button" class="att" data-a="att" data-v="${i}:${k}" aria-label="Last ned ${H.esc(x.n)}">${H.icon('file', 22)}<span><b>${H.esc(x.n)}</b><span class="meta">${kb(x.s)}</span></span>${H.icon('download', 18)}</button>`).join('')}${onlyFiles ? '' : `<span class="att-txt">${H.esc(m.text)}</span>`}</div>`;
+  };
   if (cur && !H.partner(cur)) cur = null;
   function render() {
     const S = H.S;
@@ -49,27 +63,66 @@ if (H.requireLogin()) {
       convo = `<div class="convo-h"><button class="ibtn plain" data-a="close" aria-label="Tilbake til samtaler">${H.icon('back', 20, 2)}</button>${H.avatar(f, 38)}<div class="grow stack" style="gap:0">${f.customer ? `<b style="font-weight:800">${H.esc(f.name)}</b><span class="meta">Kunde</span>` : `<a href="frilanser.html?id=${f.id}" style="color:var(--fg);font-weight:800">${H.esc(f.name)}</a><span class="meta">Svarer vanligvis innen ${H.esc(f.resp)}</span>`}</div>${f.customer ? '' : `<a class="btn dark sm" href="book.html?id=${f.id}">Book</a>`}</div>
         <div class="msgs" id="msgs"><div class="bubble sys" style="background:var(--surface);color:var(--muted)">Hold samtalen her. Da er avtalen og betalingen beskyttet.</div>
         ${t.length ? '' : `<div class="empty" style="border:0">${f.customer ? 'Ingen meldinger ennå.' : `Skriv hva du trenger, når og hvor. ${H.esc(H.first(f.name))} svarer med pris og ledighet.`}</div>`}
-        ${t.map((m) => `<div class="bubble ${m.who}">${H.esc(m.text)}</div>`).join('')}${typing ? `<div class="typing">${H.esc(H.first(f.name))} skriver …</div>` : ''}</div>
+        ${t.map(bubble).join('')}${typing ? `<div class="typing">${H.esc(H.first(f.name))} skriver …</div>` : ''}</div>
         ${f.customer ? '' : `<div class="chips scroll" style="padding:8px 12px 0">${['Er du ledig 14.11?', 'Hva koster det?', 'Kan vi ta en prat på telefon?'].map((q) => `<button class="chip" data-a="quick" data-v="${q}">${q}</button>`).join('')}</div>`}
-        ${f.gone ? `<div class="hint" style="padding:14px 16px;border-top:1px solid var(--line);text-align:center">Kunden har slettet kontoen sin. Du kan lese samtalen, men ikke svare.</div>` : `<form class="composer" id="cform"><label class="sr" for="msg">Melding</label><input id="msg" maxlength="2000" placeholder="Skriv en melding …" autocomplete="off"><button class="send" aria-label="Send">${H.icon('arrow', 20, 2)}</button></form>`}`;
+        ${f.gone ? `<div class="hint" style="padding:14px 16px;border-top:1px solid var(--line);text-align:center">Kunden har slettet kontoen sin. Du kan lese samtalen, men ikke svare.</div>` : `${pending.length || sending ? `<div class="att-pending">${pending.map((p, k) => `<span class="att-chip">${H.icon('file', 14)}<span>${H.esc(p.name)}</span>${sending ? '' : `<button type="button" data-a="rmAtt" data-v="${k}" aria-label="Fjern ${H.esc(p.name)}">${H.icon('close', 14, 2)}</button>`}</span>`).join('')}${sending ? `<span class="meta">${H.esc(sending)}</span>` : ''}</div>` : ''}<form class="composer" id="cform">${canAttach() ? `<input type="file" id="attIn" class="sr" multiple accept="${Vedlegg.accept}" tabindex="-1" aria-hidden="true"><button type="button" class="ibtn plain att-btn" data-a="pickFiles" aria-label="Legg ved filer" title="Legg ved bilder eller filer" ${sending ? 'disabled' : ''}>${H.icon('clip', 22)}</button>` : ''}<label class="sr" for="msg">Melding</label><input id="msg" maxlength="2000" placeholder="${pending.length ? 'Legg til en melding (valgfritt)' : 'Skriv en melding …'}" autocomplete="off" value="${H.esc(draft)}" ${sending ? 'disabled' : ''}><button class="send" aria-label="Send" ${sending ? 'disabled' : ''}>${H.icon('arrow', 20, 2)}</button></form>`}`;
     }
     box.innerHTML = `<div class="threads">${list}</div><div class="convo">${convo}</div>`;
     const m = document.getElementById('msgs'); if (m) m.scrollTop = m.scrollHeight;
     const form = document.getElementById('cform');
     if (form) form.addEventListener('submit', (e) => { e.preventDefault(); const i = document.getElementById('msg'); send(i.value); });
+    const mi = document.getElementById('msg'); if (mi) mi.addEventListener('input', (e) => (draft = e.target.value));
+    const fi = document.getElementById('attIn'); if (fi) fi.addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
+    // Bildene hentes med lenker som virker en time
+    document.querySelectorAll('img[data-att]').forEach((img) => { const x = attOf(img.dataset.att); if (x) Vedlegg.url(x).then((u) => { img.src = u; }).catch(() => img.closest('.att-img').classList.add('gone')); });
   }
-  function send(text) {
-    if (!text.trim()) return;
-    H.sendMessage(cur, text, (s) => { typing = s === 'typing'; render(); const i = document.getElementById('msg'); if (i) i.focus(); });
+  const attOf = (v) => { const [i, k] = String(v).split(':').map(Number); const m = (H.S.threads[cur] || [])[i]; const x = m && m.files && m.files[k]; return x && Vedlegg.valid(x) ? x : null; };
+  function addFiles(list) {
+    for (const file of list) {
+      if (pending.length >= Vedlegg.MAXN) { H.toast(`Du kan sende høyst ${Vedlegg.MAXN} filer i én melding.`); break; }
+      const err = Vedlegg.check(file); if (err) { H.toast(err); continue; }
+      pending.push(file);
+    }
+    render(); const i = document.getElementById('msg'); if (i) i.focus();
+  }
+  // Bildet i full størrelse, med knapp for å laste det ned
+  async function viewImg(x) {
+    const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', x.n);
+    lb.innerHTML = `<div class="lb-top"><span class="small" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${H.esc(x.n)}</span><div class="row" style="flex-wrap:nowrap"><button type="button" class="btn sm lb-dl" data-x="dl">${H.icon('download', 16, 2)} Last ned</button><button type="button" class="ibtn" data-x="close" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div></div><div class="lb-stage"><img alt="${H.esc(x.n)}"></div>`;
+    const close = () => { lb.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', key); };
+    const key = (e) => { if (e.key === 'Escape') close(); };
+    let downBg = false;
+    lb.addEventListener('pointerdown', (e) => { downBg = e.target === lb || e.target.classList.contains('lb-stage'); });
+    lb.addEventListener('click', (e) => { const b = e.target.closest('[data-x]'); if (b) { if (b.dataset.x === 'close') close(); else Vedlegg.save(x).catch((er) => H.toast(er.message)); return; } if (downBg && (e.target === lb || e.target.classList.contains('lb-stage'))) close(); });
+    document.addEventListener('keydown', key); document.body.appendChild(lb); document.body.style.overflow = 'hidden';
+    lb.querySelector('[data-x="close"]').focus();
+    try { lb.querySelector('.lb-stage img').src = await Vedlegg.url(x); } catch (e) { H.toast(e.message); close(); }
+  }
+  async function send(text) {
+    text = String(text || '').trim();
+    if (sending || (!text && !pending.length)) return;
+    const done = (s) => { typing = s === 'typing'; render(); const i = document.getElementById('msg'); if (i) i.focus(); };
+    if (!pending.length) { draft = ''; H.sendMessage(cur, text, done); return; }
+    // Filene lastes opp først. Meldingen sendes når alle er oppe.
+    const convo = Vedlegg.convo(cur); if (!convo) { H.toast('Logg inn for å sende vedlegg.'); return; }
+    draft = text; const files = [];
+    try {
+      for (let k = 0; k < pending.length; k++) { sending = pending.length === 1 ? 'Laster opp …' : `Laster opp ${k + 1} av ${pending.length} …`; render(); files.push(await Vedlegg.upload(pending[k], convo)); }
+    } catch (e) { sending = ''; render(); H.toast(e.message); return; }
+    sending = ''; pending = []; draft = '';
+    H.sendMessage(cur, text || Vedlegg.label(files), done, files);
   }
   Object.assign(H.actions, {
     open: (v) => { cur = v; history.replaceState(null, '', '?med=' + v); render(); H.mountHeader(); },
     close: () => { cur = null; history.replaceState(null, '', 'meldinger.html'); render(); },
-    quick: (v) => send(v)
+    quick: (v) => send(v),
+    pickFiles: () => { const i = document.getElementById('attIn'); if (i) i.click(); },
+    rmAtt: (v) => { pending.splice(+v, 1); render(); },
+    att: (v) => { const x = attOf(v); if (!x) return; if (Vedlegg.isImage(x)) viewImg(x); else Vedlegg.save(x).catch((e) => H.toast(e.message)); }
   });
   H.boot(render);
   // Hent nye meldinger jevnlig når databasen er koblet til. Venter hvis du holder på å skrive.
-  if (window.Cloud && Cloud.on) setInterval(async () => { if (document.hidden) return; const i = document.getElementById('msg'); if (i && i.value) return; const before = JSON.stringify(H.S.threads); await H.refresh(); if (JSON.stringify(H.S.threads) !== before) { render(); H.mountHeader(); } }, 8000);
+  if (window.Cloud && Cloud.on) setInterval(async () => { if (document.hidden) return; const i = document.getElementById('msg'); if ((i && i.value) || pending.length || sending) return; const before = JSON.stringify(H.S.threads); await H.refresh(); if (JSON.stringify(H.S.threads) !== before) { render(); H.mountHeader(); } }, 8000);
 }
 </script>
 </body>

@@ -127,7 +127,7 @@
         const key = mine ? m.freelancer_id : 'c:' + m.customer_id;
         if (!mine) S.partners[key] = { name: names[m.customer_id] || 'Slettet bruker', photo: photos[m.customer_id] || null, gone: !names[m.customer_id] };
         const who = m.sender === 'system' ? 'sys' : (mine ? (m.sender === 'customer' ? 'me' : 'them') : (m.sender === 'freelancer' ? 'me' : 'them'));
-        (S.threads[key] = S.threads[key] || []).push({ who, text: m.text, at: Date.parse(m.created_at) });
+        (S.threads[key] = S.threads[key] || []).push(Object.assign({ who, text: m.text, at: Date.parse(m.created_at) }, Array.isArray(m.files) && m.files.length ? { files: m.files } : {}));
       });
       orderRows.forEach((r) => { if (r.customer_id !== C.uid) S.partners['c:' + r.customer_id] = { name: names[r.customer_id] || 'Slettet bruker', photo: photos[r.customer_id] || null, gone: !names[r.customer_id] }; });
 
@@ -217,8 +217,8 @@
       list.slice(from).forEach((m) => {
         if (key.startsWith('c:')) {
           if (!S.profile) return;
-          rows.push({ customer_id: key.slice(2), freelancer_id: S.profile.id, sender: m.who === 'sys' ? 'system' : 'freelancer', text: m.text });
-        } else rows.push({ customer_id: C.uid, freelancer_id: key, sender: m.who === 'me' ? 'customer' : m.who === 'sys' ? 'system' : 'freelancer', text: m.text });
+          rows.push(Object.assign({ customer_id: key.slice(2), freelancer_id: S.profile.id, sender: m.who === 'sys' ? 'system' : 'freelancer', text: m.text }, m.files ? { files: m.files } : {}));
+        } else rows.push(Object.assign({ customer_id: C.uid, freelancer_id: key, sender: m.who === 'me' ? 'customer' : m.who === 'sys' ? 'system' : 'freelancer', text: m.text }, m.files ? { files: m.files } : {}));
       });
     }
     if (rows.length) must(await sb.from('messages').insert(rows));
@@ -257,6 +257,26 @@
     chain = chain.then(push).catch((e) => { console.error(e); H.toast('Kunne ikke lagre: ' + errText(e)); snap = takeSnap(); });
   };
   H.flush = () => chain;
+  // Henter nye tilbud på dine åpne oppdrag, til varslene. Nye tilbud legges også i øyeblikksbildet,
+  // så de ikke blir forsøkt lagret på nytt. Gir true hvis det kom noe nytt.
+  H.refreshOffers = async () => {
+    if (!C.ready || !C.uid || !snap) return false;
+    const open = S.myJobs.filter((j) => (j.status || 'open') === 'open');
+    if (!open.length) return false;
+    const r = await sb.from('offers').select('job_id,freelancer_id,price,msg,visible_at,seen').in('job_id', open.map((j) => j.id));
+    if (r.error) return false;
+    let changed = false;
+    r.data.forEach((o) => {
+      const j = open.find((x) => x.id === o.job_id); if (!j) return;
+      j.offersList = j.offersList || [];
+      if (j.offersList.some((x) => x.fid === o.freelancer_id)) return;
+      j.offersList.push({ fid: o.freelancer_id, price: o.price, msg: o.msg, at: Date.parse(o.visible_at), seen: o.seen });
+      snap.offers[j.id + '|' + o.freelancer_id] = { seen: !!o.seen };
+      changed = true;
+    });
+    if (changed) H.saveLocal();
+    return changed;
+  };
   H.go = async (url) => { await H.flush(); location.href = url; };
   H.refresh = async () => { await H.flush(); await C.pull(); };
 

@@ -6,6 +6,8 @@
 
   /* ---------- ikoner ---------- */
   const ICON = {
+    clip: '<path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l8.6-8.6a4 4 0 0 1 5.6 5.7l-8.6 8.6a2 2 0 0 1-2.8-2.9l8.5-8.5"/>',
+    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
     home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -217,11 +219,13 @@
   H.VID_MB = () => (window.Cloud && Cloud.on ? 50 : 3);
   // Komprimerer en video i nettleseren til den er under grensen. Bruker Mediabunny (WebCodecs).
   // Lastes bare inn når noen faktisk laster opp en video som er for stor.
-  // o.max er grensen i byte (standard er grensen for porteføljen), o.minBr er laveste bitrate vi godtar
+  // o.max er grensen i byte (standard er grensen for porteføljen), o.minBr er laveste bitrate vi godtar.
+  // o.overlay(w, h) gir et lag (canvas) som tegnes oppå hvert bilde i videoen, for eksempel et vannmerke.
+  // Med overlay lages videoen alltid på nytt, også når den er liten nok. o.long og o.maxBr begrenser størrelse og kvalitet.
   H.fitVideo = async (file, onProgress, o = {}) => {
     const max = o.max || H.VID_MB() * 1048576, mbTxt = Math.round(max / 1048576), minBr = o.minBr || 350000;
-    if (file.size <= max) return file;
-    if (!window.VideoEncoder) throw new Error('Videoen er over ' + mbTxt + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
+    if (file.size <= max && !o.overlay) return file;
+    if (!window.VideoEncoder) throw new Error(o.overlay ? 'Denne nettleseren kan ikke legge vannmerke på video.' : 'Videoen er over ' + mbTxt + ' MB, og denne nettleseren kan ikke gjøre den mindre. Prøv Chrome, Edge eller Safari, eller korte ned videoen.');
     const MB = await import(new URL('js/vendor/mediabunny-1.61.4.min.mjs', document.baseURI).href);
     const input = new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) });
     const vt = await input.getPrimaryVideoTrack();
@@ -229,15 +233,22 @@
     const dur = await input.computeDuration();
     const audioBr = 96000, dw = vt.displayWidth, dh = vt.displayHeight;
     // Sikter på 88 % av grensen. Blir filen likevel for stor, prøver den igjen med lavere kvalitet.
-    let vbr = Math.min(6e6, Math.floor((max * 0.88 * 8) / Math.max(1, dur) - audioBr));
+    let vbr = Math.min(o.maxBr || 6e6, Math.floor((max * 0.88 * 8) / Math.max(1, dur) - audioBr));
     if (vbr < minBr) throw new Error(`Videoen er for lang til å bli under ${mbTxt} MB i god kvalitet. Korte den ned til under ${Math.floor((max * 0.88 * 8) / (minBr + 100000) / 60)} minutter.`);
     for (let round = 0; round < 3; round++) {
-      const long = vbr > 3.5e6 ? 1920 : vbr > 1.6e6 ? 1280 : vbr > 800000 ? 960 : 640;
+      const long = Math.min(o.long || 1920, vbr > 3.5e6 ? 1920 : vbr > 1.6e6 ? 1280 : vbr > 800000 ? 960 : 640);
       const k = Math.min(1, long / Math.max(dw, dh));
       const width = Math.round((dw * k) / 2) * 2, height = Math.round((dh * k) / 2) * 2;
       const src = round ? new MB.Input({ formats: MB.ALL_FORMATS, source: new MB.BlobSource(file) }) : input;
       const output = new MB.Output({ format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new MB.BufferTarget() });
-      const conv = await MB.Conversion.init({ input: src, output, video: { width, height, fit: 'fill', bitrate: vbr }, audio: { bitrate: audioBr }, showWarnings: false });
+      const video = { width, height, fit: 'fill', bitrate: vbr };
+      if (o.overlay) {
+        // Tegner hvert bilde på et lerret og legger laget oppå. Laget lages bare én gang.
+        const lay = o.overlay(width, height), cv = document.createElement('canvas'); cv.width = width; cv.height = height;
+        const g = cv.getContext('2d');
+        Object.assign(video, { forceTranscode: true, processedWidth: width, processedHeight: height, process: (s) => { s.drawWithFit(g, { fit: 'fill' }); g.drawImage(lay, 0, 0); return cv; } });
+      }
+      const conv = await MB.Conversion.init({ input: src, output, video, audio: { bitrate: audioBr }, showWarnings: false });
       if (!conv.isValid) throw new Error('Nettleseren kan ikke komprimere denne videoen. Prøv å eksportere den som MP4 og last opp igjen.');
       if (onProgress) conv.onProgress = (p) => onProgress(Math.min(99, Math.round((round * 100 + p * 100) / (round + 1))));
       await conv.execute();
@@ -496,6 +507,8 @@
   /* ---------- oppdrag (annonser) ---------- */
   H.allJobs = () => S.myJobs.map((j) => Object.assign({ mine: true, km: 0, by: 'Deg', posted: j.postedTxt || 'nå' }, j)).reverse().concat(D.JOBS);
   H.jobById = (id) => H.allJobs().find((j) => j.id === id);
+  // Ledige oppdrag: bare de som fortsatt tar imot tilbud. Bookede oppdrag ligger under Mine oppdrag.
+  H.openJobs = () => H.allJobs().filter((j) => (j.status || 'open') === 'open');
   H.jobOffers = (j) => (j.offersList || []).filter((o) => o.at <= Date.now());
   H.jobRow = (j) => {
     const c = H.cat(j.cat);
@@ -547,10 +560,11 @@
 
   /* ---------- meldinger ---------- */
   H.unread = () => Object.keys(S.threads).filter((fid) => { const t = S.threads[fid]; return H.partner(fid) && t.length && t[t.length - 1].who === 'them' && (S.readThreads[fid] || 0) < t.length; }).length;
-  H.sendMessage = (fid, text, onChange) => {
+  // files: vedlegg som allerede er lastet opp (se js/vedlegg.js)
+  H.sendMessage = (fid, text, onChange, files) => {
     text = String(text).trim(); if (!text) return;
     const f = H.partner(fid); if (!f) return;
-    (S.threads[fid] = S.threads[fid] || []).push({ who: 'me', text, at: Date.now() });
+    (S.threads[fid] = S.threads[fid] || []).push(Object.assign({ who: 'me', text, at: Date.now() }, files && files.length ? { files } : {}));
     // Bare demo-frilansere svarer automatisk. Ekte personer svarer selv.
     const auto = !f.customer && f.demo !== false;
     const t = text.toLowerCase(); let reply;
@@ -605,6 +619,67 @@
     clearTimeout(tt); tt = setTimeout(() => el.remove(), act ? 6000 : 3600);
   };
   H.flash = (msg) => { try { sessionStorage.setItem('freelio:flash', msg); } catch (e) {} };
+
+  /* ---------- varsler om nye tilbud ----------
+     Når noen gir tilbud på oppdraget ditt, kommer det et kort øverst på siden. Ligger Freelio i en fane i bakgrunnen
+     og du har tillatt varsler, kommer det også et varsel fra nettleseren. Tilbud du er varslet om huskes i nettleseren,
+     så det samme tilbudet ikke varsles to ganger. cloud.js henter nye tilbud fra databasen (H.refreshOffers). */
+  const ALERTED = 'freelio:varslet';
+  const alerted = () => { try { return JSON.parse(localStorage.getItem(ALERTED) || '[]'); } catch (e) { return []; } };
+  H.refreshOffers = async () => false;
+  H.notice = (n) => {
+    let box = document.getElementById('ntf-box');
+    if (!box) { box = document.createElement('div'); box.id = 'ntf-box'; box.className = 'ntf-box'; box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
+    const el = document.createElement('div'); el.className = 'ntf'; el.setAttribute('role', 'status');
+    el.innerHTML = `<a class="ntf-main" href="${H.esc(n.href)}">${n.img || `<span class="ntf-ico">${H.icon('bag', 20)}</span>`}<span><b>${H.esc(n.title)}</b><span class="meta">${H.esc(n.text)}</span></span></a><button class="ibtn ntf-x" type="button" aria-label="Lukk varselet">${H.icon('close', 16, 2)}</button>`;
+    const bye = () => { el.classList.add('out'); setTimeout(() => el.remove(), 260); };
+    el.querySelector('.ntf-x').addEventListener('click', bye);
+    box.prepend(el); while (box.children.length > 3) box.lastChild.remove();
+    setTimeout(bye, 10000);
+  };
+  let waiting = [], baseTitle = '';
+  const showNotices = () => { const list = waiting; waiting = []; if (baseTitle) { document.title = baseTitle; baseTitle = ''; } list.forEach(H.notice); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && waiting.length) showNotices(); });
+  H.checkAlerts = () => {
+    if (!S.user) return;
+    const done = alerted(), byJob = {};
+    S.myJobs.forEach((j) => {
+      if ((j.status || 'open') !== 'open') return;
+      H.jobOffers(j).forEach((o) => { const k = j.id + '|' + o.fid; if (!o.seen && !done.includes(k)) (byJob[j.id] = byJob[j.id] || { j, list: [] }).list.push(o); });
+    });
+    const groups = Object.values(byJob);
+    if (!groups.length) return;
+    try { localStorage.setItem(ALERTED, JSON.stringify(done.concat(...groups.map((g) => g.list.map((o) => g.j.id + '|' + o.fid))).slice(-300))); } catch (e) {}
+    // Står du allerede på annonsen, ser du tilbudene der
+    const here = document.body.dataset.page === 'annonse' ? new URLSearchParams(location.search).get('id') : null;
+    const notes = groups.filter((g) => g.j.id !== here).map(({ j, list }) => {
+      const f = H.byId(list[0].fid), name = (f && f.name) || 'En frilanser';
+      return {
+        href: 'annonse.html?id=' + encodeURIComponent(j.id), img: f ? H.avatar(f, 40) : '',
+        title: list.length === 1 ? `Nytt tilbud på «${j.title}»` : `${list.length} nye tilbud på «${j.title}»`,
+        text: list.length === 1 ? `${name} tilbyr ${H.kr(list[0].price)}` : `Fra ${name} og ${list.length - 1} til`
+      };
+    });
+    if (!notes.length) return;
+    if (!document.hidden) { notes.forEach(H.notice); return; }
+    // Fanen ligger i bakgrunnen: varsel fra nettleseren nå, kortene når du kommer tilbake
+    waiting = waiting.concat(notes);
+    if (!baseTitle) baseTitle = document.title;
+    document.title = `(${waiting.length}) ${baseTitle}`;
+    if (S.notify && S.notify.push !== false && 'Notification' in window && Notification.permission === 'granted') {
+      notes.forEach((n) => { try { const x = new Notification(n.title, { body: n.text, icon: 'img/favicon.svg', tag: n.href }); x.onclick = () => { window.focus(); x.close(); location.href = n.href; }; } catch (e) {} });
+    }
+  };
+  // Ser etter nye tilbud hvert halve minutt, og med en gang når du kommer tilbake til fanen
+  let polling = false;
+  const poll = async () => {
+    if (polling || !S.user || !S.myJobs.some((j) => (j.status || 'open') === 'open')) return;
+    polling = true;
+    try { if (await H.refreshOffers()) H.mountHeader(); H.checkAlerts(); } catch (e) { console.warn(e); }
+    polling = false;
+  };
+  setInterval(poll, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
 
   /* ---------- tema ---------- */
   H.isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
@@ -849,6 +924,7 @@
       setTimeout(() => document.body.classList.remove('reveal'), 1000);
       if (H.flashNow) { H.toast(H.flashNow); H.flashNow = null; }
       try { const f = sessionStorage.getItem('freelio:flash'); if (f) { sessionStorage.removeItem('freelio:flash'); H.toast(f); } } catch (e) {}
+      H.checkAlerts();
     };
     if (sk.length) { sk.forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); }); setTimeout(go, H.LOAD_MS); }
     else go();
