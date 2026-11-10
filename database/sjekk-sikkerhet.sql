@@ -189,6 +189,7 @@ alle as (
 )
 select
   (select count(*) from alle where status <> 'OK') as problemer,
-  omraade, sjekk, status, detalj
+  omraade, sjekk, status,
+  case when status = 'OK' then '' else detalj end as detalj
 from alle
 order by (status = 'OK'), omraade, sjekk;
