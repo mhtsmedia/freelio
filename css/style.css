@@ -804,3 +804,6 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 main,.bubble,.ntf,.mapcard,.lb-top,.prof-menu,.drawer,.toast{overflow-wrap:anywhere}
 @supports not (overflow-wrap:anywhere){main,.bubble,.ntf,.mapcard{word-break:break-word}}
 html,body{overflow-x:clip}
+
+/* Admin-kortet på annonser */
+.admin-card{border:1px dashed var(--line);background:var(--surface)}

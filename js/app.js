@@ -659,6 +659,9 @@
   const ALERTED = 'freelio:varslet';
   const alerted = () => { try { return JSON.parse(localStorage.getItem(ALERTED) || '[]'); } catch (e) { return []; } };
   H.refreshOffers = async () => false;
+  // Admin (database/admin.sql). cloud.js spør databasen. Uten database er ingen admin.
+  H.isAdmin = () => false;
+  H.adminDeleteJob = async () => { throw new Error('Krever innlogging.'); };
   H.notice = (n) => {
     let box = document.getElementById('ntf-box');
     if (!box) { box = document.createElement('div'); box.id = 'ntf-box'; box.className = 'ntf-box'; box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }

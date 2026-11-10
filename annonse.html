@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=c540e502">
+<link rel="stylesheet" href="css/style.css?v=cdbf0bba">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -29,11 +29,11 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=27d01966"></script>
-<script src="js/cloud.js?v=eff5e214"></script>
+<script src="js/app.js?v=eb5b457e"></script>
+<script src="js/cloud.js?v=70df825e"></script>
 <script type="text/freelio">
 const jid = H.qs('id');
-let confirmDelete = false, offerPrice = '', offerMsg = '';
+let confirmDelete = false, confirmAdmin = false, offerPrice = '', offerMsg = '';
 // Tilbudet kunden holder på å godta, og avtalen som må godtas først
 let acceptAt = -1, acTerms = '', acOk = false, acTried = false;
 const offerContract = (j, o, f) => H.makeContract(f, { title: j.title, price: o.price, desc: String(j.desc || '').slice(0, 1000), date: j.date, place: j.area, cTerms: acTerms.trim() });
@@ -74,6 +74,10 @@ function render() {
       <p class="hint">Du får ${offerPrice ? H.kr(+offerPrice.replace(/\D/g, '') * 0.95) : 'prisen minus 5 %'} utbetalt når kunden har godkjent leveransen.</p>
       <button class="btn primary block" type="submit">Send tilbud</button></form>`;
   }
+  // Admin: fjern annonser fra andre som bryter reglene
+  if (!j.mine && H.isAdmin()) side += `<div class="card stack admin-card"><b class="row" style="gap:8px">${H.icon('shield', 18)} Admin</b>${confirmAdmin
+    ? `<span class="small">Fjerne «${H.esc(j.title)}» for godt? Tilbudene på den slettes også. Det kan ikke angres.</span><label class="field"><span class="label">Grunn (valgfritt, bare til loggen)</span><input class="inp" id="adReason" maxlength="200" placeholder="F.eks. Tull eller spam"></label><div class="row"><button class="btn soft sm grow" data-a="noAdminDel">Avbryt</button><button class="btn dark sm grow" data-a="adminDel">Fjern annonsen</button></div>`
+    : `<span class="muted small">Du kan fjerne annonser som bryter reglene. Det logges hvem som fjernet hva.</span><button class="btn soft block" data-a="askAdminDel">Fjern annonsen</button>`}</div>`;
   main.innerHTML = `<div class="wrap" style="max-width:1300px">
     <div class="crumbs"><a href="oppdrag.html">Oppdrag</a><span>/</span><a href="oppdrag.html?kat=${c.id}">${c.name}</a><span>/</span><span>${H.esc(j.title)}</span></div>
     <div class="two">
@@ -128,6 +132,14 @@ Object.assign(H.actions, {
     H.go('bestilling.html?id=' + order.id);
   },
   compareOffers: () => { const j = H.S.myJobs.find((x) => x.id === jid); H.S.cmp = H.jobOffers(j).slice(0, 3).map((o) => o.fid); H.save(); H.go('sammenlign.html'); },
+  askAdminDel: () => { confirmAdmin = true; render(); const i = document.getElementById('adReason'); if (i) i.focus(); },
+  noAdminDel: () => { confirmAdmin = false; render(); },
+  adminDel: async (v, el) => {
+    const reason = H.clip((document.getElementById('adReason') || {}).value || '', 200);
+    if (el) { el.disabled = true; el.textContent = 'Fjerner …'; }
+    try { await H.adminDeleteJob(jid, reason); H.flash('Annonsen er fjernet.'); H.go('oppdrag.html'); }
+    catch (e) { H.toast(e.message); confirmAdmin = false; render(); }
+  },
   askDelete: () => { confirmDelete = true; render(); },
   noDelete: () => { confirmDelete = false; render(); },
   delete: () => { H.S.myJobs = H.S.myJobs.filter((x) => x.id !== jid); H.save(); H.flash('Annonsen er slettet.'); H.go('mine-oppdrag.html?fane=annonser'); },

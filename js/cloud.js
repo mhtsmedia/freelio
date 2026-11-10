@@ -90,16 +90,20 @@
     S.myJobs = myJobRows.reverse().map((r) => Object.assign({}, r.data, { id: r.id, status: r.status, created: Date.parse(r.created_at), postedTxt: dateTxt(r.created_at), offersList: [] }));
 
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};
+    C.admin = false;
     let adopted = [];
     if (C.uid) {
-      const [prof, offers, orders, msgs, saved, fo] = await Promise.all([
+      const [prof, offers, orders, msgs, saved, fo, adm] = await Promise.all([
         sb.from('profiles').select('id,name,avatar_url,created_at').eq('id', C.uid).maybeSingle(),
         sb.from('offers').select('*'),
         sb.from('orders').select('*').order('created_at'),
         sb.from('messages').select('*').order('created_at'),
         sb.from('saved').select('freelancer_id'),
-        sb.from('saved_folders').select('id,name,items,created_at').order('created_at')
+        sb.from('saved_folders').select('id,name,items,created_at').order('created_at'),
+        // Admin kan fjerne andres annonser (database/admin.sql). Mangler funksjonen, er ingen admin.
+        sb.rpc('is_admin')
       ]);
+      C.admin = !adm.error && adm.data === true;
       const p = must(prof);
       S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
       const meta = session.user.user_metadata || {};
@@ -257,6 +261,13 @@
     chain = chain.then(push).catch((e) => { console.error(e); H.toast('Kunne ikke lagre: ' + errText(e)); snap = takeSnap(); });
   };
   H.flush = () => chain;
+  H.isAdmin = () => !!C.admin;
+  // Fjerner en annonse som admin. Databasen sjekker selv at du er admin, og logger det.
+  H.adminDeleteJob = async (id, reason) => {
+    const r = await sb.rpc('admin_delete_job', { p_id: id, p_reason: reason || '' });
+    if (r.error) throw new Error(errText(r.error));
+    D.JOBS = D.JOBS.filter((j) => j.id !== id);
+  };
   // Henter nye tilbud på dine åpne oppdrag, til varslene. Nye tilbud legges også i øyeblikksbildet,
   // så de ikke blir forsøkt lagret på nytt. Gir true hvis det kom noe nytt.
   H.refreshOffers = async () => {
