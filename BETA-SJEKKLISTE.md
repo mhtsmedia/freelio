@@ -7,6 +7,8 @@ Tre ting må være på plass. Gjør dem i denne rekkefølgen og kryss av underve
 - [ ] Supabase → **SQL Editor** → **New query**. Lim inn hele `database/sjekk-sikkerhet.sql` og trykk **Run**.
       Skriptet endrer ingenting. Kolonnen `problemer` skal være **0**.
 - [ ] Står det MANGLER, ÅPEN eller AV på noe: kjør `database/oppdatering.sql`, deretter filene som står i `detalj`, og kjør sjekken på nytt.
+- [ ] Kjør `database/stram-anon.sql` (ekstra sikring). Uinnloggede får da ikke engang spørre etter
+      profiler, meldinger, bestillinger, tilbud og lagrede ting. RLS stopper dem allerede, men dette er et ekstra lag.
 - [ ] Lim inn hele `database/test-tilgang.sql` i en ny query og trykk **Run**.
       Den lager tre falske brukere og prøver å lese og endre hverandres data som innlogget bruker.
       Alt testdata slettes igjen. `problemer` skal være **0**, og hver rad skal si **OK**.

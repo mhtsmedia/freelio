@@ -116,11 +116,31 @@ con as (
   from forventet_con f
 ),
 
--- Hva en uinnlogget besøkende (rollen anon) får gjøre
+-- Hva en uinnlogget besøkende (rollen anon) får gjøre.
+-- Private tabeller: ÅPEN bare hvis uinnlogget både har lov til å spørre OG en regel slipper rader ut
+-- (eller Row Level Security er av). Har anon bare tillatelsen, men ingen regel gjelder anon, får de 0 rader.
+-- Kjør database/stram-anon.sql for å fjerne selve tillatelsen også.
+privat_tab(sjekk, tabell) as (values
+  ('Kan ikke lese brukerprofiler', 'public.profiles'),
+  ('Kan ikke lese meldinger', 'public.messages'),
+  ('Kan ikke lese bestillinger', 'public.orders'),
+  ('Kan ikke lese tilbud', 'public.offers'),
+  ('Kan ikke lese lagrede frilansere', 'public.saved')
+),
 uinnlogget as (
-  select 'Uinnlogget', 'Kan ikke lese brukerprofiler',
-    case when to_regclass('public.profiles') is null then 'MANGLER'
-         when has_table_privilege('anon', 'public.profiles', 'SELECT') then 'ÅPEN' else 'OK' end, ''
+  select 'Uinnlogget', u.sjekk,
+    case
+      when to_regclass(u.tabell) is null then 'MANGLER'
+      when not has_table_privilege('anon', u.tabell, 'SELECT') then 'OK'
+      when not (select c.relrowsecurity from pg_class c where c.oid = to_regclass(u.tabell)) then 'ÅPEN'
+      when exists (select 1 from pg_policies p
+                   where p.schemaname || '.' || p.tablename = u.tabell
+                     and p.cmd in ('SELECT', 'ALL') and p.permissive = 'PERMISSIVE'
+                     and ('anon' = any (p.roles) or 'public' = any (p.roles))) then 'ÅPEN'
+      else 'OK'
+    end,
+    'En regel slipper uinnloggede inn i tabellen. Regelen må ha «to authenticated».'
+  from privat_tab u
   union all
   select 'Uinnlogget', 'Ser ikke hvem som eier et oppdrag (jobs.owner_id)',
     case when to_regclass('public.jobs') is null then 'MANGLER'
@@ -129,14 +149,6 @@ uinnlogget as (
   select 'Uinnlogget', 'Ser ikke hvem som skrev en omtale (reviews.author_id)',
     case when to_regclass('public.reviews') is null then 'MANGLER'
          when has_column_privilege('anon', 'public.reviews', 'author_id', 'SELECT') then 'ÅPEN' else 'OK' end, ''
-  union all
-  select 'Uinnlogget', 'Kan ikke lese meldinger',
-    case when to_regclass('public.messages') is null then 'MANGLER'
-         when has_table_privilege('anon', 'public.messages', 'SELECT') then 'ÅPEN' else 'OK' end, ''
-  union all
-  select 'Uinnlogget', 'Kan ikke lese bestillinger',
-    case when to_regclass('public.orders') is null then 'MANGLER'
-         when has_table_privilege('anon', 'public.orders', 'SELECT') then 'ÅPEN' else 'OK' end, ''
   union all
   select 'Uinnlogget', 'Kan ikke slette kontoer (delete_my_account)',
     case when to_regprocedure('public.delete_my_account()') is null then 'MANGLER'
