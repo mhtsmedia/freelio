@@ -59,15 +59,19 @@
     const { data: { session } } = await sb.auth.getSession();
     C.uid = session ? session.user.id : null;
 
-    const [fr, rv, jobs, posts] = await Promise.all([
+    const [fr, rv, jobs, posts, posters] = await Promise.all([
       sb.from('freelancers').select('id,user_id,demo,published,data').order('created_at'),
       // author_id og order_id hentes bare når du er logget inn (de trengs for å kjenne igjen og slette egne omtaler).
       // Uinnlogget får dem ikke, så interne id-er ikke lekkes til folk som skraper siden.
       sb.from('reviews').select('id,freelancer_id,author_name,stars,text,job_label,created_at' + (C.uid ? ',author_id,order_id' : '')).order('created_at', { ascending: false }),
       // owner_id (hvem som la ut oppdraget) hentes bare når du er logget inn, så det ikke lekkes til uinnlogget
       sb.from('jobs').select('id,demo,status,data,created_at' + (C.uid ? ',owner_id' : '')).order('created_at', { ascending: false }),
-      sb.from('posts').select('id,freelancer_id,data,created_at').order('created_at', { ascending: false }).limit(300)
+      sb.from('posts').select('id,freelancer_id,data,created_at').order('created_at', { ascending: false }).limit(300),
+      // Hvem som har lagt ut hvert oppdrag (navn og bilde fra profilen). Mangler funksjonen, vises «Kunde på Freelio».
+      sb.rpc('job_posters')
     ]);
+    const who = {};
+    if (!posters.error && Array.isArray(posters.data)) posters.data.forEach((p) => (who[p.job_id] = { name: p.name, photo: p.photo || null, since: p.since, jobs: p.jobs || 0, fid: p.fid || null }));
     const frRows = must(fr), rvRows = must(rv), jobRows = must(jobs);
     // Innlegg. Mangler tabellen, er Utforsk bare tom til database/innlegg.sql er kjørt.
     C.postsReady = !posts.error;
@@ -86,7 +90,7 @@
 
     // Oppdrag
     const myJobRows = jobRows.filter((r) => C.uid && r.owner_id === C.uid);
-    D.JOBS = jobRows.filter((r) => !r.demo && !(C.uid && r.owner_id === C.uid)).map((r) => Object.assign({ offers: 0, km: 0 }, r.data, { id: r.id, status: r.status, posted: r.data.posted || posted(r.created_at), by: r.data.by || 'Kunde på Freelio' }));
+    D.JOBS = jobRows.filter((r) => !r.demo && !(C.uid && r.owner_id === C.uid)).map((r) => Object.assign({ offers: 0, km: 0 }, r.data, { id: r.id, status: r.status, posted: r.data.posted || posted(r.created_at), by: (who[r.id] && who[r.id].name) || 'Kunde på Freelio', poster: who[r.id] || null }));
     S.myJobs = myJobRows.reverse().map((r) => Object.assign({}, r.data, { id: r.id, status: r.status, created: Date.parse(r.created_at), postedTxt: dateTxt(r.created_at), offersList: [] }));
 
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};

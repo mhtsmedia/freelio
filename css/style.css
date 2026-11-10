@@ -807,3 +807,7 @@ html,body{overflow-x:clip}
 
 /* Admin-kortet på annonser */
 .admin-card{border:1px dashed var(--line);background:var(--surface)}
+
+/* Hvem som har lagt ut oppdraget */
+.poster{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:14px}
+.poster b{font-size:16px}
