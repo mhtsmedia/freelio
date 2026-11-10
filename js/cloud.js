@@ -398,6 +398,7 @@
     if (/Invalid login credentials/i.test(m)) return 'Feil e-post eller passord.';
     if (/already registered|already been registered/i.test(m)) return 'Det finnes allerede en konto med denne e-posten. Logg inn i stedet.';
     if (/Email not confirmed/i.test(m)) return 'Du må bekrefte e-posten din først. Sjekk innboksen.';
+    if (/sending (confirmation|magic link|recovery)? ?e-?mail|error sending/i.test(m)) return 'Vi fikk ikke sendt bekreftelses-e-posten. Prøv igjen om litt, eller meld fra til oss.';
     if (/at least \d+|Password should/i.test(m)) return 'Passordet må ha minst 8 tegn.';
     if (/valid email|invalid format/i.test(m)) return 'Skriv inn en gyldig e-postadresse.';
     if (/rate limit|too many/i.test(m)) return 'For mange forsøk. Vent litt og prøv igjen.';
