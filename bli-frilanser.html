@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=1b73c24c">
+<link rel="stylesheet" href="css/style.css?v=c540e502">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -29,7 +29,7 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c0db7442"></script>
+<script src="js/app.js?v=27d01966"></script>
 <script src="js/cloud.js?v=eff5e214"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
@@ -131,7 +131,7 @@ function form() {
         <div class="niche-grid">${HDATA.CATS.map((c) => `<label class="check"><input type="checkbox" data-niche="${c.id}" ${niches.includes(c.id) ? 'checked' : ''} ${c.id === mainCat ? 'disabled' : ''}> ${c.name}</label>`).join('')}</div>
         <span class="hint">Kryss av alt du tar oppdrag innen. Hovedområdet er alltid med. Du vises i søket for hvert fagfelt du krysser av.</span></fieldset>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Pakker og priser * <span class="hint" style="font-weight:600">(minst én)</span></legend>
-        ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" maxlength="40" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" maxlength="7" value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" maxlength="200" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
+        ${pkgs.map((x, i) => `<div class="card stack" style="gap:8px"><div class="grid2"><input class="inp" data-pk="${i}:0" maxlength="40" value="${H.esc(x[0])}" placeholder="Navn, f.eks. Halv dag" aria-label="Pakkenavn ${i + 1}"><input class="inp" data-pk="${i}:1" maxlength="7" data-kr value="${H.esc(x[1])}" inputmode="numeric" placeholder="Pris i kr" aria-label="Pris ${i + 1}"></div><input class="inp" data-pk="${i}:2" maxlength="200" value="${H.esc(x[2])}" placeholder="Hva er inkludert?" aria-label="Beskrivelse ${i + 1}">${pkgs.length > 1 ? `<button type="button" class="btn link small" style="align-self:flex-start" data-a="rmPk" data-v="${i}">Fjern pakke</button>` : ''}</div>`).join('')}
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
       <label class="field"><span class="label">Egne vilkår (valgfritt)</span><textarea class="inp" id="terms" rows="4" maxlength="3000" placeholder="F.eks. reisekostnader over 50 km, hvor mange runder med retting som er med, eller hvordan kunden kan bruke bildene.">${H.esc(p.terms || '')}</textarea><span class="hint">Vises på profilen din og legges inn i oppdragsavtalen ved hver booking (punkt 8). <a href="avtale.html" target="_blank">Freelios standardavtale</a> gjelder i tillegg, og går foran for betaling, avbestilling og reklamasjon.</span></label>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
@@ -211,16 +211,18 @@ function form() {
     e.preventDefault();
     if (saving) return;
     const v = (id) => document.getElementById(id).value.trim();
-    const pk = pkgs.filter((x) => x[0].trim() && +String(x[1]).replace(/\D/g, '')).map((x) => [x[0].trim(), +String(x[1]).replace(/\D/g, ''), x[2].trim()]);
+    const pk = pkgs.filter((x) => x[0].trim() && H.num(x[1])).map((x) => [H.clip(x[0], 40), H.num(x[1]), H.clip(x[2], 200)]);
     const miss = ['name', 'role', 'area', 'bio', 'years'].filter((k) => !v(k));
     const years = Math.round(+v('years'));
     let msg = '';
     if (miss.length) msg = 'Fyll ut navn, tittel, område, erfaring og om deg.';
     else if (!(years >= 0 && years <= 60)) msg = 'Skriv antall år erfaring som et tall mellom 0 og 60.';
     else if (!pk.length) msg = 'Legg inn minst én pakke med navn og pris.';
+    else if (pk.some((x) => x[1] > H.MAX_PRICE)) msg = `En pakke kan koste høyst ${H.kr(H.MAX_PRICE)}.`;
+    else if (H.textErr([['Navn', v('name')], ['Tittel', v('role')], ['Område', v('area')], ['Om deg', v('bio')], ['Egne vilkår', v('terms')]].concat(pk.map((x) => ['Pakke', x[0] + ' ' + x[2]])))) msg = H.textErr([['Navn', v('name')], ['Tittel', v('role')], ['Område', v('area')], ['Om deg', v('bio')], ['Egne vilkår', v('terms')]].concat(pk.map((x) => ['Pakke', x[0] + ' ' + x[2]])));
     else if (!document.getElementById('legal').checked) msg = 'Du må bekrefte at du driver lovlig og godta vilkårene.';
-    if (msg) { document.getElementById('err').innerHTML = `<div class="banner bad">${msg}</div>`; return; }
-    const name = v('name');
+    if (msg) { document.getElementById('err').innerHTML = `<div class="banner bad">${H.esc(msg)}</div>`; return; }
+    const name = H.clip(v('name'), 60);
     const mc = document.getElementById('cat').value;
     const nich = [mc].concat(niches.filter((n) => n !== mc && HDATA.CATS.some((c) => c.id === n)));
     pf.forEach((x) => { if (!nich.includes(x.cat)) x.cat = mc; });
@@ -234,7 +236,7 @@ function form() {
       saving = false;
     }
     S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
-      id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: v('role'), area: v('area'), reach: +document.getElementById('reach').value, bio: v('bio'), terms: v('terms'),
+      id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: H.clip(v('role'), 60), area: H.clip(v('area'), 60), reach: +document.getElementById('reach').value, bio: H.clip(v('bio'), 1500, true), terms: H.clip(v('terms'), 3000, true),
       niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, cardImg: card, lat: pos ? pos[0] : null, lng: pos ? pos[1] : null, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();

@@ -565,7 +565,7 @@
   H.unread = () => Object.keys(S.threads).filter((fid) => { const t = S.threads[fid]; return H.partner(fid) && t.length && t[t.length - 1].who === 'them' && (S.readThreads[fid] || 0) < t.length; }).length;
   // files: vedlegg som allerede er lastet opp (se js/vedlegg.js)
   H.sendMessage = (fid, text, onChange, files) => {
-    text = String(text).trim(); if (!text) return;
+    text = H.clip(text, 2000, true); if (!text) return;
     const f = H.partner(fid); if (!f) return;
     (S.threads[fid] = S.threads[fid] || []).push(Object.assign({ who: 'me', text, at: Date.now() }, files && files.length ? { files } : {}));
     // Bare demo-frilansere svarer automatisk. Ekte personer svarer selv.
@@ -609,6 +609,35 @@
     location.replace('logg-inn.html?neste=' + encodeURIComponent(location.pathname.split('/').pop() + location.search));
     return false;
   };
+
+
+  /* ---------- grenser for det brukerne skriver ----------
+     Skjemaene sjekker dette før noe lagres, og de samme grensene ligger i databasen (database/grenser.sql),
+     så de kan ikke omgås. Lang tekst uten mellomrom brytes også i visningen (css/style.css), så ingenting
+     kan gjøre siden bredere enn skjermen. */
+  H.MAX_PRICE = 1000000;
+  H.MAX_WORD = 50;
+  // Beløp i hele kroner fra et felt. Alt som ikke er tall fjernes.
+  H.num = (v) => +String(v == null ? '' : v).replace(/\D/g, '').slice(0, 9) || 0;
+  H.priceErr = (n, what = 'Prisen') => (!n ? `${what} må være et beløp i hele kroner.` : n > H.MAX_PRICE ? `${what} kan være høyst ${H.kr(H.MAX_PRICE)}.` : '');
+  // Rydder tekst før lagring: fjerner usynlige tegn og styretegn, slår sammen mellomrom (og tomme linjer der
+  // linjeskift er lov), og kutter til makslengden.
+  H.clip = (s, max, lines) => {
+    s = String(s == null ? '' : s).normalize('NFC').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '');
+    s = lines ? s.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n') : s.replace(/\s+/g, ' ');
+    return Array.from(s.trim()).slice(0, max).join('');
+  };
+  // Et «ord» uten mellomrom på over 50 tegn (for eksempel «864864864…») er nesten alltid tull. Lenker teller ikke.
+  H.longWord = (s) => { const m = String(s || '').replace(/https?:\/\/\S+/g, '').match(new RegExp('\\S{' + (H.MAX_WORD + 1) + ',}')); return m ? m[0] : ''; };
+  H.textErr = (fields) => { for (const [label, s] of fields) if (H.longWord(s)) return `«${label}» har et ord på over ${H.MAX_WORD} tegn uten mellomrom. Del det opp med mellomrom.`; return ''; };
+  // Dato fra et datofelt (åååå-mm-dd): fra i dag og høyst to år frem
+  H.isoDay = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  H.dateMin = () => H.isoDay(new Date());
+  H.dateMax = () => { const d = new Date(); d.setFullYear(d.getFullYear() + 2); return H.isoDay(d); };
+  H.dateErr = (v) => (!/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? 'Velg en dato.' : v < H.dateMin() ? 'Datoen har vært.' : v > H.dateMax() ? 'Velg en dato innen to år.' : '');
+  H.dateTxt = (v) => v.split('-').reverse().join('.');
+  // Beløpsfelt (data-kr): bare tall, høyst 7 sifre
+  document.addEventListener('input', (e) => { const t = e.target; if (t && t.matches && t.matches('input[data-kr]')) { const v = t.value.replace(/\D/g, '').slice(0, 7); if (v !== t.value) t.value = v; } });
 
   /* ---------- toast ---------- */
   let tt;

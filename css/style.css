@@ -798,3 +798,9 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 /* Forslag om å slå på varsler, på egne annonser */
 .push-cta{border:1px solid var(--accent);background:var(--accent-soft)}
 .push-cta .btn{align-self:flex-start}
+
+/* Lang tekst uten mellomrom (lange lenker, eller tull som «864864864…») brytes i stedet for å gjøre siden
+   bredere enn skjermen. overflow-x:clip er en ekstra sikring, så siden aldri kan skyves sidelengs. */
+main,.bubble,.ntf,.mapcard,.lb-top,.prof-menu,.drawer,.toast{overflow-wrap:anywhere}
+@supports not (overflow-wrap:anywhere){main,.bubble,.ntf,.mapcard{word-break:break-word}}
+html,body{overflow-x:clip}
