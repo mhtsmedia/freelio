@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meld feil | Freelio</title>
+<meta name="description" content="Fant du noe som ikke virker på Freelio? Fortell oss det, så fikser vi det.">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Freelio">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css?v=496ed689">
+<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
+<script src="js/design.js?v=7c71ad27"></script>
+</head>
+<body data-page="meld-feil" data-needs="">
+<div id="site-header"></div>
+<main id="main">
+  <div class="wrap" style="max-width:820px">
+    <section class="section" id="box"></section>
+    <section class="section" id="admin" style="padding-top:0" hidden></section>
+  </div>
+</main>
+<div id="site-footer"></div>
+<script src="js/logo.js?v=e81a0a03"></script>
+<script src="js/data.js?v=13ca9b41"></script>
+<script src="js/config.js?v=8c092c05"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="js/app.js?v=c91c1945"></script>
+<script src="js/cloud.js?v=1f857a02"></script>
+<script type="text/freelio">
+const S = H.S, $ = (id) => document.getElementById(id);
+const OWN = /^[a-z0-9-]+\.html(\?[^#]*)?$/i;
+// Siden du kom fra: fra lenken (?fra=), ellers forrige side hvis den var på Freelio
+const from = (() => {
+  let f = H.qs('fra') || '';
+  if (!f) try { const r = new URL(document.referrer); if (r.origin === location.origin) f = r.pathname.split('/').pop() + r.search; } catch (e) { /* ingen forrige side */ }
+  return OWN.test(f) && !f.startsWith('meld-feil') ? f : '';
+})();
+const PAGES = [['index', 'Forsiden'], ['sok', 'Finn frilanser (søk)'], ['utforsk', 'Utforsk'], ['kart', 'Kart'], ['frilanser', 'En frilanserprofil'], ['sammenlign', 'Sammenlign'], ['oppdrag', 'Ledige oppdrag'], ['annonse', 'Et oppdrag (annonse)'], ['ny-annonse', 'Legg ut oppdrag'], ['book', 'Booking og betaling'], ['mine-oppdrag', 'Mine oppdrag'], ['bestilling', 'En bestilling'], ['avtale', 'Oppdragsavtalen'], ['meldinger', 'Meldinger'], ['lagret', 'Lagret'], ['min-side', 'Min side'], ['bli-frilanser', 'Bli frilanser eller rediger profil'], ['logg-inn', 'Logg inn eller ny konto'], ['hjelp', 'Hjelp'], ['assistent', 'Assistent']];
+const fromPage = from.split(/[.?]/)[0];
+const KINDS = [['liten', 'Småting', 'Ser rart ut eller er litt feil'], ['virker-ikke', 'Noe virker ikke', 'En knapp eller funksjon gjør ikke det den skal'], ['stopper', 'Jeg kommer ikke videre', 'Jeg får ikke gjort det jeg prøvde på']];
+let busy = false, sent = null;
+
+// Det som sendes med automatisk. Holdes kort, så det ikke blir for stort for databasen.
+function info() {
+  const v = (document.querySelector('script[src*="js/app.js"]') || { getAttribute: () => '' }).getAttribute('src').split('v=')[1] || '';
+  const i = { nettleser: navigator.userAgent.slice(0, 300), skjerm: `${screen.width}×${screen.height}`, vindu: `${innerWidth}×${innerHeight}`, design: document.documentElement.dataset.design || '', tema: H.isDark() ? 'mørk' : 'lys', innlogget: S.user ? 'ja' : 'nei', språk: navigator.language || '', versjon: v, tid: new Date().toLocaleString('nb-NO') };
+  const errs = H.jsErrors();
+  if (errs.length) i.feilmeldinger = errs.map((e) => `${e.at} ${e.page}: ${e.msg} (${e.where})`);
+  if (JSON.stringify(i).length > 1800) delete i.feilmeldinger;
+  return i;
+}
+const infoList = (i) => `<dl>${Object.entries(i).map(([k, val]) => `<dt>${H.esc(k.charAt(0).toUpperCase() + k.slice(1))}</dt><dd>${Array.isArray(val) ? val.map(H.esc).join('<br>') : H.esc(typeof val === 'object' ? JSON.stringify(val) : val)}</dd>`).join('')}</dl>`;
+
+function form() {
+  const where = PAGES.some(([p]) => p === fromPage) ? fromPage : '';
+  $('box').innerHTML = `<div class="stack" style="gap:8px"><span class="pill new" style="align-self:flex-start">${H.icon('bug', 14, 2)} Testfase</span><h1>Meld feil</h1>
+    <p class="muted" style="font-size:16px">Freelio er nytt, og noe virker sikkert ikke som det skal ennå. Fortell oss hva som skjedde, så fikser vi det. Det tar under ett minutt.</p></div>
+    <form class="card stack" id="bform" novalidate style="gap:18px">
+      <label class="field"><span class="label">Hvor skjedde det?</span><select class="inp" id="where">
+        <option value="">Velg side</option>
+        ${PAGES.map(([p, t]) => `<option value="${p}" ${p === where ? 'selected' : ''}>${t}${p === where ? ' (siden du kom fra)' : ''}</option>`).join('')}
+        <option value="annet">Annet, eller vet ikke</option></select></label>
+      <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Hvor ille er det?</legend>
+        <div class="kinds">${KINDS.map(([k, t, d]) => `<label class="check card"><input type="radio" name="kind" value="${k}" ${k === 'virker-ikke' ? 'checked' : ''}> <span><b>${t}</b><span class="muted">${d}</span></span></label>`).join('')}</div></fieldset>
+      <label class="field"><span class="label">Hva skjedde? *</span><textarea class="inp" id="what" rows="5" maxlength="2000" placeholder="F.eks. Jeg trykket på «Send tilbud», men ingenting skjedde. Det sto ingen feilmelding."></textarea><span class="hint" id="whatCount">Skriv med egne ord hva du gjorde og hva som skjedde.</span></label>
+      <label class="field"><span class="label">Hva trodde du skulle skje? (valgfritt)</span><textarea class="inp" id="exp" rows="2" maxlength="1000" placeholder="F.eks. At tilbudet ble sendt til kunden."></textarea></label>
+      <label class="field"><span class="label">E-post (valgfritt)</span><input class="inp" id="email" type="email" maxlength="254" autocomplete="email" value="${H.esc((S.user && S.user.email) || '')}" placeholder="navn@eksempel.no"><span class="hint">Bare hvis vi kan spørre deg om mer. Vises ikke for andre.</span></label>
+      <label class="hp" aria-hidden="true">Nettside <input id="site" tabindex="-1" autocomplete="off"></label>
+      <details class="bug-info"><summary>Dette sendes med automatisk</summary><p style="margin:8px 0 0">Nettleser, skjermstørrelse og hvilken versjon av siden du bruker, så vi kan finne feilen. Ingen passord eller betalingsinfo.</p>${infoList(info())}</details>
+      <span class="err-text" id="berr" role="alert"></span>
+      <div class="row"><button class="btn primary" type="submit" ${busy ? 'disabled' : ''}>${busy ? 'Sender …' : 'Send feilmeldingen'}</button>${from ? `<a class="btn soft" href="${H.esc(from)}">Tilbake</a>` : ''}</div>
+    </form>
+    <p class="hint">Gjelder det en bestilling eller betaling? Skriv til oss via <a href="hjelp.html">hjelpesenteret</a>, så svarer vi deg direkte.</p>`;
+  const w = $('what');
+  w.addEventListener('input', () => { const n = w.value.trim().length; $('whatCount').textContent = n < 10 ? 'Skriv med egne ord hva du gjorde og hva som skjedde.' : `${n} tegn. Takk!`; });
+  $('bform').addEventListener('submit', submit);
+}
+
+async function submit(e) {
+  e.preventDefault();
+  if (busy) return;
+  const err = (t) => { $('berr').textContent = t; };
+  const what = $('what').value.trim(), email = $('email').value.trim(), where = $('where').value;
+  if (what.length < 10) { err('Skriv litt mer om hva som skjedde, minst 10 tegn.'); $('what').focus(); return; }
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) { err('E-posten ser ikke riktig ut. Rett den, eller la feltet stå tomt.'); $('email').focus(); return; }
+  const report = { kind: (document.querySelector('input[name=kind]:checked') || {}).value || 'virker-ikke', what, expected: $('exp').value.trim(), email, page: where === fromPage ? from : where && where !== 'annet' ? where + '.html' : where, info: info() };
+  // Feltet «Nettside» er skjult for folk. Er det fylt ut, er det en robot.
+  if ($('site').value) { sent = report; thanks(); return; }
+  busy = true; err('');
+  const btn = $('bform').querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Sender …';
+  try {
+    await H.reportBug(report);
+    try { sessionStorage.removeItem('freelio:jsfeil'); } catch (x) { /* privat modus */ }
+    sent = report; thanks(); loadAdmin();
+  } catch (x) { err(x.message || 'Kunne ikke sende. Prøv igjen.'); btn.disabled = false; btn.textContent = 'Send feilmeldingen'; }
+  busy = false;
+}
+
+function thanks() {
+  const demo = !(window.Cloud && Cloud.on);
+  $('box').innerHTML = `<div class="card stack" style="gap:14px;align-items:flex-start"><span class="pill ok">${H.icon('check', 14, 3)} Sendt</span><h1>Takk!</h1>
+    <p style="font-size:16px;margin:0">Vi har fått feilmeldingen og ser på den så snart vi kan.${sent && sent.email ? ' Lurer vi på noe, skriver vi til deg på e-post.' : ''}</p>
+    ${demo ? '<p class="hint" style="margin:0">Demo: feilmeldingen er bare lagret i denne nettleseren.</p>' : ''}
+    <div class="row"><a class="btn primary" href="${H.esc(from || 'index.html')}">${from ? 'Tilbake til siden du var på' : 'Til forsiden'}</a><button class="btn soft" data-a="again">Meld en feil til</button></div></div>`;
+  window.scrollTo(0, 0);
+}
+
+/* ---------- for admin: feilene som er sendt inn ---------- */
+let reports = null, show = 'ny', loadErr = '';
+async function loadAdmin() {
+  if (!H.isAdmin()) return;
+  try { reports = await H.bugReports(); loadErr = ''; } catch (x) { loadErr = x.message || 'Kunne ikke hente feilene.'; }
+  drawAdmin();
+}
+function drawAdmin() {
+  const box = $('admin'); box.hidden = false;
+  const KIND = { liten: ['acc', 'Småting'], 'virker-ikke': ['warn', 'Virker ikke'], stopper: ['bad', 'Stopper'] };
+  const STATUS = { ny: ['new', 'Ny'], fikset: ['ok', 'Fikset'], avvist: ['', 'Avvist'] };
+  const list = (reports || []).filter((r) => show === 'alle' || r.status === show);
+  const count = (s) => (reports || []).filter((r) => s === 'alle' || r.status === s).length;
+  const link = (p) => (OWN.test(p) ? `<a href="${H.esc(p)}">${H.esc(p)}</a>` : H.esc(p || 'Ikke valgt'));
+  box.innerHTML = `<div class="section-head"><h2 class="row" style="gap:8px">${H.icon('shield', 20)} Innsendte feil</h2><span class="meta">Bare admin ser dette</span></div>
+    <div class="seg" role="group" aria-label="Vis">${[['ny', 'Nye'], ['fikset', 'Fikset'], ['avvist', 'Avvist'], ['alle', 'Alle']].map(([k, t]) => `<button aria-pressed="${show === k}" data-a="bugShow" data-v="${k}">${t} (${count(k)})</button>`).join('')}</div>
+    ${loadErr ? `<div class="banner bad">${H.esc(loadErr)}</div>` : !reports ? '<p class="muted">Henter …</p>' : !list.length ? '<p class="muted">Ingen her.</p>'
+      : list.map((r) => `<div class="card stack" style="gap:8px">
+        <div class="row" style="justify-content:space-between"><span class="row" style="gap:6px"><span class="pill ${KIND[r.kind] ? KIND[r.kind][0] : ''}">${KIND[r.kind] ? KIND[r.kind][1] : H.esc(r.kind)}</span><span class="pill ${STATUS[r.status][0]}">${STATUS[r.status][1]}</span></span><span class="meta">${new Date(r.created_at).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short' })}</span></div>
+        <span style="white-space:pre-line;overflow-wrap:anywhere">${H.esc(r.what)}</span>
+        ${r.expected ? `<span class="muted small" style="white-space:pre-line">Forventet: ${H.esc(r.expected)}</span>` : ''}
+        <span class="meta">Side: ${link(r.page)}${/^\S+@\S+\.\S+$/.test(r.email) ? ` · <a href="mailto:${H.esc(r.email)}">${H.esc(r.email)}</a>` : ''}</span>
+        <details class="bug-info"><summary>Teknisk info</summary>${infoList(r.info || {})}</details>
+        <div class="row">${r.status !== 'fikset' ? `<button class="btn soft sm" data-a="bugStatus" data-v="${r.id}:fikset">${H.icon('check', 16, 2.4)} Merk som fikset</button>` : ''}${r.status !== 'avvist' ? `<button class="btn link small" data-a="bugStatus" data-v="${r.id}:avvist">Avvis</button>` : ''}${r.status !== 'ny' ? `<button class="btn link small" data-a="bugStatus" data-v="${r.id}:ny">Åpne igjen</button>` : ''}</div>
+      </div>`).join('')}`;
+}
+
+Object.assign(H.actions, {
+  again: () => { sent = null; form(); $('what').focus(); },
+  bugShow: (v) => { show = v; drawAdmin(); },
+  bugStatus: async (v) => {
+    const [id, status] = v.split(':');
+    try { await H.setBugStatus(id, status); const r = reports.find((x) => String(x.id) === id); if (r) r.status = status; drawAdmin(); H.toast(status === 'fikset' ? 'Merket som fikset' : status === 'avvist' ? 'Avvist' : 'Åpnet igjen'); }
+    catch (x) { H.toast(x.message || 'Kunne ikke endre'); }
+  }
+});
+H.boot(() => { if (!sent) form(); loadAdmin(); });
+</script>
+</body>
+</html>

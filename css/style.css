@@ -316,6 +316,23 @@ select.inp{padding-right:8px}
 .banner.ok{background:var(--ok-soft);color:var(--ok)}
 .banner.warn{background:var(--warn-soft);color:var(--warn)}
 .banner.bad{background:var(--bad-soft);color:var(--bad)}
+/* Meld feil: stripe øverst mens nettsiden testes (H.BUGS i js/app.js) og siden meld-feil.html */
+.bugbar{background:var(--accent);color:var(--on-accent);font-size:14px;line-height:1.35}
+.bugbar-in{display:flex;align-items:center;gap:10px;min-height:44px;padding-block:6px}
+.bugbar-btn{flex:none;background:var(--on-accent);color:var(--accent);font-weight:700;border-radius:999px;padding:6px 14px;text-decoration:none;white-space:nowrap}
+.bugbar-btn:hover{color:var(--accent);opacity:.9}
+.bugbar .bugbar-x{width:32px;height:32px;color:inherit}
+.bugbar .bugbar-x:hover{background:color-mix(in srgb,var(--on-accent) 16%,transparent);color:inherit}
+@media (max-width:560px){.bugbar-more{display:none}}
+.kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.kinds .check{align-items:flex-start;padding:12px 14px;font-size:14px}
+.kinds .check b{display:block;font-size:15px}
+@media (max-width:560px){.kinds{grid-template-columns:1fr}}
+.bug-info{font-size:13px;color:var(--muted)}
+.bug-info summary{cursor:pointer;font-weight:600}
+.bug-info dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;margin:10px 0 0}
+.bug-info dd{margin:0;overflow-wrap:anywhere}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .sum{background:var(--surface);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:8px;font-size:14px;font-variant-numeric:tabular-nums}
 .sum div{display:flex;justify-content:space-between;gap:10px}
 .sum .tot{border-top:1px solid var(--surface2);padding-top:10px;font-weight:700}

@@ -272,6 +272,22 @@
     if (r.error) throw new Error(errText(r.error));
     D.JOBS = D.JOBS.filter((j) => j.id !== id);
   };
+  /* ---------- meld feil (database/feil.sql) ---------- */
+  // Alle kan sende inn. Bare admin kan lese og endre status. Mangler tabellen, sier vi hva som må kjøres.
+  const bugTable = (e) => (/does not exist|schema cache|PGRST205|42P01/i.test((e && (e.message || e.code)) || '') ? 'Meld feil er ikke slått på ennå. Kjør database/feil.sql i Supabase.' : errText(e));
+  H.reportBug = async (r) => {
+    const res = await sb.from('bug_reports').insert({ kind: r.kind, what: r.what, expected: r.expected || '', page: r.page || '', email: r.email || '', info: r.info || {} });
+    if (res.error) throw new Error(bugTable(res.error));
+  };
+  H.bugReports = async () => {
+    const res = await sb.from('bug_reports').select('id,kind,what,expected,page,email,info,status,created_at').order('created_at', { ascending: false }).limit(200);
+    if (res.error) throw new Error(bugTable(res.error));
+    return res.data;
+  };
+  H.setBugStatus = async (id, status) => {
+    const res = await sb.from('bug_reports').update({ status }).eq('id', id);
+    if (res.error) throw new Error(bugTable(res.error));
+  };
   // Henter nye tilbud på dine åpne oppdrag, til varslene. Nye tilbud legges også i øyeblikksbildet,
   // så de ikke blir forsøkt lagret på nytt. Gir true hvis det kom noe nytt.
   H.refreshOffers = async () => {

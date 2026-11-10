@@ -17,7 +17,15 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+
+### Meld feil (midlertidig)
+
+Mens Freelio testes, ligger det en stripe øverst på sidene med knappen «Meld feil». Den åpner `meld-feil.html`, der alle kan fortelle hva som ikke virker, også uten å logge inn. Lenken finnes også i menyen og nederst på alle sider. Feilmeldingen får med seg siden du kom fra, nettleser, skjermstørrelse, versjon og de siste feilene i nettleseren.
+
+1. Kjør `database/admin.sql` (hvis du ikke har gjort det) og så `database/feil.sql` i SQL Editor.
+2. Feilene ser du nederst på `meld-feil.html` når du er logget inn som admin. Der kan du merke dem som fikset eller avvist. De ligger også i Supabase under **Table Editor → bug_reports**.
+3. Når testfasen er over: sett `H.BUGS = false` i `js/app.js` (da forsvinner stripen og lenkene) og slett `meld-feil.html`.
 
 ### Hent fra portefølje (Edge Function)
 
@@ -78,6 +86,7 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 | Lagret: mapper med frilansere, innlegg og oppdrag | `lagret.html?mappe=` | Nei |
 | Slik fungerer det, trygg betaling og priser | `slik-fungerer-det.html` | Nei |
 | Hjelpesenter med FAQ og kontaktskjema | `hjelp.html` | Nei |
+| Meld feil (midlertidig, mens Freelio testes). Admin ser innsendte feil nederst | `meld-feil.html?fra=` | Nei |
 | Om, vilkår, personvern, cookies, 404 | `om.html`, `vilkar.html`, `personvern.html`, `cookies.html`, `404.html` | Nei |
 
 ## Struktur

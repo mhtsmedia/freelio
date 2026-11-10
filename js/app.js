@@ -59,7 +59,8 @@
     'c-some': '<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 5h3"/><path d="M9 10.5c0-.8.6-1.5 1.5-1.5h3c.9 0 1.5.7 1.5 1.5v2c0 .8-.6 1.5-1.5 1.5h-2L10 15.5V14h0c-.6 0-1-.7-1-1.5z"/><path d="M8.5 18.5h7"/>',
     clipboard: '<rect x="4.5" y="4" width="15" height="17.5" rx="2.5"/><path d="M9 4V2.8h1.6a1.4 1.4 0 0 1 2.8 0H15V5.5H9z"/><path d="m7.5 10 1.2 1.2 2-2M7.5 14.5l1.2 1.2 2-2M13 10.2h3.5M13 14.7h3.5"/>',
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
-    compass: '<circle cx="12" cy="12" r="9"/><path d="m15.6 8.4-2.1 5.1-5.1 2.1 2.1-5.1z"/>'
+    compass: '<circle cx="12" cy="12" r="9"/><path d="m15.6 8.4-2.1 5.1-5.1 2.1 2.1-5.1z"/>',
+    bug: '<path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="7.5" width="10" height="12" rx="5"/><path d="M12 11v8.5M3.5 13H7M17 13h3.5M4.5 7.5 7 9.5M19.5 7.5 17 9.5M4.5 19l2.8-2M19.5 19l-2.8-2"/>'
   };
   H.icon = (n, s = 20, w = 1.8, fill = 'none') => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="${Math.round(w * 78) / 100}" stroke-linecap="round" stroke-linejoin="round">${ICON[n] || ''}</svg>`;
   H.star = (s = 14) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor">${ICON.star}</svg>`;
@@ -662,6 +663,23 @@
   // Admin (database/admin.sql). cloud.js spør databasen. Uten database er ingen admin.
   H.isAdmin = () => false;
   H.adminDeleteJob = async () => { throw new Error('Krever innlogging.'); };
+
+  /* ---------- meld feil (midlertidig, meld-feil.html) ----------
+     Stripen øverst og lenkene i menyen og bunnteksten vises så lenge H.BUGS er true. Sett den til false når testfasen er over. */
+  H.BUGS = true;
+  // Lenken tar med siden du er på, så vi vet hvor feilen skjedde
+  H.bugLink = () => 'meld-feil.html' + (page && page !== 'meld-feil' ? '?fra=' + encodeURIComponent((location.pathname.split('/').pop() || 'index.html') + location.search) : '');
+  // De siste feilene i nettleseren (JavaScript) huskes til fanen lukkes, og sendes med feilmeldingen
+  const JSERR = 'freelio:jsfeil';
+  const jsErr = (msg, where) => { try { const l = JSON.parse(sessionStorage.getItem(JSERR) || '[]'); l.push({ msg: String(msg || '').slice(0, 160), where: String(where || '').slice(0, 80), page, at: new Date().toISOString().slice(11, 19) }); sessionStorage.setItem(JSERR, JSON.stringify(l.slice(-3))); } catch (e) {} };
+  addEventListener('error', (e) => { if (e.message) jsErr(e.message, (e.filename || '').split('/').pop() + ':' + e.lineno); });
+  // Avbrutte sideoverganger (AbortError) er ikke feil
+  addEventListener('unhandledrejection', (e) => { if (!(e.reason && e.reason.name === 'AbortError')) jsErr(e.reason && (e.reason.message || e.reason), 'promise'); });
+  H.jsErrors = () => { try { return JSON.parse(sessionStorage.getItem(JSERR) || '[]'); } catch (e) { return []; } };
+  // Uten database lagres feilmeldingen bare i denne nettleseren. cloud.js sender den til Supabase (database/feil.sql).
+  H.reportBug = async (r) => { try { const k = 'freelio:feil', l = JSON.parse(localStorage.getItem(k) || '[]'); l.push(Object.assign({ at: Date.now() }, r)); localStorage.setItem(k, JSON.stringify(l.slice(-20))); } catch (e) {} };
+  H.bugReports = async () => [];
+  H.setBugStatus = async () => {};
   H.notice = (n) => {
     let box = document.getElementById('ntf-box');
     if (!box) { box = document.createElement('div'); box.id = 'ntf-box'; box.className = 'ntf-box'; box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
@@ -819,6 +837,13 @@
 
   /* ---------- toppmeny og bunntekst ---------- */
   const page = document.body.dataset.page || '';
+  // Stripe øverst på sidene så lenge Meld feil er på (H.BUGS). Kan skjules til fanen lukkes.
+  // Ikke på sider som fyller hele skjermen (meldinger og kart), der ligger lenken i menyen.
+  const bugbar = () => {
+    if (!H.BUGS || ['meld-feil', 'meldinger', 'kart'].includes(page)) return '';
+    try { if (sessionStorage.getItem('freelio:feilstripe')) return ''; } catch (e) { /* privat modus */ }
+    return `<div class="bugbar"><div class="wrap bugbar-in">${H.icon('bug', 18)}<span class="grow"><b>Freelio er i testfasen.</b><span class="bugbar-more"> Ser du noe som ikke virker, vil vi gjerne vite det.</span></span><a class="bugbar-btn" href="${H.bugLink()}">Meld feil</a><button class="ibtn bugbar-x" type="button" data-a="hideBugbar" aria-label="Skjul stripen" title="Skjul">${H.icon('close', 16, 2)}</button></div></div>`;
+  };
   /* ---------- toppmeny i det nye designet ----------
      PC: hovedvalgene til venstre, «Lagret», «Meldinger» og en Min side-meny til høyre (som «Min FINN»).
      Mobil: tilbake, logo, pluss for å legge ut oppdrag og en gruppert meny. Resten ligger i bunnmenyen. */
@@ -843,11 +868,12 @@
             <hr>
             <button role="menuitem" data-a="theme">${H.icon(dark ? 'sun' : 'moon', 18)}${dark ? 'Lys modus' : 'Mørk modus'}</button>
             <a role="menuitem" href="hjelp.html">${H.icon('shield', 18)}Hjelp og kontakt</a>
+            ${H.BUGS ? `<a role="menuitem" href="${H.bugLink()}">${H.icon('bug', 18)}Meld feil</a>` : ''}
             <button role="menuitem" data-a="logout">${H.icon('logout', 18)}Logg ut</button>
           </div></div>`
       : `<a class="ibtn lbl hide-sm" href="logg-inn.html" aria-label="Logg inn" title="Logg inn">${H.icon('user', 19)}<span class="lbl-t">Logg inn</span></a>`;
     const link = (h, ic, t, n) => `<a href="${h}">${H.icon(ic, 20)}<span>${t}</span>${badge(n)}</a>`;
-    el.innerHTML = `<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
+    el.innerHTML = `${bugbar()}<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
       <div class="top-in">
         ${page && page !== 'index' ? `<button class="ibtn back-btn" data-a="goBack" aria-label="Tilbake" title="Tilbake">${H.icon('back', 22, 2)}</button>` : ''}
         <a class="logo" href="index.html" aria-label="Freelio, til forsiden">${H.logo()}</a>
@@ -866,7 +892,7 @@
         <div class="dgroup"><span class="dlabel">Finn og utforsk</span>${link('sok.html', 'search', 'Finn frilanser')}${link('utforsk.html', 'compass', 'Utforsk')}${link('kart.html', 'map', 'Kart')}</div>
         <div class="dgroup"><span class="dlabel">Mitt Freelio</span>${link('ny-annonse.html', 'plus', 'Legg ut oppdrag')}${link('mine-oppdrag.html', 'clipboard', 'Mine oppdrag', act)}${link('meldinger.html', 'chat', 'Meldinger', unread)}${link('lagret.html', 'heart', 'Lagret')}</div>
         <div class="dgroup"><span class="dlabel">For frilansere</span>${link('oppdrag.html', 'bag', 'Ledige oppdrag')}${link(S.profile ? 'min-side.html?vis=frilanser' : 'bli-frilanser.html', 'user', S.profile ? 'Frilanserprofil' : 'Bli frilanser')}</div>
-        <div class="dgroup"><span class="dlabel">Hjelp</span>${link('slik-fungerer-det.html', 'shield', 'Slik fungerer det')}${link('avtale.html', 'clipboard', 'Oppdragsavtalen')}${link('hjelp.html', 'chat', 'Hjelp og kontakt')}${link('assistent.html', 'spark', 'Assistent')}</div>
+        <div class="dgroup"><span class="dlabel">Hjelp</span>${link('slik-fungerer-det.html', 'shield', 'Slik fungerer det')}${link('avtale.html', 'clipboard', 'Oppdragsavtalen')}${link('hjelp.html', 'chat', 'Hjelp og kontakt')}${H.BUGS ? link(H.bugLink(), 'bug', 'Meld feil') : ''}${link('assistent.html', 'spark', 'Assistent')}</div>
         <div class="dgroup"><button data-a="theme">${H.icon(dark ? 'sun' : 'moon', 20)}<span>${dark ? 'Lys modus' : 'Mørk modus'}</span></button>${S.user ? `<button data-a="logout">${H.icon('logout', 20)}<span>Logg ut</span></button>` : ''}</div>
       </div></nav>
     </div></header>`;
@@ -880,7 +906,7 @@
     const unread = H.unread(); const act = H.actionCount();
     const wasOpen = el.querySelector('.top.open');
     const dark = H.isDark();
-    el.innerHTML = `<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
+    el.innerHTML = `${bugbar()}<header class="top${wasOpen ? ' open' : ''}"><div class="wrap">
       <div class="top-in">
         ${page && page !== 'index' ? `<button class="ibtn back-btn" data-a="goBack" aria-label="Tilbake" title="Tilbake">${H.icon('back', 22, 2)}</button>` : ''}
         <a class="logo" href="index.html" aria-label="Freelio, til forsiden">${H.logo()}</a>
@@ -899,7 +925,7 @@
       <nav class="drawer" aria-label="Meny for mobil"><div>
         <a href="ny-annonse.html">Legg ut oppdrag</a>${nav.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="kart.html">Kart</a>
         <a href="assistent.html">Assistent</a><a href="meldinger.html">Meldinger${unread ? ` (${unread})` : ''}</a><a href="mine-oppdrag.html">Mine oppdrag${act ? ` (${act})` : ''}</a><a href="lagret.html">Lagret</a>
-        <a href="${S.user ? 'min-side.html' : 'logg-inn.html'}">${S.user ? 'Min side' : 'Logg inn'}</a>
+        <a href="${S.user ? 'min-side.html' : 'logg-inn.html'}">${S.user ? 'Min side' : 'Logg inn'}</a>${H.BUGS ? `<a href="${H.bugLink()}">Meld feil</a>` : ''}
       </div></nav>
     </div></header>`;
     H.mountTabbar(unread, act);
@@ -923,7 +949,7 @@
   };
   H.mountFooter = () => {
     const el = document.getElementById('site-footer'); if (!el) return;
-    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp'], ['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['personvern.html', 'Personvern'], ['cookies.html', 'Cookies']];
+    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp']].concat(H.BUGS ? [[H.bugLink(), 'Meld feil']] : [], [['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['personvern.html', 'Personvern'], ['cookies.html', 'Cookies']]);
     el.innerHTML = `<footer class="foot"><div class="wrap">
       <div class="foot-in">
         <div class="stack" style="gap:14px;max-width:300px"><a class="logo" href="index.html" aria-label="Freelio">${H.logo()}</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
@@ -979,6 +1005,7 @@
       const c = document.getElementById('cookie'); if (c) { c.classList.add('out'); setTimeout(() => c.remove(), 300); }
     },
     cookieSettings: () => H.mountCookie(true),
+    hideBugbar: () => { try { sessionStorage.setItem('freelio:feilstripe', '1'); } catch (e) { /* privat modus */ } const b = document.querySelector('.bugbar'); if (b) b.remove(); },
     save: (v) => {
       const i = S.saved.indexOf(v);
       if (i > -1) {
