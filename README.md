@@ -62,15 +62,6 @@ Kjør `python3 tools/versjon.py` før hver push. Den gir CSS- og JS-filene et ny
 
 Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på et privat repo krever et betalt GitHub-abonnement. Ellers må repoet være offentlig.
 
-## Gå tilbake til den originale forsiden
-
-Forsiden ble byttet til en roligere, FINN-inspirert forside i november 2026. Den originale forsiden er ikke slettet:
-
-- **For alle:** sett `FORSIDE = 'original'` i `js/design.js` og publiser.
-- **Bare for deg:** åpne `index.html?forside=original`. Tilbake med `?forside=ny`.
-- **Uten sirkler bak kategori-ikonene:** sett `IKONSIRKLER = false` i `js/design.js`, eller prøv `?sirkler=av`.
-- **Koden:** den originale forsiden ligger urørt i `index.html`, i `<template id="forside-original">`. Hele koden fra før endringen har git-merket `forside-original`.
-
 ## Sider
 
 | Side | Fil | Innlogging |
@@ -103,8 +94,7 @@ Forsiden ble byttet til en roligere, FINN-inspirert forside i november 2026. Den
 ```
 css/style.css   Design, lys og mørk modus, animasjoner og skeleton
 css/ny.css      Det nye designet oppå style.css. Slås av i js/design.js
-css/forside.css Den rolige, FINN-inspirerte forsiden. Slås av i js/design.js
-js/design.js    Velger design (STANDARD), forside (FORSIDE) og sirkler bak kategori-ikonene (IKONSIRKLER)
+js/design.js    Velger nytt eller forrige design (STANDARD = 'ny' eller 'gammel')
 img/            Logo (SVG) og favicon
 js/logo.js      Logoen som vektor, følger lys og mørk modus
 js/data.js      Kategorier og farger
