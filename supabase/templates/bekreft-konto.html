@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Bekreft e-postadressen din</title>
+<style>
+  @media only screen and (max-width: 480px) {
+    .kort { padding: 30px 22px 26px !important; }
+    .tittel { font-size: 22px !important; line-height: 29px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#F1F4F7;-webkit-text-size-adjust:100%;">
+<!-- Forhåndsvisningstekst i innboksen -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px;">Ett klikk til, så er Freelio-kontoen din klar.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1F4F7;">
+  <tr>
+    <td align="center" style="padding:36px 16px 40px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+
+        <!-- Logo -->
+        <tr>
+          <td style="padding:0 4px 20px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <img src="https://mhtsmedia.github.io/freelio/img/ikon-192.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px;">
+                </td>
+                <td style="vertical-align:middle;padding-left:10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:23px;line-height:28px;font-weight:700;letter-spacing:-0.5px;color:#1A1D21;">freelio</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Kort -->
+        <tr>
+          <td class="kort" style="background-color:#FFFFFF;border:1px solid #E1E5EA;border-radius:16px;padding:40px 36px 36px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+            <h1 class="tittel" style="margin:0 0 12px;font-size:24px;line-height:32px;font-weight:700;letter-spacing:-0.3px;color:#1A1D21;">Bekreft e-postadressen din</h1>
+            <p style="margin:0 0 28px;font-size:16px;line-height:26px;color:#5A626C;">Takk for at du registrerte deg på Freelio! Trykk på knappen for å bekrefte at <strong style="color:#1A1D21;font-weight:600;">{{ .Email }}</strong> er din e-postadresse. Så er kontoen klar til bruk.</p>
+
+            <!-- Knapp -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#3E5368" style="border-radius:10px;">
+                  <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:20px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:10px;">Bekreft e-postadressen</a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:20px 0 0;font-size:14px;line-height:22px;color:#5A626C;">Lenken er gyldig i 1 time.</p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="padding:28px 0;"><div style="border-top:1px solid #E1E5EA;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+            </table>
+
+            <p style="margin:0 0 6px;font-size:13px;line-height:20px;color:#5A626C;">Fungerer ikke knappen? Kopier denne lenken inn i nettleseren:</p>
+            <p style="margin:0;font-size:13px;line-height:20px;word-break:break-all;"><a href="{{ .ConfirmationURL }}" target="_blank" style="color:#3E5368;text-decoration:underline;">{{ .ConfirmationURL }}</a></p>
+          </td>
+        </tr>
+
+        <!-- Bunntekst -->
+        <tr>
+          <td align="center" style="padding:24px 12px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#8A929B;">
+            Har du ikke opprettet konto på Freelio? Da kan du se bort fra denne e-posten.<br>
+            Kontoen blir ikke aktivert uten at lenken brukes.
+            <br><br>
+            <strong style="color:#5A626C;font-weight:600;">Freelio</strong> · Lokale fotografer og videografer<br>
+            <a href="{{ .SiteURL }}" target="_blank" style="color:#5A626C;text-decoration:underline;">mhtsmedia.github.io/freelio</a>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
