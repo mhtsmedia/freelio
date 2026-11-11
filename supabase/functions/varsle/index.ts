@@ -17,6 +17,22 @@
 const SITE = "https://mhtsmedia.github.io/freelio/";
 const FRESH_MS = 10 * 60 * 1000;
 const env = (k) => ((globalThis.Deno && Deno.env.get(k)) || "");
+// En nøkkel fra Secrets. Tåler at den er limt inn som «NAVN=verdi», også flere linjer på en gang
+// (da plukkes linjen med riktig navn ut), og mellomrom eller anførselstegn rundt.
+export const secret = (k, raw = env(k), others = [env("VAPID_PUBLIC_KEY"), env("VAPID_PRIVATE_KEY")]) => {
+  const pick = (val) => {
+    for (const line of String(val || "").trim().split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*["']?([^"'\s]+)["']?\s*$/);
+      if (m && m[1] === k) return m[2];
+    }
+    return "";
+  };
+  const v = String(raw || "").trim();
+  // Først i sin egen verdi, så i de andre VAPID-verdiene (hvis begge linjene ble limt inn i samme felt)
+  return pick(v) || others.map(pick).find(Boolean) || v.replace(/^["']|["']$/g, "");
+};
+// Formen på en nøkkel til feilsøking: lengde og antall linjer, aldri innholdet
+const shape = (k) => { const v = env(k); return `${k.replace("VAPID_", "").toLowerCase()} ${v.length} tegn/${v ? v.split(/\r?\n/).length : 0} linjer`; };
 
 // ---------- hjelpere ----------
 export const b64u = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -61,10 +77,24 @@ export async function encryptPayload(plain, uaPublic, authSecret, test) {
 }
 
 // ---------- VAPID: viser push-tjenesten at varselet kommer fra Freelio (RFC 8292) ----------
+// Den hemmelige nøkkelen lastes som PKCS8 (standardformatet for en P-256-nøkkel), som alle kjøremotorer
+// leser likt. JWK brukes bare som reserve.
+const PKCS8_HEAD = new Uint8Array([0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b, 0x02, 0x01, 0x01, 0x04, 0x20]);
+const PKCS8_MID = new Uint8Array([0xa1, 0x44, 0x03, 0x42, 0x00]);
+export async function vapidKey(publicKey, privateKey) {
+  const pub = unb64u(publicKey), d = unb64u(privateKey);
+  if (pub.length !== 65 || d.length !== 32) throw new Error(`VAPID-nøklene har feil lengde (${pub.length} og ${d.length} byte; ${shape("VAPID_PUBLIC_KEY")}, ${shape("VAPID_PRIVATE_KEY")}). Sjekk Secrets.`);
+  try {
+    return await crypto.subtle.importKey("pkcs8", cat(PKCS8_HEAD, d, PKCS8_MID, pub), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  } catch (e) {
+    console.warn("VAPID pkcs8", e && e.message);
+    return await crypto.subtle.importKey("jwk", { ...pubJwk(pub), d: privateKey }, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  }
+}
 export async function vapidAuth(endpoint, publicKey, privateKey, subject) {
   const head = b64u(txt(JSON.stringify({ typ: "JWT", alg: "ES256" })));
   const claims = b64u(txt(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: subject })));
-  const key = await crypto.subtle.importKey("jwk", { ...pubJwk(unb64u(publicKey)), d: privateKey }, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const key = await vapidKey(publicKey, privateKey);
   const sig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, txt(head + "." + claims)));
   return `vapid t=${head}.${claims}.${b64u(sig)}, k=${publicKey}`;
 }
@@ -78,7 +108,7 @@ async function sendPush(sub, note) {
   const r = await fetch(sub.endpoint, {
     method: "POST",
     headers: {
-      Authorization: await vapidAuth(sub.endpoint, env("VAPID_PUBLIC_KEY"), env("VAPID_PRIVATE_KEY"), env("VAPID_SUBJECT") || SITE),
+      Authorization: await vapidAuth(sub.endpoint, secret("VAPID_PUBLIC_KEY"), secret("VAPID_PRIVATE_KEY"), env("VAPID_SUBJECT") || SITE),
       "Content-Encoding": "aes128gcm",
       "Content-Type": "application/octet-stream",
       TTL: "86400",

@@ -994,7 +994,7 @@
     pushOn: async () => { try { await H.push.enable(); H.toast('Varsler er på. Du får beskjed om nye tilbud og meldinger.'); } catch (e) { H.toast(e.message); } H.pushFill(); },
     pushOff: async () => { await H.push.disable(); H.toast('Varsler er slått av for denne enheten.'); H.pushFill(); },
     pushTest: async () => {
-      try { const r = await Cloud.sb.functions.invoke('varsle', { body: { type: 'test' } }); if (r.error) throw r.error; H.toast(r.data && r.data.sent ? 'Testvarselet er sendt. Det kommer om noen sekunder.' : 'Fant ingen enhet å sende til. Slå på varsler først.'); }
+      try { const r = await Cloud.sb.functions.invoke('varsle', { body: { type: 'test' } }); if (r.error) throw r.error; H.toast(r.data && r.data.sent ? 'Testvarselet er sendt. Det kommer om noen sekunder.' : r.data && r.data.devices ? 'Fant enheten, men varselet kunne ikke leveres. Slå varsler av og på igjen, eller meld fra om feilen.' : 'Fant ingen enhet å sende til. Slå på varsler først.'); }
       catch (e) { H.toast('Fikk ikke sendt testvarsel. Er funksjonen «varsle» lagt inn i Supabase?'); }
     },
     theme: () => H.setTheme(H.isDark() ? 'light' : 'dark'),
