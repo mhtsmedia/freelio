@@ -137,7 +137,7 @@
   const S = (H.S = H.load());
 
   /* ---------- frilansere ---------- */
-  H.all = () => {
+  H.all = (withHidden) => {
     // Legger til ekte omtaler. Ekte frilansere får snitt bare av ekte omtaler. Demo-frilansere har et startgrunnlag.
     const withReviews = (f) => {
       H.clean(H.fixCats(f));
@@ -150,9 +150,11 @@
     };
     const list = D.FREELANCERS.filter((f) => !S.profile || f.id !== S.profile.id).map(withReviews);
     if (S.profile && S.profile.published) list.push(withReviews(S.profile));
+    // Skjulte profiler (bare admin får dem fra databasen) tas med når en enkelt profil slås opp
+    if (withHidden) (D.HIDDEN || []).forEach((f) => { if (!list.some((x) => x.id === f.id)) list.push(withReviews(f)); });
     return list;
   };
-  H.byId = (id) => H.all().find((f) => f.id === id);
+  H.byId = (id) => H.all(true).find((f) => f.id === id);
   // Rydd bort data som peker til frilansere som ikke finnes lenger (for eksempel fra en eldre versjon)
   H.prune = function prune() {
     const ok = (id) => !!H.byId(id);
@@ -678,6 +680,7 @@
   H.isAdmin = () => false;
   H.bugsNew = () => 0; // antall nye feilmeldinger (bare for admin)
   H.adminDeleteJob = async () => { throw new Error('Krever innlogging.'); };
+  H.adminDo = async () => { throw new Error('Krever innlogging.'); }; // admin-funksjoner i databasen (database/moderering.sql)
 
   /* ---------- meld feil (midlertidig, meld-feil.html) ----------
      Stripen øverst og lenkene i menyen og bunnteksten vises så lenge H.BUGS er true. Sett den til false når testfasen er over. */
@@ -876,7 +879,7 @@
           <div class="prof-menu" role="menu" hidden>
             <a class="pm-head" href="min-side.html">${H.avatar(me, 40)}<span><b>${H.esc(S.user.name)}</b><span class="meta">Gå til Min side</span></span></a>
             <a role="menuitem" href="mine-oppdrag.html">${H.icon('clipboard', 18)}Mine oppdrag${badge(act)}</a>
-            ${H.isAdmin() ? `<a role="menuitem" href="meld-feil.html#admin">${H.icon('bug', 18)}Feilmeldinger${badge(H.bugsNew())}</a>` : ''}
+            ${H.isAdmin() ? `<a role="menuitem" href="admin.html">${H.icon('shield', 18)}Admin${badge(H.bugsNew())}</a>` : ''}
             <a role="menuitem" href="meldinger.html">${H.icon('chat', 18)}Meldinger${badge(unread)}</a>
             <a role="menuitem" href="lagret.html">${H.icon('heart', 18)}Lagret</a>
             <a role="menuitem" href="${S.profile ? 'min-side.html?vis=frilanser' : 'bli-frilanser.html'}">${H.icon('user', 18)}${S.profile ? 'Frilanserprofil' : 'Bli frilanser'}</a>

@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=df31d6e4">
+<link rel="stylesheet" href="css/style.css?v=9c0643b3">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -34,8 +34,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=63cbbc6e"></script>
-<script src="js/cloud.js?v=9d24d311"></script>
+<script src="js/app.js?v=a17a36fa"></script>
+<script src="js/cloud.js?v=c259cde7"></script>
 <script type="text/freelio">
 let cat = 'alle';
 let draft = null, busy = '', caption = '';
@@ -88,7 +88,7 @@ function openReel(startId) {
           <div class="reel-info">
             <a class="reel-by" href="frilanser.html?id=${f.id}">${H.avatar(f, 40)}<span><b>${H.esc(f.name)} ${H.verified(f)}</b><span>${H.esc(f.role)} · ${H.esc(f.area)} · ${ago(p.at)}</span></span></a>
             ${p.cap ? `<p class="reel-cap">${H.esc(p.cap)}</p>` : ''}
-            <div class="reel-btns"><a class="btn sm reel-light" href="frilanser.html?id=${f.id}">Se profil</a><a class="btn primary sm" href="book.html?id=${f.id}">Book · ${H.priceTxt(f)}</a>${p.fid === mineId ? '<button class="btn sm reel-light" data-r="del">Slett innlegget</button>' : ''}</div>
+            <div class="reel-btns"><a class="btn sm reel-light" href="frilanser.html?id=${f.id}">Se profil</a><a class="btn primary sm" href="book.html?id=${f.id}">Book · ${H.priceTxt(f)}</a>${p.fid === mineId ? '<button class="btn sm reel-light" data-r="del">Slett innlegget</button>' : H.isAdmin() ? '<button class="btn sm reel-light" data-r="del">Fjern innlegget (admin)</button>' : ''}</div>
           </div>
         </div>
         <div class="reel-actions">
@@ -151,7 +151,7 @@ function openReel(startId) {
     const off = H.social.ready === false && cloud;
     const canWrite = !off && (!cloud || H.S.user);
     panel.innerHTML = `<div class="reel-c-head"><b>Kommentarer ${list.length ? '(' + list.length + ')' : ''}</b><button class="ibtn" data-r="cclose" aria-label="Lukk kommentarer">${H.icon('close', 18, 2)}</button></div>
-      <div class="reel-c-list">${list.length ? list.map((c) => `<div class="reel-c"><span class="av" style="width:32px;height:32px;background:#5B5F97;font-size:12px">${H.esc(String(c.name).slice(0, 1).toUpperCase())}</span><div class="grow stack" style="gap:2px;min-width:0"><span><b>${H.esc(c.name)}</b> <span class="meta">${ago(c.at)}</span></span><span style="white-space:pre-line;overflow-wrap:anywhere">${H.esc(c.text)}</span>${c.mine || c.canDel ? `<button class="btn link small" style="align-self:flex-start;padding:0" data-r="cdel" data-c="${c.id}">Slett</button>` : ''}</div></div>`).join('') : '<p class="muted">Ingen kommentarer ennå. Skriv den første.</p>'}</div>
+      <div class="reel-c-list">${list.length ? list.map((c) => `<div class="reel-c"><span class="av" style="width:32px;height:32px;background:#5B5F97;font-size:12px">${H.esc(String(c.name).slice(0, 1).toUpperCase())}</span><div class="grow stack" style="gap:2px;min-width:0"><span><b>${H.esc(c.name)}</b> <span class="meta">${ago(c.at)}</span></span><span style="white-space:pre-line;overflow-wrap:anywhere">${H.esc(c.text)}</span>${c.mine || c.canDel || H.isAdmin() ? `<button class="btn link small" style="align-self:flex-start;padding:0" data-r="cdel" data-c="${c.id}">Slett</button>` : ''}</div></div>`).join('') : '<p class="muted">Ingen kommentarer ennå. Skriv den første.</p>'}</div>
       ${off ? '<p class="hint" style="padding:12px 16px">Kommentarer er ikke slått på ennå. Kjør database/kommentarer.sql i Supabase.</p>'
         : canWrite ? `<form class="reel-c-form" data-r="cform"><label class="sr" for="ctext">Skriv en kommentar</label><input id="ctext" class="inp" maxlength="1000" placeholder="Skriv en kommentar …" autocomplete="off"><button class="send" aria-label="Send kommentar">${H.icon('arrow', 20, 2)}</button></form>`
         : `<div style="padding:12px 16px"><button class="btn primary block" data-r="login">Logg inn for å kommentere</button></div>`}`;

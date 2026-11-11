@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=df31d6e4">
+<link rel="stylesheet" href="css/style.css?v=9c0643b3">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -29,11 +29,31 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=63cbbc6e"></script>
-<script src="js/cloud.js?v=9d24d311"></script>
+<script src="js/app.js?v=a17a36fa"></script>
+<script src="js/cloud.js?v=c259cde7"></script>
 <script type="text/freelio">
 const id = H.qs('id');
 let tab = location.hash === '#omtaler' ? 'rv' : 'work';
+// ---------- admin: skjul, steng eller slett frilanseren ----------
+let adm = null, admAsk = null, admBusy = false;
+const ADM = {
+  hide: ['Skjul fra søk', 'Profilen forsvinner fra søk, kart og forsiden. Bestillinger blir stående. Kan angres.', 'admin_hide_freelancer', { p_hide: true }],
+  show: ['Vis i søk igjen', 'Profilen blir synlig igjen.', 'admin_hide_freelancer', { p_hide: false }],
+  ban: ['Steng kontoen', 'Personen kan ikke logge inn, og profilen skjules. Kan angres.', 'admin_ban_freelancer', { p_ban: true }],
+  unban: ['Åpne kontoen', 'Personen kan logge inn igjen. Profilen er fortsatt skjult til du viser den.', 'admin_ban_freelancer', { p_ban: false }],
+  del: ['Slett profilen', 'Profilen, tilbudene, meldingene, omtalene og innleggene slettes for godt. Det kan ikke angres.', 'admin_delete_freelancer', {}]
+};
+async function loadAdm() { if (!H.isAdmin()) return; try { adm = await H.adminDo('admin_freelancer_info', { p_id: id }); } catch (e) { adm = { err: e.message }; } render(); }
+function adminCard(f) {
+  if (!adm) return `<div class="card stack admin-card"><b class="row" style="gap:8px">${H.icon('shield', 18)} Admin</b><span class="muted small">Henter status …</span></div>`;
+  if (adm.err) return `<div class="card stack admin-card"><b class="row" style="gap:8px">${H.icon('shield', 18)} Admin</b><span class="small">${H.esc(adm.err)}</span></div>`;
+  const st = [adm.hidden ? 'Skjult fra søk' : adm.published ? 'Synlig i søk' : 'Ikke publisert', adm.banned ? 'Kontoen er stengt' : '', adm.orders ? `${adm.orders} ${adm.orders === 1 ? 'bestilling' : 'bestillinger'}${adm.active ? `, ${adm.active} aktive` : ''}` : 'Ingen bestillinger'].filter(Boolean).join(' · ');
+  if (adm.isAdmin) return `<div class="card stack admin-card"><b class="row" style="gap:8px">${H.icon('shield', 18)} Admin</b><span class="muted small">${H.esc(st)}. Dette er en admin-konto og kan ikke fjernes her.</span></div>`;
+  if (admAsk) { const a = ADM[admAsk]; return `<div class="card stack admin-card"><b class="row" style="gap:8px">${H.icon('shield', 18)} ${a[0]}?</b><span class="small">${a[1]}</span><label class="field"><span class="label">Grunn (valgfritt, bare til loggen)</span><input class="inp" id="admReason" maxlength="200" placeholder="F.eks. Falsk profil eller spam"></label><div class="row"><button class="btn soft sm grow" data-a="admNo">Avbryt</button><button class="btn ${admAsk === 'del' ? 'dark' : 'primary'} sm grow" data-a="admGo" ${admBusy ? 'disabled' : ''}>${admBusy ? 'Jobber …' : a[0]}</button></div></div>`; }
+  return `<div class="card stack admin-card"><b class="row" style="gap:8px">${H.icon('shield', 18)} Admin</b><span class="muted small">${H.esc(st)}</span>
+    <div class="row" style="gap:6px"><button class="btn soft sm" data-a="admAsk" data-v="${adm.hidden ? 'show' : 'hide'}">${adm.hidden ? 'Vis i søk igjen' : 'Skjul fra søk'}</button><button class="btn soft sm" data-a="admAsk" data-v="${adm.banned ? 'unban' : 'ban'}">${adm.banned ? 'Åpne kontoen' : 'Steng kontoen'}</button></div>
+    ${adm.orders ? '<span class="hint">Har bestillinger, så profilen kan bare skjules, ikke slettes.</span>' : '<button class="btn link small" style="align-self:flex-start;padding:0;color:var(--bad,#c0392b)" data-a="admAsk" data-v="del">Slett profilen for godt</button>'}</div>`;
+}
 let pcat = H.qs('kat') || 'alle';
 function render() {
   const f = H.byId(id);
@@ -60,7 +80,7 @@ function render() {
       : `<div class="stack" style="gap:20px">${f.demo !== false && f.sum ? `<div class="banner acc">${H.icon('spark', 20)}<span><b>Oppsummert av assistenten.</b> ${H.esc(f.sum)}</span></div>` : ''}
       <div class="grid2"><div class="stack" style="gap:2px"><span style="font-family:var(--f-display);font-size:48px;font-weight:800;line-height:1">${H.ratingTxt(f)}</span><span class="rate" aria-label="${H.ratingTxt(f)} av 5 stjerner">${[1, 2, 3, 4, 5].map((k) => `<span style="color:${k <= Math.round(f.rating) ? 'var(--star)' : 'var(--surface2)'};display:inline-flex">${H.star(18)}</span>`).join('')}</span><span class="muted small">${f.reviews} ${f.reviews === 1 ? 'omtale' : 'omtaler'} fra kunder som har betalt via Freelio</span></div>
       <div class="bars">${dist.map(([s, c]) => `<div><span>${s} ${s === 1 ? 'stjerne' : 'stjerner'}</span><i><b style="width:${f.reviews ? (c / f.reviews) * 100 : 0}%"></b></i><span>${c}</span></div>`).join('')}</div></div>
-      <div>${f.rv.map((r) => `<div class="rev"><div class="row" style="justify-content:space-between"><b>${H.esc(r[0])}</b><span class="rate" style="color:var(--star)">${H.star(14).repeat(r[1])}<span class="sr">${r[1]} av 5</span></span></div><span class="meta">${H.esc(r[2])}</span><span>${H.esc(r[3])}</span>${r[4] ? '<span class="pill acc" style="align-self:flex-start">Din omtale</span>' : ''}</div>`).join('')}</div></div>`,
+      <div>${f.rv.map((r) => `<div class="rev"><div class="row" style="justify-content:space-between"><b>${H.esc(r[0])}</b><span class="rate" style="color:var(--star)">${H.star(14).repeat(r[1])}<span class="sr">${r[1]} av 5</span></span></div><span class="meta">${H.esc(r[2])}</span><span>${H.esc(r[3])}</span>${r[4] ? '<span class="pill acc" style="align-self:flex-start">Din omtale</span>' : ''}${H.isAdmin() && r[6] ? `<button class="btn link small" style="align-self:flex-start;padding:0" data-a="adminDelReview" data-v="${H.esc(r[6])}">Fjern omtalen (admin)</button>` : ''}</div>`).join('')}</div></div>`,
     about: `<div class="prose"><p>${H.esc(f.bio)}</p><ul><li>Område: ${H.esc(f.area)} og omegn</li><li>Spesialiserer seg på: ${f.tags.map(H.esc).join(', ')}</li><li>Medlem siden ${H.esc(f.joined)}</li>${f.verified ? '<li>Identitet bekreftet med BankID</li>' : ''}</ul>${f.terms ? `<h2>Vilkår fra ${H.esc(H.first(f.name))}</h2><p style="white-space:pre-line">${H.esc(f.terms)}</p>` : ''}<p class="hint">Alle bookinger følger <a href="avtale.html">Freelios oppdragsavtale</a>. Pengene holdes trygt til du har godkjent leveransen, og ${H.esc(H.first(f.name))} eier bildene frem til du godkjenner.</p></div>`
   }[tab];
   const similar = H.all().filter((x) => x.id !== f.id && (f.niches || [f.cat]).some((n) => H.inCat(x, n))).slice(0, 4);
@@ -86,6 +106,7 @@ function render() {
         <button class="btn link small" style="align-self:flex-start" data-a="folder" data-v="f:${f.id}">${H.inFolders('f', f.id).length ? 'Lagret i ' + H.inFolders('f', f.id).map((m) => H.esc(m.name)).join(', ') + '. Endre mapper' : 'Legg i mappe'}</button>
         ${H.S.cmp.length >= 2 ? `<a href="sammenlign.html" class="small">Gå til sammenligning (${H.S.cmp.length})</a>` : ''}
       </div>
+      ${H.isAdmin() && !(H.S.profile && H.S.profile.id === f.id) ? adminCard(f) : ''}
       <div class="banner acc">${H.icon('lock', 20)}<span>Trygg betaling. Pengene holdes til du har godkjent leveransen. <a href="slik-fungerer-det.html#betaling">Slik fungerer det</a></span></div>
       <p class="hint">Hold samtalen og betalingen i Freelio. Da er du dekket hvis noe går galt.</p>
     </aside>
@@ -93,6 +114,28 @@ function render() {
   ${similar.length ? `<div class="wrap section"><h2>Lignende frilansere</h2><div class="cards">${similar.map((x) => H.fCard(x)).join('')}</div></div>` : ''}`;
 }
 H.actions.tab = (v) => { tab = v; render(); };
+H.actions.admAsk = (v) => { admAsk = v; render(); const i = document.getElementById('admReason'); if (i) i.focus(); };
+H.actions.admNo = () => { admAsk = null; render(); };
+H.actions.admGo = async () => {
+  const a = ADM[admAsk]; if (!a || admBusy) return;
+  const reason = H.clip((document.getElementById('admReason') || {}).value || '', 200);
+  admBusy = true; render();
+  try {
+    await H.adminDo(a[2], Object.assign({ p_id: id, p_reason: reason }, a[3]));
+    if (admAsk === 'del') { H.flash('Profilen er slettet.'); H.go('sok.html'); return; }
+    H.toast(a[0] + ': gjort.'); admAsk = null; admBusy = false;
+    if (H.refresh) await H.refresh();
+    await loadAdm();
+  } catch (e) { admBusy = false; H.toast(e.message); render(); }
+};
+H.actions.adminDelReview = async (v) => {
+  if (!confirm('Fjerne denne omtalen for godt?')) return;
+  try {
+    await H.adminDo('admin_delete_review', { p_id: v, p_reason: '' });
+    Object.values(H.S.extraReviews || {}).forEach((l) => { const i = l.findIndex((r) => r[6] === v); if (i > -1) l.splice(i, 1); });
+    H.toast('Omtalen er fjernet.'); render();
+  } catch (e) { H.toast(e.message); }
+};
 H.actions.pcat = (v) => { pcat = v; render(); };
 // Bla gjennom porteføljen i en visning på siden, uten å åpne ny fane.
 // Piler, piltastene eller sveip på mobil. Lukk med Esc, krysset eller klikk utenfor.
@@ -130,7 +173,7 @@ H.actions.viewPf = (v) => {
   setTimeout(() => { const c = lb.querySelector('[data-lb="close"]'); if (c) c.focus(); }, 30);
 };
 H.actions.playVid = H.actions.viewPf;
-H.boot(render);
+H.boot(() => { render(); loadAdm(); });
 </script>
 </body>
 </html>

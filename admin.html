@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin | Freelio</title>
+<meta name="robots" content="noindex">
+<script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Freelio">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css?v=9c0643b3">
+<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
+<script src="js/design.js?v=7c71ad27"></script>
+</head>
+<body data-page="admin">
+<div id="site-header"></div>
+<main id="main" data-skel="page"></main>
+<div id="site-footer"></div>
+<script src="js/logo.js?v=e81a0a03"></script>
+<script src="js/data.js?v=13ca9b41"></script>
+<script src="js/config.js?v=8c092c05"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="js/app.js?v=a17a36fa"></script>
+<script src="js/cloud.js?v=c259cde7"></script>
+<script type="text/freelio">
+// Admin: feilmeldinger, skjulte og stengte frilansere, og loggen over hva som er fjernet.
+// Alt hentes og endres gjennom admin-funksjonene i databasen (database/moderering.sql), som sjekker at du er admin.
+let data = null, err = '', busy = '';
+const when = (iso) => new Date(iso).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+async function load() {
+  try { data = await H.adminDo('admin_overview'); err = ''; } catch (e) { err = e.message; }
+  render();
+}
+function render() {
+  const main = document.getElementById('main');
+  if (!H.S.user) { location.replace('logg-inn.html?neste=admin.html'); return; }
+  if (!H.isAdmin()) { main.innerHTML = `<div class="wrap section"><div class="empty"><b style="color:var(--fg)">Bare for admin</b><span>Denne siden er for dem som driver Freelio.</span><a class="btn primary sm" href="index.html">Til forsiden</a></div></div>`; return; }
+  const hidden = (data && data.hidden) || [], log = (data && data.log) || [];
+  main.innerHTML = `<div class="wrap section stack" style="max-width:860px;gap:24px">
+    <div class="stack" style="gap:6px"><h1 class="row" style="gap:10px">${H.icon('shield', 28)} Admin</h1><p class="muted">Fjern innhold som bryter reglene. Alt du gjør, logges nederst.</p></div>
+    ${err ? `<div class="banner bad">${H.esc(err)}</div>` : ''}
+    <section class="card stack">
+      <div class="row" style="justify-content:space-between"><b style="font-size:17px">Feilmeldinger</b><a class="btn soft sm" href="meld-feil.html#admin">${H.icon('bug', 16)} Åpne${data && data.bugs ? ` (${data.bugs} nye)` : ''}</a></div>
+      <span class="muted small">Feil som brukere har meldt inn. Du får push-varsel når det kommer en ny.</span>
+    </section>
+    <section class="card stack">
+      <b style="font-size:17px">Slik fjerner du innhold</b>
+      <ul class="muted small" style="margin:0;padding-left:18px;display:grid;gap:4px">
+        <li><b>Frilanser:</b> åpne profilen. Admin-kortet til høyre (nederst på mobil) har Skjul, Steng kontoen og Slett.</li>
+        <li><b>Oppdrag:</b> åpne oppdraget og trykk Fjern annonsen i admin-kortet.</li>
+        <li><b>Innlegg og kommentarer:</b> på Utforsk har alle innlegg og kommentarer en fjern-knapp når du er admin.</li>
+        <li><b>Omtaler:</b> under Omtaler på profilen står Fjern omtalen ved hver omtale.</li>
+      </ul>
+    </section>
+    <section class="card stack">
+      <b style="font-size:17px">Skjulte og stengte frilansere (${hidden.length})</b>
+      ${!data && !err ? '<span class="muted small">Henter …</span>' : hidden.length ? `<div class="admin-list">${hidden.map((f) => `<div class="admin-row"><b>${H.esc(f.name)}</b>${f.banned ? '<span class="pill bad">Stengt</span>' : '<span class="pill">Skjult</span>'}
+        <a class="btn link small" href="frilanser.html?id=${encodeURIComponent(f.id)}">Åpne profilen</a>
+        ${f.banned ? `<button class="btn soft sm" data-a="admUndo" data-v="unban:${H.esc(f.id)}" ${busy ? 'disabled' : ''}>Åpne kontoen</button>` : ''}
+        <button class="btn soft sm" data-a="admUndo" data-v="show:${H.esc(f.id)}" ${busy ? 'disabled' : ''}>Vis i søk igjen</button></div>`).join('')}</div>` : '<span class="muted small">Ingen frilansere er skjult eller stengt.</span>'}
+    </section>
+    <section class="card stack">
+      <b style="font-size:17px">Siste handlinger</b>
+      ${log.length ? `<div class="admin-log">${log.map((l) => `<div><span class="small"><b>${H.esc(l.action.charAt(0).toUpperCase() + l.action.slice(1))}</b> · ${H.esc(l.admin)} · ${H.esc(when(l.created_at))}</span>${l.note ? `<span class="muted small">${H.esc(l.note)}</span>` : ''}</div>`).join('')}</div>` : '<span class="muted small">Ingenting er fjernet ennå.</span>'}
+    </section>
+  </div>`;
+}
+H.actions.admUndo = async (v) => {
+  const i = v.indexOf(':'), what = v.slice(0, i), fid = v.slice(i + 1);
+  busy = v; render();
+  try {
+    if (what === 'show') await H.adminDo('admin_hide_freelancer', { p_id: fid, p_hide: false, p_reason: 'Vist igjen fra admin-siden' });
+    else await H.adminDo('admin_ban_freelancer', { p_id: fid, p_ban: false, p_reason: 'Åpnet fra admin-siden' });
+    H.toast(what === 'show' ? 'Profilen er synlig igjen.' : 'Kontoen er åpnet.');
+  } catch (e) { H.toast(e.message); }
+  busy = ''; await load();
+};
+H.boot(() => { render(); load(); });
+</script>
+</body>
+</html>

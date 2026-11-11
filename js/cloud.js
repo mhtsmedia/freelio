@@ -81,7 +81,7 @@
 
     // Frilansere og omtaler
     S.extraReviews = {};
-    rvRows.forEach((r) => (S.extraReviews[r.freelancer_id] = S.extraReviews[r.freelancer_id] || []).push([r.author_name, r.stars, r.job_label, r.text, r.author_id === C.uid, r.order_id]));
+    rvRows.forEach((r) => (S.extraReviews[r.freelancer_id] = S.extraReviews[r.freelancer_id] || []).push([r.author_name, r.stars, r.job_label, r.text, r.author_id === C.uid, r.order_id, r.id]));
     // Demo-frilansere og demo-oppdrag vises ikke. Bare ekte brukere.
     const all = frRows.filter((r) => !r.demo).map(fromFreelancer).map((f) => {
       if (!f.demo) { const ex = S.extraReviews[f.id] || []; f.reviews = 0; f.rv = []; f.rating = 0; }
@@ -96,7 +96,7 @@
     S.myJobs = myJobRows.reverse().map((r) => Object.assign({}, r.data, { id: r.id, status: r.status, created: Date.parse(r.created_at), postedTxt: dateTxt(r.created_at), offersList: [] }));
 
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};
-    C.admin = false;
+    C.admin = false; D.HIDDEN = [];
     let adopted = [];
     if (C.uid) {
       const [prof, offers, orders, msgs, saved, fo, adm] = await Promise.all([
@@ -111,6 +111,8 @@
       ]);
       C.admin = !adm.error && adm.data === true;
       C.bugsNew = C.admin ? await countBugs() : 0;
+      // Admin får også skjulte profiler fra databasen. De vises ikke i lister, men kan åpnes og vises igjen.
+      D.HIDDEN = C.admin ? all.filter((f) => !f.published && f.id !== C.uid) : [];
       const p = must(prof);
       S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
       const meta = session.user.user_metadata || {};
@@ -269,6 +271,12 @@
   };
   H.flush = () => chain;
   H.isAdmin = () => !!C.admin;
+  // Admin-funksjonene i databasen sjekker selv at du er admin (database/moderering.sql)
+  H.adminDo = async (fn, args) => {
+    const r = await sb.rpc(fn, args || {});
+    if (r.error) throw new Error(/function|schema cache/i.test(r.error.message) ? 'Admin-funksjonene er ikke lagt inn ennå (database/moderering.sql).' : errText(r.error));
+    return r.data;
+  };
   H.bugsNew = () => C.bugsNew || 0;
   // Fjerner en annonse som admin. Databasen sjekker selv at du er admin, og logger det.
   H.adminDeleteJob = async (id, reason) => {
@@ -337,6 +345,9 @@
   };
   H.removePost = async (id) => {
     const p = S.posts.find((x) => x.id === id); if (!p) return;
+    const own = S.profile && p.fid === S.profile.id;
+    // Andres innlegg fjernes som admin (sjekkes og logges i databasen)
+    if (!own && C.admin) { await H.adminDo('admin_delete_post', { p_id: id, p_reason: '' }); S.posts = S.posts.filter((x) => x.id !== id); H.saveLocal(); return; }
     const r = await sb.from('posts').delete().eq('id', id);
     if (r.error) throw new Error(errText(r.error));
     S.posts = S.posts.filter((x) => x.id !== id); H.saveLocal();
@@ -381,7 +392,12 @@
       if (r.error) throw new Error(noTable(r.error) ? 'Kommentarer er ikke slått på ennå. Kjør database/kommentarer.sql i Supabase.' : errText(r.error));
       return { id: r.data.id, name: name || 'Deg', text, at: Date.parse(r.data.created_at), mine: true, canDel: true };
     },
-    uncomment: async (id, cid) => { const r = await sb.from('post_comments').delete().eq('id', cid); if (r.error) throw new Error(errText(r.error)); }
+    uncomment: async (id, cid) => {
+      const r = await sb.from('post_comments').delete().eq('id', cid).select('id');
+      if (r.error) throw new Error(errText(r.error));
+      // Ingenting slettet: kommentaren er en annens. Admin kan fjerne den likevel.
+      if (!(r.data || []).length && C.admin) await H.adminDo('admin_delete_comment', { p_id: cid, p_reason: '' });
+    }
   };
   H.dropImage = async (url) => {
     const m = String(url || '').match(/\/object\/public\/profiles\/(.+)$/);
