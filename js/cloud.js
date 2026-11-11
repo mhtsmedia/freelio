@@ -30,6 +30,8 @@
   };
   const dateTxt = (iso) => new Date(iso).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const ini = (name) => String(name || '?').split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase();
+  // Antall nye feilmeldinger (bare admin får lese tabellen)
+  const countBugs = async () => { const r = await sb.from('bug_reports').select('id', { count: 'exact', head: true }).eq('status', 'ny'); return r.error ? 0 : r.count || 0; };
   const must = (r) => { if (r.error) throw r.error; return r.data; };
   const clone = (x) => JSON.parse(JSON.stringify(x === undefined ? null : x));
   const pick = (o, keys) => { const r = {}; Object.keys(o).forEach((k) => { if (!keys.includes(k)) r[k] = o[k]; }); return r; };
@@ -108,6 +110,7 @@
         sb.rpc('is_admin')
       ]);
       C.admin = !adm.error && adm.data === true;
+      C.bugsNew = C.admin ? await countBugs() : 0;
       const p = must(prof);
       S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
       const meta = session.user.user_metadata || {};
@@ -266,6 +269,7 @@
   };
   H.flush = () => chain;
   H.isAdmin = () => !!C.admin;
+  H.bugsNew = () => C.bugsNew || 0;
   // Fjerner en annonse som admin. Databasen sjekker selv at du er admin, og logger det.
   H.adminDeleteJob = async (id, reason) => {
     const r = await sb.rpc('admin_delete_job', { p_id: id, p_reason: reason || '' });
@@ -287,6 +291,7 @@
   H.setBugStatus = async (id, status) => {
     const res = await sb.from('bug_reports').update({ status }).eq('id', id);
     if (res.error) throw new Error(bugTable(res.error));
+    C.bugsNew = await countBugs();
   };
   // Henter nye tilbud på dine åpne oppdrag, til varslene. Nye tilbud legges også i øyeblikksbildet,
   // så de ikke blir forsøkt lagret på nytt. Gir true hvis det kom noe nytt.

@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
+<link rel="stylesheet" href="css/style.css?v=df31d6e4">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -29,8 +29,8 @@
 <script src="js/data.js?v=13ca9b41"></script>
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/app.js?v=b1d1dc55"></script>
+<script src="js/cloud.js?v=9d24d311"></script>
 <script src="js/vedlegg.js?v=d6cbec62"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
@@ -41,6 +41,15 @@ if (H.requireLogin()) {
   const canAttach = () => !!(window.Cloud && Cloud.on && window.Vedlegg);
   const kb = (b) => (b >= 1e6 ? (b / 1e6).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round((b || 0) / 1e3)) + ' kB');
   // En melding. Med vedlegg vises bilder rett i samtalen og andre filer som et kort du kan laste ned.
+  // Dagsskille før første melding hver dag, og klokkeslett under en melding når neste er fra den andre,
+  // eller kommer mer enn fem minutter senere
+  const stamp = (t, i, where) => {
+    const m = t[i]; if (!m || !m.at) return '';
+    if (where === 'før') { const p = t[i - 1]; return !p || !p.at || H.dayLabel(p.at) !== H.dayLabel(m.at) ? `<div class="mday">${H.esc(H.dayLabel(m.at))}</div>` : ''; }
+    if (m.who === 'sys') return '';
+    const n = t[i + 1];
+    return !n || n.who !== m.who || !n.at || n.at - m.at > 5 * 60000 || H.dayLabel(n.at) !== H.dayLabel(m.at) ? `<time class="mtime ${m.who}" datetime="${new Date(m.at).toISOString()}">${H.esc(H.clock(m.at))}</time>` : '';
+  };
   const bubble = (m, i) => {
     const files = window.Vedlegg ? (m.files || []).filter(Vedlegg.valid) : [];
     if (!files.length) return `<div class="bubble ${m.who}">${H.esc(m.text)}</div>`;
@@ -58,7 +67,7 @@ if (H.requireLogin()) {
     const box = document.getElementById('inbox');
     box.classList.toggle('has-thread', !!cur);
     const list = ids.length ? ids.map((id) => { const f = H.partner(id); const t = S.threads[id] || []; const last = t.slice(-1)[0]; const unread = last && last.who === 'them' && (S.readThreads[id] || 0) < t.length;
-      return `<button class="thread-btn" data-a="open" data-v="${id}" aria-current="${id === cur}">${H.avatar(f, 44)}<span class="stack grow" style="gap:0;min-width:0"><b>${H.esc(f.name)}${unread ? ' <span class="count">1</span>' : ''}</b><span class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last ? H.esc((last.who === 'me' ? 'Du: ' : '') + last.text) : 'Ny samtale'}</span></span></button>`; }).join('')
+      return `<button class="thread-btn" data-a="open" data-v="${id}" aria-current="${id === cur}">${H.avatar(f, 44)}<span class="stack grow" style="gap:0;min-width:0"><b>${H.esc(f.name)}${unread ? ' <span class="count">1</span>' : ''}</b><span class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last ? H.esc((last.who === 'me' ? 'Du: ' : '') + last.text) : 'Ny samtale'}</span></span>${last && last.at ? `<span class="thread-time">${H.esc(H.shortTime(last.at))}</span>` : ''}</button>`; }).join('')
       : `<div class="empty" style="border:0">Ingen samtaler ennå. Åpne en profil og trykk «Send melding».</div>`;
     let convo = `<div class="empty" style="border:0;margin:auto">Velg en samtale.</div>`;
     if (cur) {
@@ -66,7 +75,7 @@ if (H.requireLogin()) {
       convo = `<div class="convo-h"><button class="ibtn plain" data-a="close" aria-label="Tilbake til samtaler">${H.icon('back', 20, 2)}</button>${H.avatar(f, 38)}<div class="grow stack" style="gap:0">${f.customer ? `<b style="font-weight:800">${H.esc(f.name)}</b><span class="meta">Kunde</span>` : `<a href="frilanser.html?id=${f.id}" style="color:var(--fg);font-weight:800">${H.esc(f.name)}</a><span class="meta">Svarer vanligvis innen ${H.esc(f.resp)}</span>`}</div>${f.customer ? '' : `<a class="btn dark sm" href="book.html?id=${f.id}">Book</a>`}</div>
         <div class="msgs" id="msgs"><div class="bubble sys" style="background:var(--surface);color:var(--muted)">Hold samtalen her. Da er avtalen og betalingen beskyttet.</div>
         ${t.length ? '' : `<div class="empty" style="border:0">${f.customer ? 'Ingen meldinger ennå.' : `Skriv hva du trenger, når og hvor. ${H.esc(H.first(f.name))} svarer med pris og ledighet.`}</div>`}
-        ${t.map(bubble).join('')}${typing ? `<div class="typing">${H.esc(H.first(f.name))} skriver …</div>` : ''}</div>
+        ${t.map((m, i) => stamp(t, i, 'før') + bubble(m, i) + stamp(t, i, 'etter')).join('')}${typing ? `<div class="typing">${H.esc(H.first(f.name))} skriver …</div>` : ''}</div>
         ${f.customer ? '' : `<div class="chips scroll" style="padding:8px 12px 0">${['Er du ledig 14.11?', 'Hva koster det?', 'Kan vi ta en prat på telefon?'].map((q) => `<button class="chip" data-a="quick" data-v="${q}">${q}</button>`).join('')}</div>`}
         ${f.gone ? `<div class="hint" style="padding:14px 16px;border-top:1px solid var(--line);text-align:center">Kunden har slettet kontoen sin. Du kan lese samtalen, men ikke svare.</div>` : `${pending.length || sending ? `<div class="att-pending">${pending.map((p, k) => `<span class="att-chip">${H.icon('file', 14)}<span>${H.esc(p.name)}</span>${sending ? '' : `<button type="button" data-a="rmAtt" data-v="${k}" aria-label="Fjern ${H.esc(p.name)}">${H.icon('close', 14, 2)}</button>`}</span>`).join('')}${sending ? `<span class="meta">${H.esc(sending)}</span>` : ''}</div>` : ''}<form class="composer" id="cform">${canAttach() ? `<input type="file" id="attIn" class="sr" multiple accept="${Vedlegg.accept}" tabindex="-1" aria-hidden="true"><button type="button" class="ibtn plain att-btn" data-a="pickFiles" aria-label="Legg ved filer" title="Legg ved bilder eller filer" ${sending ? 'disabled' : ''}>${H.icon('clip', 22)}</button>` : ''}<label class="sr" for="msg">Melding</label><input id="msg" maxlength="2000" placeholder="${pending.length ? 'Legg til en melding (valgfritt)' : 'Skriv en melding …'}" autocomplete="off" value="${H.esc(draft)}" ${sending ? 'disabled' : ''}><button class="send" aria-label="Send" ${sending ? 'disabled' : ''}>${H.icon('arrow', 20, 2)}</button></form>`}`;
     }

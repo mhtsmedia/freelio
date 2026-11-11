@@ -7,7 +7,8 @@
 //
 // Secrets (Edge Functions -> Secrets): VAPID_PUBLIC_KEY og VAPID_PRIVATE_KEY (fra VAPID-nokler.txt).
 // SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY finnes automatisk i alle Supabase-funksjoner.
-// Databasen kaller funksjonen med { "type": "offer" | "message", "id": "<uuid>" } (database/push.sql).
+// Databasen kaller funksjonen med { "type": "offer" | "message", "id": "<uuid>" } (database/push.sql),
+// og { "type": "bug", "id": <tall> } når noen melder en feil. Det varselet går til alle admin (database/feil-varsel.sql).
 // Nettsiden kan også be om et testvarsel til din egen enhet: { "type": "test" } med innloggingen din.
 //
 // Krypteringen følger standarden for Web Push (RFC 8291, aes128gcm) og VAPID (RFC 8292), og bruker bare
@@ -113,8 +114,16 @@ const CORS = {
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Finner mottakeren og teksten i varselet. Gir null hvis det ikke skal varsles.
+// Finner mottakerne og teksten i varselet. Gir null hvis det ikke skal varsles.
 async function build(type, id) {
+  if (type === "bug") {
+    const r = await one(`bug_reports?id=eq.${id}&select=id,kind,what,created_at`);
+    if (!r || !fresh(r.created_at)) return null;
+    const admins = ((await db("admins?select=user_id")) || []).map((a) => a.user_id);
+    if (!admins.length) return null;
+    const label = { liten: "Småting", "virker-ikke": "Virker ikke", stopper: "Stopper" }[r.kind] || "Feil";
+    return { to: admins, note: { title: `Ny feilmelding: ${label}`, body: cut(r.what, 140), url: `${SITE}meld-feil.html#admin`, tag: "feil-" + r.id } };
+  }
   if (type === "offer") {
     const o = await one(`offers?id=eq.${id}&select=id,job_id,freelancer_id,price,created_at`);
     if (!o || !fresh(o.created_at)) return null;
@@ -149,13 +158,15 @@ async function buildTest(req) {
   return { to: u.id, note: { title: "Varsler er på", body: "Slik ser det ut når du får et nytt tilbud eller en ny melding på Freelio.", url: SITE + "min-side.html?vis=varsler", tag: "test" } };
 }
 
-if (globalThis.Deno?.serve) Deno.serve(async (req) => {
+// Selve funksjonen. Eksportert, så den kan testes uten Supabase.
+export async function handle(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Bruk POST" }, 405);
   let input;
   try { input = await req.json(); } catch { return json({ error: "Ugyldig JSON" }, 400); }
   const type = input?.type, id = String(input?.id || "");
-  if (!(type === "test" || (["offer", "message"].includes(type) && UUID.test(id)))) return json({ error: "Ugyldig forespørsel" }, 400);
+  const okId = type === "bug" ? /^\d{1,18}$/.test(id) : UUID.test(id);
+  if (!(type === "test" || (["offer", "message", "bug"].includes(type) && okId))) return json({ error: "Ugyldig forespørsel" }, 400);
   try {
     let b;
     if (type === "test") {
@@ -168,7 +179,9 @@ if (globalThis.Deno?.serve) Deno.serve(async (req) => {
       const log = await db("push_log", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ kind: type, ref: id }) });
       if (log && log.conflict) return json({ sent: 0, skipped: "allerede varslet" });
     }
-    const subs = (await db(`push_subscriptions?user_id=eq.${b.to}&select=id,endpoint,p256dh,auth`)) || [];
+    const to = [].concat(b.to).filter((x) => UUID.test(String(x)));
+    if (!to.length) return json({ sent: 0, skipped: "ingen mottaker" });
+    const subs = (await db(`push_subscriptions?user_id=in.(${to.join(",")})&select=id,endpoint,p256dh,auth`)) || [];
     let sent = 0;
     for (const s of subs) {
       try {
@@ -184,4 +197,6 @@ if (globalThis.Deno?.serve) Deno.serve(async (req) => {
     console.error(e);
     return json({ error: "Kunne ikke sende varsel" }, 500);
   }
-});
+}
+
+if (globalThis.Deno?.serve) Deno.serve(handle);

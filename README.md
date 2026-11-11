@@ -44,7 +44,7 @@ Når noen gir tilbud på et oppdrag, eller sender en melding, får mottakeren va
 1. I Supabase: **Edge Functions**, **Deploy a new function**, **Via Editor**. Navn: `varsle`. Lim inn hele `supabase/functions/varsle/index.ts` og trykk **Deploy**.
 2. Slå **av** «Verify JWT» for `varsle` (databasen kaller den). Funksjonen sender bare om tilbud og meldinger som finnes, er nye og ikke er varslet før.
 3. **Edge Functions → Secrets**: legg inn `VAPID_PUBLIC_KEY` og `VAPID_PRIVATE_KEY`. Den offentlige nøkkelen står også i `js/config.js` (`vapidPublicKey`). Den hemmelige skal aldri ligge i koden.
-4. Kjør `database/push.sql` i SQL Editor.
+4. Kjør `database/push.sql` i SQL Editor. Vil du også ha varsel når noen melder en feil (gjelder alle admin), kjør `database/feil-varsel.sql` etterpå.
 5. Test: Min side → Varsler → **Slå på**, så **Send test**.
 
 ## Kjør lokalt

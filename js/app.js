@@ -618,8 +618,8 @@
      kan gjøre siden bredere enn skjermen. */
   H.MAX_PRICE = 1000000;
   H.MAX_WORD = 50;
-  // Beløp i hele kroner fra et felt. Alt som ikke er tall fjernes.
-  H.num = (v) => +String(v == null ? '' : v).replace(/\D/g, '').slice(0, 9) || 0;
+  // Beløp i hele kroner fra et felt. Alt som ikke er tall fjernes. (H.num er noe annet: viser tall med komma.)
+  H.amount = (v) => +String(v == null ? '' : v).replace(/\D/g, '').slice(0, 9) || 0;
   H.priceErr = (n, what = 'Prisen') => (!n ? `${what} må være et beløp i hele kroner.` : n > H.MAX_PRICE ? `${what} kan være høyst ${H.kr(H.MAX_PRICE)}.` : '');
   // Rydder tekst før lagring: fjerner usynlige tegn og styretegn, slår sammen mellomrom (og tomme linjer der
   // linjeskift er lov), og kutter til makslengden.
@@ -639,6 +639,20 @@
   H.dateTxt = (v) => v.split('-').reverse().join('.');
   // Beløpsfelt (data-kr): bare tall, høyst 7 sifre
   document.addEventListener('input', (e) => { const t = e.target; if (t && t.matches && t.matches('input[data-kr]')) { const v = t.value.replace(/\D/g, '').slice(0, 7); if (v !== t.value) t.value = v; } });
+
+  /* ---------- tid i meldinger ---------- */
+  H.clock = (t) => new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+  // «I dag», «I går» eller «Mandag 9. november» (med år hvis det ikke er i år)
+  H.dayLabel = (t) => {
+    const d = new Date(t), now = new Date(), day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(now) - day(d)) / 864e5);
+    if (diff === 0) return 'I dag';
+    if (diff === 1) return 'I går';
+    const s = d.toLocaleDateString('nb-NO', Object.assign({ weekday: 'long', day: 'numeric', month: 'long' }, d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }));
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+  // Kort tid til lista over samtaler: «14:32», «I går» eller «9. nov.»
+  H.shortTime = (t) => { const l = H.dayLabel(t); return l === 'I dag' ? H.clock(t) : l === 'I går' ? l : new Date(t).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }); };
 
   /* ---------- toast ---------- */
   let tt;
@@ -662,6 +676,7 @@
   H.refreshOffers = async () => false;
   // Admin (database/admin.sql). cloud.js spør databasen. Uten database er ingen admin.
   H.isAdmin = () => false;
+  H.bugsNew = () => 0; // antall nye feilmeldinger (bare for admin)
   H.adminDeleteJob = async () => { throw new Error('Krever innlogging.'); };
 
   /* ---------- meld feil (midlertidig, meld-feil.html) ----------
@@ -857,10 +872,11 @@
     const badge = (n) => (n ? `<span class="count">${n}</span>` : '');
     const nav = [['sok.html', 'Finn frilanser', ['sok', 'frilanser', 'kart', 'sammenlign', 'book']], ['utforsk.html', 'Utforsk', ['utforsk']], ['oppdrag.html', 'Ledige oppdrag', ['oppdrag', 'annonse']], ['slik-fungerer-det.html', 'Slik fungerer det', ['slik-fungerer-det'], 'hide-lg']];
     const profMenu = S.user ? `<div class="prof hide-sm">
-          <button class="prof-btn" data-a="profMenu" aria-expanded="false" aria-haspopup="true" aria-label="Min side${act ? ', ' + act + ' venter på deg' : ''}">${H.avatar(me, 28)}<span class="lbl-t">Min side</span>${act ? '<span class="dot"></span>' : ''}<span class="chev-d">${H.icon('back', 16, 2)}</span></button>
+          <button class="prof-btn" data-a="profMenu" aria-expanded="false" aria-haspopup="true" aria-label="Min side${act ? ', ' + act + ' venter på deg' : ''}">${H.avatar(me, 28)}<span class="lbl-t">Min side</span>${act || H.bugsNew() ? '<span class="dot"></span>' : ''}<span class="chev-d">${H.icon('back', 16, 2)}</span></button>
           <div class="prof-menu" role="menu" hidden>
             <a class="pm-head" href="min-side.html">${H.avatar(me, 40)}<span><b>${H.esc(S.user.name)}</b><span class="meta">Gå til Min side</span></span></a>
             <a role="menuitem" href="mine-oppdrag.html">${H.icon('clipboard', 18)}Mine oppdrag${badge(act)}</a>
+            ${H.isAdmin() ? `<a role="menuitem" href="meld-feil.html#admin">${H.icon('bug', 18)}Feilmeldinger${badge(H.bugsNew())}</a>` : ''}
             <a role="menuitem" href="meldinger.html">${H.icon('chat', 18)}Meldinger${badge(unread)}</a>
             <a role="menuitem" href="lagret.html">${H.icon('heart', 18)}Lagret</a>
             <a role="menuitem" href="${S.profile ? 'min-side.html?vis=frilanser' : 'bli-frilanser.html'}">${H.icon('user', 18)}${S.profile ? 'Frilanserprofil' : 'Bli frilanser'}</a>

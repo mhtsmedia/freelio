@@ -49,7 +49,7 @@ grant execute on function public.forget_push(text) to authenticated;
 -- Hva som er varslet, så hver hendelse bare varsles én gang. Bare funksjonen (service role) bruker tabellen.
 create table if not exists public.push_log (
   kind text not null,
-  ref uuid not null,
+  ref text not null,
   created_at timestamptz not null default now(),
   primary key (kind, ref)
 );

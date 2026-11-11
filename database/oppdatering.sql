@@ -709,7 +709,7 @@ grant execute on function public.forget_push(text) to authenticated;
 -- Hva som er varslet, så hver hendelse bare varsles én gang. Bare funksjonen (service role) bruker tabellen.
 create table if not exists public.push_log (
   kind text not null,
-  ref uuid not null,
+  ref text not null,
   created_at timestamptz not null default now(),
   primary key (kind, ref)
 );
@@ -923,3 +923,14 @@ create trigger bug_reports_rate before insert on public.bug_reports for each row
 
 -- Når siden ikke trengs lenger: slett meld-feil.html, sett H.BUGS = false i js/app.js, og kjør linjen under hvis du vil fjerne feilene.
 -- drop table if exists public.bug_reports;
+
+-- ============================================================
+-- Push-varsel til admin om nye feilmeldinger (samme som database/feil-varsel.sql)
+-- ============================================================
+
+-- Feilmeldinger har tall som id, så loggen over sendte varsler må kunne lagre det også
+alter table public.push_log alter column ref type text using ref::text;
+
+drop trigger if exists bug_reports_push on public.bug_reports;
+create trigger bug_reports_push after insert on public.bug_reports
+  for each row execute function public.push_notify('bug');
