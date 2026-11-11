@@ -30,7 +30,7 @@
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=1f857a02"></script>
+<script src="js/cloud.js?v=5f349e7d"></script>
 <script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
 const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
@@ -72,7 +72,7 @@ function renderCloud(box) {
     <form class="stack" id="aform" novalidate>
       ${up ? '<label class="field"><span class="label">Navn</span><input class="inp" id="aname" maxlength="60" autocomplete="name" required></label>' : ''}
       <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" maxlength="254" autocomplete="email" required></label>
-      <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" maxlength="72" autocomplete="${up ? 'new-password' : 'current-password'}" minlength="6" required>${up ? '<span class="hint">Minst 6 tegn.</span>' : ''}</label>
+      <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" maxlength="72" autocomplete="${up ? 'new-password' : 'current-password'}" ${up ? 'minlength="8" ' : ''}required>${up ? '<span class="hint">Minst 8 tegn.</span>' : ''}</label>
       ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
       <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
       <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>
@@ -86,7 +86,10 @@ function renderCloud(box) {
     const err = (t) => { cerr = t; document.getElementById('aerr').textContent = t; };
     if (up && !v('aname').trim()) return err('Skriv inn navnet ditt.');
     if (!/^\S+@\S+\.\S+$/.test(v('aemail').trim())) return err('Skriv inn en gyldig e-postadresse.');
-    if (v('apass').length < 6) return err('Passordet må ha minst 6 tegn.');
+    // Nye kontoer: minst 8 tegn (samme som i Supabase). Ved innlogging sjekkes bare at feltet er fylt ut,
+    // så eldre kontoer med kortere passord fortsatt kommer inn.
+    if (up && v('apass').length < 8) return err('Passordet må ha minst 8 tegn.');
+    if (!up && !v('apass')) return err('Skriv inn passordet ditt.');
     if (up && !document.getElementById('aterms').checked) return err('Du må godta vilkårene for å opprette konto.');
     cbusy = true; cerr = ''; render();
     try {
