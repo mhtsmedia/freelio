@@ -51,7 +51,15 @@ let pfBusy = '', coverBusy = '', cardBusy = '', saving = false;
 // Dra et bilde for å endre rekkefølgen. Med mus drar du med en gang.
 // Med finger holder du inne litt først, så kan siden fortsatt scrolles når du bare sveiper over bildene.
 (function () {
-  let from = -1, ghost = null, start = null, over = -1, timer = 0, touchArmed = false;
+  let from = -1, ghost = null, start = null, over = -1, timer = 0, touchArmed = false, last = [0, 0], raf = 0;
+  // Scroller siden jevnt mens du holder bildet nær toppen eller bunnen. Jo nærmere kanten, jo raskere.
+  const EDGE = 140, MAXV = 28;
+  const autoScroll = () => {
+    raf = 0; if (!ghost) return;
+    const y = last[1], top = y < EDGE ? (EDGE - y) / EDGE : 0, bot = y > innerHeight - EDGE ? (y - (innerHeight - EDGE)) / EDGE : 0;
+    const v = Math.round(MAXV * Math.min(1, top * top * 1.6) * -1 + MAXV * Math.min(1, bot * bot * 1.6));
+    if (v) { window.scrollBy({ top: v, behavior: 'instant' }); target(last[0], last[1]); raf = requestAnimationFrame(autoScroll); }
+  };
   const grid = () => document.querySelector('.pf-grid');
   const tileAt = (x, y) => { const el = document.elementFromPoint(x, y); const t = el && el.closest('.pf-item:not(.pf-ghost)'); return t && grid() && grid().contains(t) ? +t.dataset.pfi : -1; };
   const lift = () => {
@@ -61,13 +69,17 @@ let pfBusy = '', coverBusy = '', cardBusy = '', saving = false;
     if (navigator.vibrate) navigator.vibrate(12);
   };
   const move = (x, y) => {
+    last = [x, y];
     ghost.style.transform = `translate(${x - ghost.offsetWidth / 2}px, ${y - ghost.offsetHeight / 2}px) scale(1.05)`;
-    if (y < 70) window.scrollBy(0, -12); else if (y > innerHeight - 70) window.scrollBy(0, 12);
+    target(x, y);
+    if (!raf) raf = requestAnimationFrame(autoScroll);
+  };
+  const target = (x, y) => {
     const o = tileAt(x, y);
     if (o !== over) { grid().querySelectorAll('.pf-target').forEach((n) => n.classList.remove('pf-target')); over = o; if (o > -1 && o !== from) grid().querySelector(`[data-pfi="${o}"]`).classList.add('pf-target'); }
   };
   const end = () => {
-    clearTimeout(timer); touchArmed = false;
+    clearTimeout(timer); touchArmed = false; if (raf) { cancelAnimationFrame(raf); raf = 0; }
     if (from < 0) return;
     const f = from, o = over; from = -1; over = -1; document.body.style.userSelect = '';
     if (!ghost) return;
