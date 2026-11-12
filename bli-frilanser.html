@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=c0d075a8">
+<link rel="stylesheet" href="css/style.css?v=64dfb495">
 <link rel="stylesheet" href="css/ny.css?v=a8f5b98c" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -48,31 +48,26 @@ const CLOUD = !!(window.Cloud && Cloud.on);
 const PF_MAX = CLOUD ? 24 : 8;
 const VID_MB = H.VID_MB();
 let pfBusy = '', coverBusy = '', cardBusy = '', saving = false;
-// Dra et bilde med musen for å endre rekkefølgen. Bildet flyttes dit du slipper det. På mobil brukes pilene.
+// Dra et bilde for å endre rekkefølgen. Med mus drar du med en gang.
+// Med finger holder du inne litt først, så kan siden fortsatt scrolles når du bare sveiper over bildene.
 (function () {
-  let from = -1, ghost = null, start = null, over = -1;
+  let from = -1, ghost = null, start = null, over = -1, timer = 0, touchArmed = false;
   const grid = () => document.querySelector('.pf-grid');
   const tileAt = (x, y) => { const el = document.elementFromPoint(x, y); const t = el && el.closest('.pf-item:not(.pf-ghost)'); return t && grid() && grid().contains(t) ? +t.dataset.pfi : -1; };
-  document.addEventListener('pointerdown', (e) => {
-    // Med finger brukes pilene, så siden fortsatt kan scrolles over bildene
-    if (e.pointerType === 'touch') return;
-    const t = e.target.closest('.pf-grid .pf-item'); if (!t || e.target.closest('button,select')) return;
-    from = +t.dataset.pfi; start = [e.clientX, e.clientY];
-  });
-  document.addEventListener('pointermove', (e) => {
-    if (from < 0) return;
-    if (!ghost) {
-      if (Math.hypot(e.clientX - start[0], e.clientY - start[1]) < 8) return;
-      const t = grid().querySelector(`[data-pfi="${from}"]`), r = t.getBoundingClientRect();
-      ghost = t.cloneNode(true); ghost.className = 'pf-item pf-ghost'; ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
-      document.body.appendChild(ghost); t.classList.add('pf-lifted'); document.body.style.userSelect = 'none';
-    }
-    e.preventDefault();
-    ghost.style.transform = `translate(${e.clientX - ghost.offsetWidth / 2}px, ${e.clientY - ghost.offsetHeight / 2}px)`;
-    const o = tileAt(e.clientX, e.clientY);
+  const lift = () => {
+    const t = grid().querySelector(`[data-pfi="${from}"]`), r = t.getBoundingClientRect();
+    ghost = t.cloneNode(true); ghost.className = 'pf-item pf-ghost'; ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
+    document.body.appendChild(ghost); t.classList.add('pf-lifted'); document.body.style.userSelect = 'none';
+    if (navigator.vibrate) navigator.vibrate(12);
+  };
+  const move = (x, y) => {
+    ghost.style.transform = `translate(${x - ghost.offsetWidth / 2}px, ${y - ghost.offsetHeight / 2}px) scale(1.05)`;
+    if (y < 70) window.scrollBy(0, -12); else if (y > innerHeight - 70) window.scrollBy(0, 12);
+    const o = tileAt(x, y);
     if (o !== over) { grid().querySelectorAll('.pf-target').forEach((n) => n.classList.remove('pf-target')); over = o; if (o > -1 && o !== from) grid().querySelector(`[data-pfi="${o}"]`).classList.add('pf-target'); }
-  }, { passive: false });
+  };
   const end = () => {
+    clearTimeout(timer); touchArmed = false;
     if (from < 0) return;
     const f = from, o = over; from = -1; over = -1; document.body.style.userSelect = '';
     if (!ghost) return;
@@ -80,7 +75,33 @@ let pfBusy = '', coverBusy = '', cardBusy = '', saving = false;
     if (o > -1 && o !== f) { const [x] = pf.splice(f, 1); pf.splice(o, 0, x); }
     form();
   };
-  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+  const startOn = (e, x, y) => {
+    const t = e.target.closest('.pf-grid .pf-item'); if (!t || e.target.closest('button,select')) return false;
+    from = +t.dataset.pfi; start = [x, y]; return true;
+  };
+  // Mus
+  document.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') startOn(e, e.clientX, e.clientY); });
+  document.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch' || from < 0) return;
+    if (!ghost) { if (Math.hypot(e.clientX - start[0], e.clientY - start[1]) < 6) return; lift(); }
+    e.preventDefault(); move(e.clientX, e.clientY);
+  });
+  document.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') end(); });
+  // Finger: hold inne 250 ms, så dra
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return end();
+    const p = e.touches[0];
+    if (!startOn(e, p.clientX, p.clientY)) return;
+    timer = setTimeout(() => { touchArmed = true; lift(); move(start[0], start[1]); }, 250);
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (from < 0) return;
+    const p = e.touches[0];
+    if (!touchArmed) { if (Math.hypot(p.clientX - start[0], p.clientY - start[1]) > 8) { clearTimeout(timer); from = -1; } return; }
+    e.preventDefault(); move(p.clientX, p.clientY);
+  }, { passive: false });
+  document.addEventListener('touchend', end); document.addEventListener('touchcancel', end);
+  document.addEventListener('contextmenu', (e) => { if (e.target.closest('.pf-grid .pf-item')) e.preventDefault(); });
 })();
 // Henting fra en portefølje på nett (Supabase-funksjonen hent-portefolje, se supabase/functions)
 let imp = { busy: '', err: '', found: null, sel: [] };
@@ -169,8 +190,8 @@ function form() {
         ${pkgs.length < 4 ? '<button type="button" class="btn soft sm" style="align-self:flex-start" data-a="addPk">Legg til pakke</button>' : ''}</fieldset>
       <label class="field"><span class="label">Egne vilkår (valgfritt)</span><textarea class="inp" id="terms" rows="4" maxlength="3000" placeholder="F.eks. reisekostnader over 50 km, hvor mange runder med retting som er med, eller hvordan kunden kan bruke bildene.">${H.esc(p.terms || '')}</textarea><span class="hint">Vises på profilen din og legges inn i oppdragsavtalen ved hver booking (punkt 8). <a href="avtale.html" target="_blank">Freelios standardavtale</a> gjelder i tillegg, og går foran for betaling, avbestilling og reklamasjon.</span></label>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:4px">Portefølje</legend>
-        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB. Dra bildene, eller bruk pilene, for å endre rekkefølgen. Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.</p>
-        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item" data-pfi="${i}"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen" draggable="false"><span class="pf-num">${i + 1}</span><span class="pf-move">${i > 0 ? `<button type="button" class="ibtn" data-a="mvPf" data-v="${i}:-1" aria-label="Flytt bilde ${i + 1} til venstre">${H.icon('back', 14, 2.4)}</button>` : ''}${i < pf.length - 1 ? `<button type="button" class="ibtn" data-a="mvPf" data-v="${i}:1" aria-label="Flytt bilde ${i + 1} til høyre"><span style="display:inline-flex;transform:rotate(180deg)">${H.icon('back', 14, 2.4)}</span></button>` : ''}</span>${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${`<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>`}</div>`).join('')}</div>` : ''}
+        <p class="hint">Last opp dine beste bilder og videoer, gjerne 6 til ${PF_MAX}. Store videoer gjøres automatisk mindre, til under ${VID_MB} MB. Dra bildene for å endre rekkefølgen. På mobil holder du inne på et bilde og drar. Velg fagfelt under hvert bilde. Søker en kunde på drone, vises bare dronebildene dine.</p>
+        ${pf.length ? `<div class="pf-grid">${pf.map((x, i) => `<div class="pf-item" data-pfi="${i}"><img src="${H.esc(x.thumb || x.url)}" alt="${x.type === 'video' ? 'Video' : 'Bilde'} ${i + 1} i porteføljen" draggable="false"><span class="pf-num">${i + 1}</span>${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 14, 2, 'currentColor')}</span>` : ''}<button type="button" class="ibtn" data-a="rmPf" data-v="${i}" aria-label="Fjern bilde ${i + 1}">${H.icon('close', 14, 2.4)}</button>${`<select class="pf-cat" data-pfcat="${i}" aria-label="Fagfelt for bilde ${i + 1}">${catOpts(x.cat)}</select>`}</div>`).join('')}</div>` : ''}
         <div class="row">${pf.length < PF_MAX ? `<label class="row small" style="gap:6px"><span class="muted">Last opp til</span><select class="inp sm" id="upCat" style="width:auto;height:36px;padding:0 10px">${catOpts(upCat)}</select></label>` : ''}${pf.length < PF_MAX ? `<label class="btn soft sm" for="pfFile">${H.icon('plus', 16, 2.2)} Legg til bilder eller video</label><input type="file" id="pfFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" multiple class="sr">` : ''}<span class="hint" id="pfStatus">${H.esc(pfBusy)}</span></div>
       </fieldset>
       <label class="check"><input type="checkbox" id="legal" ${p.id ? 'checked' : ''}> <span>Jeg driver lovlig virksomhet og rapporterer inntekten min. Jeg godtar <a href="vilkar.html" target="_blank">vilkårene for frilansere</a>.</span></label>
@@ -282,8 +303,6 @@ Object.assign(H.actions, {
   editCover: () => editCover(null),
   rmCover: () => { if (cover) { H.dropImage(cover.url); H.dropImage(cover.thumb); H.dropImage(cover.src); } cover = null; form(); },
   rmCard: () => { if (card) { H.dropImage(card.url); H.dropImage(card.thumb); } card = null; form(); },
-  // Flytt et bilde ett steg til venstre (-1) eller høyre (1)
-  mvPf: (v) => { const [i, d] = v.split(':').map(Number), j = i + d; if (j < 0 || j >= pf.length) return; [pf[i], pf[j]] = [pf[j], pf[i]]; form(); const b = document.querySelector(`[data-a="mvPf"][data-v="${j}:${d}"]`) || document.querySelector(`[data-pfi="${j}"] [data-a="mvPf"]`); if (b) b.focus(); },
   rmPf: (v) => { const x = pf.splice(+v, 1)[0]; if (x) { H.dropImage(x.url); H.dropImage(x.thumb); } form(); },
   addPk: () => { pkgs.push(['', '', '']); form(); },
   rmPk: (v) => { pkgs.splice(+v, 1); form(); },
