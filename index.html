@@ -147,7 +147,8 @@ const fsFill = () => {
 const forsideFinn = () => {
   document.querySelectorAll('.fs [data-ic]').forEach((e) => { e.innerHTML = H.icon(e.dataset.ic, +e.dataset.s || 20, e.dataset.s ? 2 : 1.8); });
   document.getElementById('fsCats').innerHTML = HDATA.CATS.map((c) => `<li><a href="sok.html?kat=${c.id}"><span class="fs-ci">${H.icon(c.icon, 26, 1.4)}</span><span class="fs-cl">${c.name}</span></a></li>`).join('');
-  const top = H.all().slice().sort((a, b) => b.rating * Math.log(b.reviews + 1) - a.rating * Math.log(a.reviews + 1)).slice(0, 8);
+  // Samme rekkefølge som frilanserlistene (H.all): Martinus Halvorsen først, Ole Theiste sist
+  const top = H.all().slice(0, 8);
   document.getElementById('fsCards').innerHTML = top.map(fsCard).join('');
   fsFill();
   document.getElementById('fsJobs').innerHTML = H.openJobs().slice(0, 3).map(H.jobRow).join('') || `<div class="fs-box"><span class="fs-ic">${H.icon('bag', 20, 1.8)}</span><div><b>Ingen ledige oppdrag akkurat nå</b><p>Beskriv jobben din, så kommer tilbudene til deg.</p></div><a class="btn soft sm" href="ny-annonse.html">Legg ut oppdrag</a></div>`;
