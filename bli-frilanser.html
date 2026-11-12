@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=64dfb495">
+<link rel="stylesheet" href="css/style.css?v=8b397044">
 <link rel="stylesheet" href="css/ny.css?v=a8f5b98c" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -30,7 +30,7 @@
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js?v=79553f32"></script>
-<script src="js/cloud.js?v=ddb3de75"></script>
+<script src="js/cloud.js?v=919268e0"></script>
 <script type="text/freelio">
 const next = H.qs('neste');
 const safeNext = next && /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : null;
@@ -210,7 +210,7 @@ function form() {
       <div id="err"></div>
       <div class="row"><button class="btn primary" type="submit">${S.profile ? 'Lagre endringer' : 'Publiser profil'}</button>${S.profile ? `<a class="btn soft" href="frilanser.html?id=${S.profile.id}">Se profilen</a>` : ''}</div>
     </form>
-    <aside><div class="banner acc">${H.icon('shield', 20)}<span>${S.user.method === 'E-post' ? 'Merket «BankID-verifisert» kommer når innlogging med Vipps og BankID er på plass.' : `Profilen får merket «BankID-verifisert» fordi du logget inn med ${H.esc(S.user.method)}.`}</span></div>
+    <aside><div class="banner acc">${H.icon('shield', 20)}<span>${!['BankID', 'Vipps'].includes(S.user.method) ? 'Merket «BankID-verifisert» kommer når innlogging med Vipps og BankID er på plass.' : `Profilen får merket «BankID-verifisert» fordi du logget inn med ${H.esc(S.user.method)}.`}</span></div>
       <div class="card stack small"><b style="font-size:15px">Utbetaling</b><span class="muted">I den ferdige appen legger du inn kontonummer hos betalingspartneren vår. Freelio ser aldri kontonummeret ditt.</span><span class="muted">Du betaler 5 % av hvert oppdrag. Ingen faste kostnader.</span></div></aside>
   </div></div>`;
   H.bindPhotoPicker(() => form());
@@ -304,7 +304,7 @@ function form() {
     }
     S.profile = Object.assign({ rating: 0, reviews: 0, jobs: 0, respH: 1, resp: '1 time', delD: 7, years: 1, free: true, verified: true, mx: 48, my: 46, km: 0, pal: 2, col: '#0B6E5F', joined: '2026', rv: [], sum: 'Ny på Freelio. Ingen omtaler ennå.' }, old, {
       id: window.Cloud && Cloud.on ? Cloud.uid : 'meg', name, ini, cat: v('cat') || document.getElementById('cat').value, role: H.clip(v('role'), 60), area: H.clip(v('area'), 60), reach: +document.getElementById('reach').value, bio: H.clip(v('bio'), 1500, true), terms: H.clip(v('terms'), 3000, true),
-      niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, cardImg: card, lat: pos ? pos[0] : null, lng: pos ? pos[1] : null, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: S.user.method !== 'E-post', from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
+      niches: nich, tags: nich.map((n) => H.cat(n).name), pk, portfolio: pf, coverImg: cover, cardImg: card, lat: pos ? pos[0] : null, lng: pos ? pos[1] : null, years, respH: +document.getElementById('respH').value, resp: RESP.find((r) => r[0] == document.getElementById('respH').value)[1], delD: +document.getElementById('delD').value, free: document.getElementById('free').value === '1', photo: (S.user && S.user.photo) || null, verified: ['BankID', 'Vipps'].includes(S.user.method), from: Math.min(...pk.map((x) => x[1])), unit: '', cap: 'Nytt arbeid fra ' + name.split(' ')[0], published: true
     });
     H.save();
     H.flash(old.id ? 'Profilen er oppdatert.' : 'Profilen er publisert. Nå kan du sende tilbud på oppdrag.');

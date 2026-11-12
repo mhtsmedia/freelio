@@ -852,3 +852,5 @@ html,body{overflow-x:clip}
 .pf-ghost{position:fixed;left:0;top:0;z-index:400;pointer-events:none;box-shadow:var(--shadow);opacity:.9;transform-origin:center}
 .pf-item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .pf-ghost{transition:none}
+.or-line{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}
+.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}

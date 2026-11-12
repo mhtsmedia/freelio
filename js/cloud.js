@@ -43,10 +43,13 @@
   H.uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16)));
 
   // Innlogget bruker fra lagret økt, så menyen er riktig før dataene er hentet
+  // Hvordan brukeren logget inn, og navnet vi kan vise før profilen er hentet
+  const methodOf = (u) => ({ google: 'Google', phone: 'Telefon' })[(u.app_metadata || {}).provider] || 'E-post';
+  const metaName = (u) => { const m = u.user_metadata || {}; return m.name || m.full_name || (u.email || '').split('@')[0] || 'Ny bruker'; };
   const sess = storedSession();
   if (sess && sess.user) {
     const u = sess.user;
-    S.user = { id: u.id, name: (u.user_metadata && u.user_metadata.name) || (u.email || '').split('@')[0], email: u.email, method: 'E-post', since: dateTxt(u.created_at || Date.now()) };
+    S.user = { id: u.id, name: metaName(u), email: u.email, phone: u.phone, method: methodOf(u), since: dateTxt(u.created_at || Date.now()) };
   } else S.user = null;
 
   /* ---------- mapping mellom databasen og sidene ---------- */
@@ -119,7 +122,7 @@
       // Admin får også skjulte profiler fra databasen. De vises ikke i lister, men kan åpnes og vises igjen.
       D.HIDDEN = C.admin ? all.filter((f) => !f.published && f.id !== C.uid) : [];
       const p = must(prof);
-      S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
+      S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Ny bruker', email: session.user.email, phone: session.user.phone, method: methodOf(session.user), since: dateTxt((p && p.created_at) || session.user.created_at) });
       const meta = session.user.user_metadata || {};
       S.user.photoSrc = (S.user.photo && meta.avatar_src) || null; S.user.photoCrop = meta.avatar_crop || null;
 
@@ -424,11 +427,31 @@
     if (r.error) throw r.error;
   };
   C.setPassword = async (password) => { const r = await sb.auth.updateUser({ password }); if (r.error) throw r.error; C.recovery = false; };
+  // Google: sender brukeren til Google og tilbake til logg-inn.html
+  C.signInGoogle = async (next) => {
+    const back = location.href.replace(/[^/]*$/, '') + 'logg-inn.html?fra=google' + (next ? '&neste=' + encodeURIComponent(next) : '');
+    const r = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back } });
+    if (r.error) throw r.error;
+  };
+  // Telefon: engangskode på SMS
+  C.sendSms = async (phone) => { const r = await sb.auth.signInWithOtp({ phone }); if (r.error) throw r.error; };
+  C.verifySms = async (phone, token) => { const r = await sb.auth.verifyOtp({ phone, token, type: 'sms' }); if (r.error) throw r.error; };
+  // Navn for brukere som logget inn med telefon
+  C.setName = async (name) => {
+    must(await sb.from('profiles').update({ name }).eq('id', C.uid));
+    try { await sb.auth.updateUser({ data: { name } }); } catch (e) {}
+    S.user.name = name; H.saveLocal();
+  };
+  C.needsName = () => !!(S.user && (!S.user.name || S.user.name === 'Ny bruker'));
   C.signOut = async () => { await H.flush(); await sb.auth.signOut(); };
   C.deleteAccount = async () => { await H.flush(); const r = await sb.rpc('delete_my_account'); if (r.error) throw r.error; await sb.auth.signOut(); };
   C.authError = (e) => {
     const m = (e && e.message) || '';
     if (/Invalid login credentials/i.test(m)) return 'Feil e-post eller passord.';
+    if (/provider is not enabled|Unsupported provider/i.test(m)) return 'Denne innloggingen er ikke slått på ennå. (Supabase: slå på leverandøren under Authentication, Sign In / Providers.)';
+    if (/phone provider|sms provider|Unsupported phone|twilio|messagebird|vonage|textlocal/i.test(m)) return 'Innlogging med telefon er ikke satt opp ennå. (Supabase: legg inn en SMS-leverandør under Authentication, Sign In / Providers, Phone.)';
+    if (/token has expired|invalid otp|otp_expired|Token has expired or is invalid/i.test(m)) return 'Feil kode, eller koden er utløpt. Be om en ny kode.';
+    if (/invalid phone|phone number/i.test(m)) return 'Skriv inn et gyldig telefonnummer.';
     if (/already registered|already been registered/i.test(m)) return 'Det finnes allerede en konto med denne e-posten. Logg inn i stedet.';
     if (/Email not confirmed/i.test(m)) return 'Du må bekrefte e-posten din først. Sjekk innboksen.';
     if (/sending (confirmation|magic link|recovery)? ?e-?mail|error sending/i.test(m)) return 'Vi fikk ikke sendt bekreftelses-e-posten. Prøv igjen om litt, eller meld fra til oss.';

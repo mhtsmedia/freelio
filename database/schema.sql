@@ -1273,3 +1273,18 @@ begin
     execute format('grant execute on function public.%s to authenticated', f);
   end loop;
 end $$;
+
+-- ---------- innlogging med Google og telefon: navn til nye brukere ----------
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, name)
+  values (new.id, left(coalesce(
+    nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
+    nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+    nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+    'Ny bruker'), 60))
+  on conflict (id) do nothing;
+  return new;
+end $$;

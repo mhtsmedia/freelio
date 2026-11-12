@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=64dfb495">
+<link rel="stylesheet" href="css/style.css?v=8b397044">
 <link rel="stylesheet" href="css/ny.css?v=a8f5b98c" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -30,7 +30,7 @@
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js?v=79553f32"></script>
-<script src="js/cloud.js?v=ddb3de75"></script>
+<script src="js/cloud.js?v=919268e0"></script>
 <script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
 const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
@@ -62,13 +62,18 @@ function render() {
 }
 H.actions.login = (v) => { busy = v; render(); setTimeout(() => { name = 'Kari Nordmann'; step = 'name'; render(); }, 1300); };
 // Innlogging mot Supabase med e-post og passord
-let mode = H.qs('ny') ? 'up' : 'in', cbusy = false, cmsg = '', cerr = '';
+let mode = H.qs('ny') ? 'up' : 'in', cbusy = false, cmsg = '', cerr = '', phone = '', smsSent = false;
 function renderCloud(box) {
   // Kom fra lenken i e-posten: lag nytt passord
   if (Cloud.linkError && mode !== 'forgot' && !cmsg) { box.innerHTML = `<h1>Lenken virker ikke</h1><p class="muted">Lenken er utløpt eller allerede brukt. Lenker for nytt passord virker i én time og bare én gang.</p><button class="btn primary" data-a="mode" data-v="forgot">Send ny lenke</button><button class="btn soft" data-a="mode" data-v="in">Til innlogging</button>`; return; }
   if (Cloud.recovery && H.S.user && !cmsg) return renderNewPass(box);
   if (Cloud.recovery && !H.S.user && !cmsg && mode !== 'forgot') { box.innerHTML = `<h1>Lenken virker ikke</h1><p class="muted">Vi fant ingen gyldig innlogging i lenken. Den kan være utløpt. Be om en ny.</p><button class="btn primary" data-a="mode" data-v="forgot">Send ny lenke</button>`; return; }
   if (mode === 'forgot' && !cmsg) return renderForgot(box);
+  if (mode === 'phone' && !H.S.user) return renderPhone(box);
+  // Logget inn med telefon (eller uten navn): spør om navnet før vi går videre
+  if (H.S.user && Cloud.needsName() && !cmsg) return renderName(box);
+  // Kom tilbake fra Google: gå rett videre
+  if (H.S.user && H.qs('fra') === 'google' && !cmsg) { H.flash(`Logget inn som ${H.S.user.name}.`); location.replace(safeNext); return; }
   if (H.S.user && !cmsg) { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)} (${H.esc(H.S.user.email || '')}).</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (cmsg) { box.innerHTML = `<h1>Sjekk e-posten din</h1><p class="muted">${H.esc(cmsg)}</p><button class="btn soft" data-a="mode" data-v="in">Til innlogging</button>`; return; }
   const up = mode === 'up';
@@ -83,7 +88,12 @@ function renderCloud(box) {
       <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
       <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>
     </form>
-    <p class="hint">Innlogging med Vipps og BankID kommer senere.</p>`;
+    <div class="or-line"><span>eller</span></div>
+    <div class="stack" style="gap:10px">
+      <button type="button" class="btn ghost block" data-a="google">${GOOGLE} Fortsett med Google</button>
+      <button type="button" class="btn ghost block" data-a="mode" data-v="phone">${H.icon('phone', 18)} Fortsett med telefonnummer</button>
+    </div>
+    <p class="hint">Med Google eller telefon godtar du <a href="vilkar.html" target="_blank">brukervilkårene</a> og <a href="personvern.html" target="_blank">personvernerklæringen</a>. Innlogging med Vipps og BankID kommer senere.</p>`;
   document.getElementById('aform').addEventListener('submit', async (e) => {
     e.preventDefault();
     const val = (id) => (document.getElementById(id) || {}).value || '';
@@ -109,7 +119,63 @@ function renderCloud(box) {
     } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
   });
 }
-H.actions.mode = (v) => { mode = v; cerr = ''; cmsg = ''; if (v !== 'forgot') { Cloud.linkError = ''; } render(); };
+const GOOGLE = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+H.actions.google = async () => {
+  cbusy = true; cerr = ''; render();
+  try { await Cloud.signInGoogle(safeNext); } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+};
+// Gjør om et norsk nummer til internasjonalt format: 412 34 567 blir +4741234567
+const normPhone = (t) => { let d = String(t).replace(/[\s-]/g, ''); if (/^00/.test(d)) d = '+' + d.slice(2); if (/^\d{8}$/.test(d)) d = '+47' + d; return /^\+\d{8,15}$/.test(d) ? d : ''; };
+function renderPhone(box) {
+  box.innerHTML = `<h1>Logg inn med telefon</h1><p class="muted">${smsSent ? `Vi har sendt en kode på SMS til ${H.esc(phone)}.` : 'Vi sender deg en engangskode på SMS. Har du ikke konto fra før, blir den laget.'}</p>
+    <form class="stack" id="phform" novalidate>
+      ${smsSent ? `<label class="field"><span class="label">Kode fra SMS</span><input class="inp" id="smscode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required></label>`
+        : `<label class="field"><span class="label">Telefonnummer</span><input class="inp" id="phnum" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="412 34 567" value="${H.esc(phone)}" required><span class="hint">Norske nummer trenger ikke +47.</span></label>`}
+      <span class="err-text" id="pherr" role="alert">${H.esc(cerr)}</span>
+      <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : smsSent ? 'Logg inn' : 'Send kode'}</button>
+      ${smsSent ? '<button type="button" class="btn link small" style="align-self:flex-start" data-a="smsAgain">Fikk ingen kode? Send på nytt</button>' : ''}
+      <button type="button" class="btn link small" style="align-self:flex-start" data-a="mode" data-v="in">Tilbake</button>
+    </form>
+    <p class="hint">Med telefon godtar du <a href="vilkar.html" target="_blank">brukervilkårene</a> og <a href="personvern.html" target="_blank">personvernerklæringen</a>.</p>`;
+  document.getElementById('phform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = (t) => { cerr = t; document.getElementById('pherr').textContent = t; };
+    if (!smsSent) {
+      const n = normPhone(document.getElementById('phnum').value);
+      if (!n) return err('Skriv inn et gyldig telefonnummer.');
+      phone = n; cbusy = true; cerr = ''; render();
+      try { await Cloud.sendSms(phone); smsSent = true; } catch (ex) { cerr = Cloud.authError(ex); }
+      cbusy = false; render(); return;
+    }
+    const code = document.getElementById('smscode').value.replace(/\D/g, '');
+    if (code.length < 4) return err('Skriv inn koden fra SMS-en.');
+    cbusy = true; cerr = ''; render();
+    try {
+      await Cloud.verifySms(phone, code); await Cloud.pull(); cbusy = false;
+      if (Cloud.needsName()) { mode = 'in'; render(); return; }
+      H.flash(`Logget inn som ${H.S.user.name}.`); location.href = safeNext;
+    } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+  });
+}
+H.actions.smsAgain = () => { smsSent = false; cerr = ''; render(); };
+// Første gang med telefon: be om navnet
+function renderName(box) {
+  box.innerHTML = `<h1>Hva heter du?</h1><p class="muted">Navnet vises for frilansere og kunder du har kontakt med.</p>
+    <form class="stack" id="nform" novalidate>
+      <label class="field"><span class="label">Fullt navn</span><input class="inp" id="nname" maxlength="60" autocomplete="name" required></label>
+      <span class="err-text" id="nerr" role="alert">${H.esc(cerr)}</span>
+      <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Lagrer …' : 'Fortsett'}</button>
+    </form>`;
+  document.getElementById('nform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const n = document.getElementById('nname').value.trim().replace(/\s+/g, ' ');
+    if (n.length < 2) { cerr = 'Skriv inn navnet ditt.'; document.getElementById('nerr').textContent = cerr; return; }
+    cbusy = true; cerr = ''; render();
+    try { await Cloud.setName(n); H.flash(`Velkommen, ${H.first(n)}!`); location.href = safeNext; }
+    catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+  });
+}
+H.actions.mode = (v) => { mode = v; cerr = ''; if (v === 'phone') smsSent = false; cmsg = ''; if (v !== 'forgot') { Cloud.linkError = ''; } render(); };
 // Be om lenke for nytt passord
 function renderForgot(box) {
   box.innerHTML = `<h1>Glemt passordet?</h1><p class="muted">Skriv inn e-posten du bruker på Freelio. Vi sender deg en lenke der du kan lage et nytt passord.</p>
