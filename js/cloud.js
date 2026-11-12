@@ -430,9 +430,15 @@
   // Google: sender brukeren til Google og tilbake til logg-inn.html
   C.signInGoogle = async (next) => {
     const back = location.href.replace(/[^/]*$/, '') + 'logg-inn.html?fra=google' + (next ? '&neste=' + encodeURIComponent(next) : '');
-    const r = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back } });
+    // Sjekk først at Google er slått på i Supabase. Ellers sender Supabase brukeren til en side med en rå feilmelding.
+    const st = await fetch(cfg.supabaseUrl + '/auth/v1/settings', { headers: { apikey: cfg.supabaseKey } }).then((x) => x.json()).catch(() => null);
+    if (st && st.external && !st.external.google) throw new Error('Unsupported provider: provider is not enabled');
+    const r = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back, skipBrowserRedirect: true } });
     if (r.error) throw r.error;
+    location.assign(r.data.url);
   };
+  // Samme sjekk for telefon, så vi kan si fra før brukeren skriver nummeret
+  C.providers = async () => { const st = await fetch(cfg.supabaseUrl + '/auth/v1/settings', { headers: { apikey: cfg.supabaseKey } }).then((x) => x.json()).catch(() => null); return (st && st.external) || null; };
   // Telefon: engangskode på SMS
   C.sendSms = async (phone) => { const r = await sb.auth.signInWithOtp({ phone }); if (r.error) throw r.error; };
   C.verifySms = async (phone, token) => { const r = await sb.auth.verifyOtp({ phone, token, type: 'sms' }); if (r.error) throw r.error; };
