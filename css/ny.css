@@ -140,8 +140,6 @@ h2{font-size:20px}
   body[data-page="index"] .steps3 p{font-size:14px}
 }
 
-/* profil: banneret toner ut nederst og leder blikket videre ned på siden (formatet 3:1 settes i style.css) */
-.ph.cover::before{content:"";position:absolute;left:0;right:0;bottom:0;height:70%;background:linear-gradient(to bottom,transparent 0%,color-mix(in srgb,var(--bg) 55%,transparent) 55%,var(--bg) 100%);z-index:1;pointer-events:none}
 
 /* meldinger: hele skjermen under toppmenyen, ingen boks midt på siden */
 body[data-page="meldinger"]{height:100vh;height:100dvh;min-height:0;overflow:hidden}
