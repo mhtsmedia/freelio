@@ -785,7 +785,8 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .mclu{display:grid;place-items:center;box-sizing:border-box;width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);border:3px solid #fff;font:800 15px var(--f-body);box-shadow:0 0 0 5px rgba(255,255,255,.45),0 3px 12px rgba(0,0,0,.3);cursor:pointer;transition:transform .2s var(--ease);animation:mpop .3s var(--ease)}
 .mclu.big{width:52px;height:52px;font-size:14px}
 .mclu:hover{transform:scale(1.08)}
-.mclu.on{box-shadow:0 0 0 4px var(--bg),0 0 0 7px var(--accent),0 3px 12px rgba(0,0,0,.3)}
+.mclu.on{box-shadow:0 0 0 4px var(--bg),0 0 0 7px var(--accent),0 3px 12px rgba(0,0,0,.3)}
+
 .gpin{display:block;transform:translateY(50%)}
 .pin.dotpin{padding:0;height:auto;background:none;box-shadow:none;border-radius:50%}
 .pin.dotpin.on{background:none}
@@ -844,3 +845,10 @@ html,body{overflow-x:clip}
 .admin-log{display:flex;flex-direction:column}
 .admin-log > div{padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
 .admin-log > div:last-child{border-bottom:0}
+@media (hover:hover){.pf-item{cursor:grab}}
+.pf-num{position:absolute;left:6px;top:6px;min-width:22px;height:22px;border-radius:11px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 6px}
+.pf-move{position:absolute;left:6px;top:34px;display:flex;gap:4px}
+.pf-move .ibtn{position:static;width:26px;height:26px;background:var(--bg)}
+.pf-lifted{opacity:.35}
+.pf-target{outline:3px solid var(--accent);outline-offset:-3px}
+.pf-ghost{position:fixed;left:0;top:0;z-index:400;pointer-events:none;box-shadow:var(--shadow);opacity:.9;transform-origin:center}
