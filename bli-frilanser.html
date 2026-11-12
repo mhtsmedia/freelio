@@ -181,10 +181,10 @@ function form() {
         <div class="cover-pick">${cover ? `<img src="${H.esc(cover.url)}" alt="Bakgrunnsbildet ditt">` : `<span class="hint">Ingen valgt. Det første bildet i porteføljen brukes.</span>`}</div>
         <div class="row"><label class="btn soft sm" for="coverFile">${H.icon('plus', 16, 2.2)} ${cover ? 'Bytt bakgrunnsbilde' : 'Velg bakgrunnsbilde'}</label><input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp" class="sr">${cover && cover.src ? '<button type="button" class="btn soft sm" data-a="editCover">Juster bildet</button>' : ''}${cover ? '<button type="button" class="btn link small" data-a="rmCover">Fjern</button>' : ''}<span class="hint" id="coverStatus">${H.esc(coverBusy)}</span></div>
         <span class="hint">Vises øverst på profilen din. Bruk et bredt bilde, gjerne 1600 piksler eller mer.</span></section>
-      <section class="card stack" style="gap:10px"><b style="font-size:15px">Bilde på kortet</b>
-        <div class="card-pick">${card ? `<img src="${H.esc(card.url)}" alt="Bildet på kortet ditt">` : `<span class="hint" style="padding:12px">Ingen valgt. ${cover ? 'Bakgrunnsbildet' : 'Det første bildet i porteføljen'} brukes.</span>`}</div>
-        <div class="row"><label class="btn soft sm" for="cardFile">${H.icon('plus', 16, 2.2)} ${card ? 'Bytt bilde på kortet' : 'Velg bilde på kortet'}</label><input type="file" id="cardFile" accept="image/jpeg,image/png,image/webp" class="sr">${card ? '<button type="button" class="btn link small" data-a="rmCard">Fjern</button>' : ''}<span class="hint" id="cardStatus">${H.esc(cardBusy)}</span></div>
-        <span class="hint">Vises på kortet ditt i søket og på forsiden. Velg gjerne et annet bilde enn bakgrunnsbildet, så hvert bilde passer sitt format.</span></section>
+      <section class="card stack" style="gap:10px"><b style="font-size:15px">Forsidebilde</b>
+        <div class="card-pick">${card ? `<img src="${H.esc(card.url)}" alt="Forsidebildet ditt">` : `<span class="hint" style="padding:12px">Ingen valgt. ${cover ? 'Bakgrunnsbildet' : 'Det første bildet i porteføljen'} brukes.</span>`}</div>
+        <div class="row"><label class="btn soft sm" for="cardFile">${H.icon('plus', 16, 2.2)} ${card ? 'Bytt forsidebilde' : 'Velg forsidebilde'}</label><input type="file" id="cardFile" accept="image/jpeg,image/png,image/webp" class="sr">${card ? '<button type="button" class="btn link small" data-a="rmCard">Fjern</button>' : ''}<span class="hint" id="cardStatus">${H.esc(cardBusy)}</span></div>
+        <span class="hint">Bildet folk ser først: på kortet ditt i søket og på forsiden. Velg gjerne et annet bilde enn bakgrunnsbildet, så hvert bilde passer sitt format.</span></section>
       <div class="grid2"><label class="field"><span class="label">Navn *</span><input class="inp" id="name" maxlength="60" value="${H.esc(p.name || S.user.name)}"></label>
       <label class="field"><span class="label">Hovedområde *</span><select class="inp" id="cat">${HDATA.CATS.map((c) => `<option value="${c.id}" ${p.cat === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}</select></label></div>
       <label class="field"><span class="label">Tittel *</span><input class="inp" id="role" maxlength="60" value="${H.esc(p.role || '')}" placeholder="F.eks. Bryllupsfotograf, Videograf, Dronepilot"></label>
@@ -243,7 +243,7 @@ function form() {
   const kIn = document.getElementById('cardFile');
   kIn.addEventListener('change', async () => {
     const file = kIn.files[0]; kIn.value = ''; if (!file) return;
-    const blob = await H.cropImage(file, { aspect: 4 / 3, outW: CLOUD ? 1200 : 800, title: 'Juster bildet på kortet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Slik ser kortet ditt ut i søket og på forsiden.' });
+    const blob = await H.cropImage(file, { aspect: 4 / 3, outW: CLOUD ? 1200 : 800, title: 'Juster forsidebildet', hint: 'Dra bildet for å flytte det, og zoom for å velge utsnittet. Slik ser kortet ditt ut i søket og på forsiden.' });
     if (!blob) return;
     cardBusy = 'Laster opp …'; form();
     try {
