@@ -5,7 +5,7 @@
    Hver besøkende kan også bytte selv med ?design=ny, ?design=finn eller ?design=gammel i adressen.
    Valget huskes i nettleseren. */
 (function () {
-  var STANDARD = 'ny';
+  var STANDARD = 'finn';
   var LOV = { ny: 1, finn: 1, gammel: 1 };
   var d = STANDARD;
   try {
