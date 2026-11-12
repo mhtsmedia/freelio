@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=9c0643b3">
+<link rel="stylesheet" href="css/style.css?v=5cdbd35c">
 <link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
 <script src="js/design.js?v=7c71ad27"></script>
 </head>
@@ -63,7 +63,8 @@ function render() {
   const saved = H.S.saved.includes(f.id), inCmp = H.S.cmp.includes(f.id);
   // Fordeling av stjerner: ekte omtaler telles. Demo-frilansere har i tillegg et anslått grunnlag.
   const dist = [5, 4, 3, 2, 1].map((s) => {
-    const real = (f.rv || []).filter((r) => r[5] && r[1] === s).length;
+    // De første «realReviews» i listen er ekte omtaler fra databasen. Teller dem etter antall stjerner.
+    const real = (f.rv || []).slice(0, f.realReviews || 0).filter((r) => Number(r[1]) === s).length;
     const baseN = f.reviews - (f.realReviews || 0);
     const share = { 5: 0.82, 4: 0.13, 3: 0.03, 2: 0.01, 1: 0.01 }[s];
     return [s, real + (f.demo === false ? 0 : Math.round(baseN * share))];
