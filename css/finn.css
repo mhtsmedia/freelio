@@ -124,12 +124,7 @@ html[data-design="finn"] body[data-page="index"] .foot{margin-top:88px}
 .fs-rate svg{color:var(--star)}
 .fs-new{padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:600}
 
-/* ledige plasser i siste rad fylles med en invitasjon til frilansere */
-.fs-invite{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:100%;padding:24px;border:1.5px dashed var(--line-strong);border-radius:12px;text-align:center}
-.fs-invite b{margin-top:6px;font-size:16px;font-weight:600;color:var(--fg)}
-.fs-invite p{margin:0 0 10px;max-width:34ch;font-size:14.5px;color:var(--muted)}
-
-/* små bokser: tomt for oppdrag, og «er du fotograf eller videograf?» */
+/* små bokser: tomt for oppdrag, og «er du fotograf eller videograf?» under frilanserkortene */
 .fs-ic{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink)}
 .fs-box{display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:12px;background:var(--surface)}
 .fs-box .fs-ic{background:var(--bg)}
@@ -148,7 +143,7 @@ html[data-design="finn"] body[data-page="index"] .foot{margin-top:88px}
 .fs-n{width:28px;height:28px;display:grid;place-items:center;margin-bottom:12px;border-radius:50%;background:var(--bg);color:var(--accent-ink);font-size:14px;font-weight:700}
 .fs-steps b{display:block;font-size:16px;font-weight:600;color:var(--fg)}
 .fs-steps p{margin:2px 0 0;font-size:14.5px;color:var(--muted)}
-#fsCta{margin-top:16px}
+.fs-join{margin-top:28px}
 
 /* nettbrett */
 @media (max-width:860px){
@@ -182,7 +177,7 @@ html[data-design="finn"] body[data-page="index"] .foot{margin-top:88px}
   .fs-role,.fs-loc{font-size:12.5px}
   .fs-price{margin-top:4px;font-size:14.5px}
   .fs-loc{margin-top:2px}
-  .fs-invite{padding:18px 14px}
+  .fs-join{margin-top:22px}
   .fs-box{flex-wrap:wrap;padding:16px}
   .fs-box > div{flex-basis:calc(100% - 60px)}
   .fs-box .btn{margin-left:60px}
