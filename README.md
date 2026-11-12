@@ -94,7 +94,8 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 ```
 css/style.css   Design, lys og mørk modus, animasjoner og skeleton
 css/ny.css      Det nye designet oppå style.css. Slås av i js/design.js
-js/design.js    Velger nytt eller forrige design (STANDARD = 'ny' eller 'gammel')
+css/finn.css    FINN-inspirert design oppå ny.css (smal bredde på alle sider, egen forside). Bare med design 'finn'
+js/design.js    Velger design: STANDARD = 'ny', 'finn' eller 'gammel'. Prøv selv med ?design=finn
 img/            Logo (SVG) og favicon
 js/logo.js      Logoen som vektor, følger lys og mørk modus
 js/data.js      Kategorier og farger

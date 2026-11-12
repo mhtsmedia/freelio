@@ -1,0 +1,192 @@
+/* FINN-inspirert design for hele nettsiden. Lastes etter style.css og ny.css, og brukes bare når
+   js/design.js velger designet 'finn' (STANDARD = 'finn' for alle, eller ?design=finn for deg selv).
+   Tilbake til det vanlige designet: STANDARD = 'ny', eller ?design=ny.
+   Bare utseendet endres. HTML og JS er de samme som i det nye designet, unntatt forsiden (index.html,
+   <template id="forside-finn">).
+   Mål fra FINN: 948 px innhold på alle sider, 48 px søkefelt, 32 px ikoner og kort på rundt 225 px.
+   Fargene er de samme som i det nye designet (skifer), så lys og mørk modus virker som før. */
+
+html[data-design="finn"]{--fs-field:color-mix(in srgb,var(--fg) 45%,var(--bg))}
+
+/* ---------- samme smale bredde på alle sider ----------
+   Toppmenyen, innholdet og bunnteksten står på linje overalt, og ingenting hopper når man bytter side. */
+html[data-design="finn"] .wrap{max-width:980px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+html[data-design="finn"] main .wrap[style*="max-width"]{max-width:980px!important}
+html[data-design="finn"] body[data-page="logg-inn"] main .wrap{max-width:460px!important}
+html[data-design="finn"] h1{font-size:clamp(24px,2.6vw,28px);letter-spacing:-.02em}
+html[data-design="finn"] h2{font-size:20px}
+
+/* ---------- toppmenyen: lav, med små ikoner og tekst, som på FINN ---------- */
+html[data-design="finn"] .top-in{height:60px;gap:18px}
+html[data-design="finn"] .logo .mk{height:22px}
+html[data-design="finn"] .mainnav{gap:0}
+html[data-design="finn"] .mainnav a{padding:8px 10px;font-size:14px;font-weight:500;color:var(--muted)}
+html[data-design="finn"] .mainnav a:hover{color:var(--fg)}
+html[data-design="finn"] .mainnav a[aria-current="page"]{color:var(--fg);background:var(--surface)}
+html[data-design="finn"] .mainnav .hide-lg{display:none}
+html[data-design="finn"] .ibtn.lbl{height:36px;padding:0 8px;gap:6px}
+html[data-design="finn"] .ibtn.lbl .lbl-t{font-size:12.5px;font-weight:700;color:var(--fg)}
+html[data-design="finn"] .prof-btn{font-size:12.5px;font-weight:700}
+html[data-design="finn"] .prof-btn .lbl-t{display:none}
+@media (min-width:901px){
+  html[data-design="finn"] .usernav .ibtn.lbl:not(.theme-btn):not([href="assistent.html"]) .lbl-t{display:inline}
+}
+html[data-design="finn"] .usernav .btn.primary{height:36px;padding:0 16px;border-radius:999px}
+
+/* ---------- skjema og knapper: tynn, tydelig kant som på FINN ---------- */
+html[data-design="finn"] .inp{border:1px solid var(--fs-field);border-radius:8px}
+html[data-design="finn"] .inp:hover{border-color:var(--fg)}
+html[data-design="finn"] .searchbox{border:1px solid var(--fs-field);border-radius:12px}
+html[data-design="finn"] .chip{border-radius:999px}
+
+/* ---------- kort: firkantede bilder, navn, pris og sted ---------- */
+html[data-design="finn"] .cards{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:32px 16px}
+html[data-design="finn"] .fcard .ph,html[data-design="finn"] .fc-car{aspect-ratio:1/1;border-radius:12px}
+html[data-design="finn"] .fcard .t{font-weight:500;font-size:16px}
+html[data-design="finn"] .fcard .meta{font-size:14px}
+html[data-design="finn"] .fcard .price{font-size:16px;font-weight:700}
+html[data-design="finn"] .fcard .heart{top:8px;right:8px;width:34px;height:34px;opacity:1;transform:none;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+/* mobil: to kort i bredden, litt mindre, som på forsiden */
+@media (max-width:640px){
+  html[data-design="finn"] .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}
+  html[data-design="finn"] .fcard .ph,html[data-design="finn"] .fc-car{aspect-ratio:5/4}
+  html[data-design="finn"] .fcard .heart{top:6px;right:6px;width:30px;height:30px}
+  html[data-design="finn"] .fcard .heart svg{width:16px;height:16px}
+  html[data-design="finn"] .fcard .t{font-size:14.5px}
+  html[data-design="finn"] .fcard .meta{font-size:12.5px}
+  html[data-design="finn"] .fcard .price{font-size:14.5px}
+  html[data-design="finn"] .fcard .cmp{top:6px;left:6px;height:26px;padding:0 8px;font-size:11px}
+}
+
+/* ---------- sider med filter eller sidekolonne ---------- */
+html[data-design="finn"] .with-side{grid-template-columns:260px minmax(0,1fr);gap:28px}
+html[data-design="finn"] .prof-grid{gap:32px}
+html[data-design="finn"] .two{gap:32px}
+@media (max-width:900px){
+  html[data-design="finn"] .with-side{grid-template-columns:minmax(0,1fr);gap:20px}
+}
+
+/* ---------- meldinger: samme bredde som resten, med kant på sidene ---------- */
+@media (min-width:981px){
+  html[data-design="finn"] body[data-page="meldinger"] .inbox{border-left:1px solid var(--line)!important;border-right:1px solid var(--line)!important}
+}
+
+/* =====================================================================
+   FORSIDEN (bare index.html, markup i <template id="forside-finn">)
+   ===================================================================== */
+html[data-design="finn"] body[data-page="index"] .foot{margin-top:88px}
+.fs a:not(.btn){text-decoration:none}
+
+/* overskrift og søk */
+.fs-find{padding-top:48px}
+.fs-title{margin:0 0 18px;font-size:28px;line-height:1.2;font-weight:700;letter-spacing:-.02em;color:var(--fg)}
+.fs-search-row{display:flex;align-items:center;gap:16px}
+.fs-search{flex:1;min-width:0;display:flex;align-items:center;height:48px;border:1px solid var(--fs-field);border-radius:12px;background:var(--bg);transition:border-color .15s,box-shadow .15s}
+.fs-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fs-si{display:grid;padding-left:15px;color:var(--muted)}
+.fs-search input{flex:1;min-width:0;height:100%;margin:0;padding:0 10px;border:0;border-radius:0;outline:0;background:none;box-shadow:none;font:inherit;font-size:16px;color:var(--fg)}
+.fs-search input::placeholder{color:var(--muted);opacity:.85}
+.fs-search button{flex:none;height:38px;margin-right:4px;padding:0 22px;border:0;border-radius:9px;background:var(--accent);color:var(--on-accent);font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.fs-search button:hover{background:var(--accent-hover)}
+.fs-kart{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600;color:var(--fg)}
+.fs-kart:hover span:last-child{text-decoration:underline;text-underline-offset:3px}
+.fs [data-ic]{display:grid}
+
+/* kategorier: ikon i en lys sirkel, navn under */
+.fs-cats{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));margin:32px 0 0;padding:0;list-style:none}
+.fs-cats a{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 2px;border-radius:8px;font-size:14px;line-height:1.3;text-align:center;color:var(--fg)}
+.fs-cats a:hover .fs-cl{text-decoration:underline;text-underline-offset:3px}
+.fs-ci{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);transition:background .15s}
+.fs-ci svg{display:block;width:26px;height:26px}
+.fs-cats a:hover .fs-ci{background:color-mix(in srgb,var(--accent-soft) 88%,var(--accent))}
+
+/* seksjoner */
+.fs-sec{margin-top:64px}
+.fs-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px}
+.fs-head h2{margin:0;font-size:22px;line-height:1.25;font-weight:700;letter-spacing:-.01em}
+.fs-head a{display:flex;align-items:center;gap:2px;font-size:15px;font-weight:600;color:var(--accent-ink)}
+.fs-head a:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* frilanserkort */
+.fs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px 16px}
+.fs-card{position:relative;min-width:0}
+.fs-card .ph{display:block;aspect-ratio:1/1;border-radius:12px;overflow:hidden}
+.fs-card .ph > .fs-av{position:absolute;left:8px;bottom:8px;z-index:2;width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--bg);background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.fs-fav{position:absolute;top:8px;right:8px;z-index:3;width:34px;height:34px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:color-mix(in srgb,var(--bg) 94%,transparent);color:var(--fg);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.fs-fav[aria-pressed="true"]{color:var(--like)}
+.fs-name{display:flex;align-items:center;gap:5px;min-width:0;margin-top:10px;font-size:16px;line-height:1.35;font-weight:500;color:var(--fg)}
+.fs-name span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-name:hover span:first-child,.fs-card .ph:hover ~ .fs-name span:first-child{text-decoration:underline;text-underline-offset:3px}
+.fs-role{margin:0;font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-price{margin:6px 0 0;font-size:16px;font-weight:700;color:var(--fg)}
+.fs-loc{display:flex;align-items:center;gap:8px;margin:4px 0 0;font-size:14px;color:var(--muted)}
+.fs-rate{display:flex;align-items:center;gap:3px;color:var(--fg)}
+.fs-rate svg{color:var(--star)}
+.fs-new{padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:600}
+
+/* ledige plasser i siste rad fylles med en invitasjon til frilansere */
+.fs-invite{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:100%;padding:24px;border:1.5px dashed var(--line-strong);border-radius:12px;text-align:center}
+.fs-invite b{margin-top:6px;font-size:16px;font-weight:600;color:var(--fg)}
+.fs-invite p{margin:0 0 10px;max-width:34ch;font-size:14.5px;color:var(--muted)}
+
+/* små bokser: tomt for oppdrag, og «er du fotograf eller videograf?» */
+.fs-ic{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink)}
+.fs-box{display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:12px;background:var(--surface)}
+.fs-box .fs-ic{background:var(--bg)}
+.fs-box > div{flex:1;min-width:0}
+.fs-box b{display:block;font-size:16px;font-weight:600;color:var(--fg)}
+.fs-box p{margin:0;font-size:14.5px;color:var(--muted)}
+.fs-box .btn{flex:none}
+.fs-box .btn.soft{background:var(--bg)}
+.fs-box .btn.soft:hover{background:var(--surface2)}
+.fs .list .jrow:first-child{border-top:1px solid var(--line)}
+.fs [hidden]{display:none!important}
+
+/* slik fungerer det */
+.fs-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0;padding:0;list-style:none}
+.fs-steps li{padding:20px 22px;border-radius:12px;background:var(--surface)}
+.fs-n{width:28px;height:28px;display:grid;place-items:center;margin-bottom:12px;border-radius:50%;background:var(--bg);color:var(--accent-ink);font-size:14px;font-weight:700}
+.fs-steps b{display:block;font-size:16px;font-weight:600;color:var(--fg)}
+.fs-steps p{margin:2px 0 0;font-size:14.5px;color:var(--muted)}
+#fsCta{margin-top:16px}
+
+/* nettbrett */
+@media (max-width:860px){
+  .fs-find{padding-top:36px}
+  .fs-cats{grid-template-columns:repeat(5,minmax(0,1fr));row-gap:12px}
+  .fs-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* mobil */
+@media (max-width:640px){
+  html[data-design="finn"] body[data-page="index"] .foot{margin-top:56px}
+  .fs-find{padding-top:24px}
+  .fs-title{font-size:22px;margin-bottom:14px}
+  .fs-search-row{gap:12px}
+  .fs-search button{padding:0 14px}
+  .fs-kart span:last-child{display:none}
+  .fs-kart svg{width:24px;height:24px}
+  .fs-cats{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:2px;margin-top:20px}
+  .fs-cats a{padding:8px 4px;font-size:13px;gap:6px}
+  .fs-ci{width:44px;height:44px}
+  .fs-ci svg{width:22px;height:22px}
+  .fs-sec{margin-top:44px}
+  .fs-head{margin-bottom:14px}
+  .fs-head h2{font-size:20px}
+  .fs-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 12px}
+  .fs-card .ph{aspect-ratio:5/4}
+  .fs-fav{top:6px;right:6px;width:30px;height:30px}
+  .fs-fav svg{width:16px;height:16px}
+  .fs-card .ph > .fs-av{left:6px;bottom:6px;width:28px;height:28px}
+  .fs-name{margin-top:8px;font-size:14.5px}
+  .fs-role,.fs-loc{font-size:12.5px}
+  .fs-price{margin-top:4px;font-size:14.5px}
+  .fs-loc{margin-top:2px}
+  .fs-invite{padding:18px 14px}
+  .fs-box{flex-wrap:wrap;padding:16px}
+  .fs-box > div{flex-basis:calc(100% - 60px)}
+  .fs-box .btn{margin-left:60px}
+  .fs-steps{grid-template-columns:1fr;gap:10px}
+  .fs-steps li{display:grid;grid-template-columns:28px 1fr;column-gap:14px;padding:16px}
+  .fs-n{grid-row:span 2;margin:0}
+}
