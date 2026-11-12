@@ -30,7 +30,7 @@
 <script src="js/config.js?v=8c092c05"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script src="js/app.js?v=a17a36fa"></script>
-<script src="js/cloud.js?v=c259cde7"></script>
+<script src="js/cloud.js?v=ddb3de75"></script>
 <script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
 const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
@@ -64,6 +64,11 @@ H.actions.login = (v) => { busy = v; render(); setTimeout(() => { name = 'Kari N
 // Innlogging mot Supabase med e-post og passord
 let mode = H.qs('ny') ? 'up' : 'in', cbusy = false, cmsg = '', cerr = '';
 function renderCloud(box) {
+  // Kom fra lenken i e-posten: lag nytt passord
+  if (Cloud.linkError && mode !== 'forgot' && !cmsg) { box.innerHTML = `<h1>Lenken virker ikke</h1><p class="muted">Lenken er utløpt eller allerede brukt. Lenker for nytt passord virker i én time og bare én gang.</p><button class="btn primary" data-a="mode" data-v="forgot">Send ny lenke</button><button class="btn soft" data-a="mode" data-v="in">Til innlogging</button>`; return; }
+  if (Cloud.recovery && H.S.user && !cmsg) return renderNewPass(box);
+  if (Cloud.recovery && !H.S.user && !cmsg && mode !== 'forgot') { box.innerHTML = `<h1>Lenken virker ikke</h1><p class="muted">Vi fant ingen gyldig innlogging i lenken. Den kan være utløpt. Be om en ny.</p><button class="btn primary" data-a="mode" data-v="forgot">Send ny lenke</button>`; return; }
+  if (mode === 'forgot' && !cmsg) return renderForgot(box);
   if (H.S.user && !cmsg) { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)} (${H.esc(H.S.user.email || '')}).</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (cmsg) { box.innerHTML = `<h1>Sjekk e-posten din</h1><p class="muted">${H.esc(cmsg)}</p><button class="btn soft" data-a="mode" data-v="in">Til innlogging</button>`; return; }
   const up = mode === 'up';
@@ -73,6 +78,7 @@ function renderCloud(box) {
       ${up ? '<label class="field"><span class="label">Navn</span><input class="inp" id="aname" maxlength="60" autocomplete="name" required></label>' : ''}
       <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" maxlength="254" autocomplete="email" required></label>
       <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" maxlength="72" autocomplete="${up ? 'new-password' : 'current-password'}" ${up ? 'minlength="8" ' : ''}required>${up ? '<span class="hint">Minst 8 tegn.</span>' : ''}</label>
+      ${up ? '' : '<button type="button" class="btn link small" style="align-self:flex-start;margin-top:-6px" data-a="mode" data-v="forgot">Glemt passordet?</button>'}
       ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
       <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
       <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>
@@ -103,7 +109,51 @@ function renderCloud(box) {
     } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
   });
 }
-H.actions.mode = (v) => { mode = v; cerr = ''; cmsg = ''; render(); };
+H.actions.mode = (v) => { mode = v; cerr = ''; cmsg = ''; if (v !== 'forgot') { Cloud.linkError = ''; } render(); };
+// Be om lenke for nytt passord
+function renderForgot(box) {
+  box.innerHTML = `<h1>Glemt passordet?</h1><p class="muted">Skriv inn e-posten du bruker på Freelio. Vi sender deg en lenke der du kan lage et nytt passord.</p>
+    <form class="stack" id="fform" novalidate>
+      <label class="field"><span class="label">E-post</span><input class="inp" id="femail" type="email" maxlength="254" autocomplete="email" required></label>
+      <span class="err-text" id="ferr" role="alert">${H.esc(cerr)}</span>
+      <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Sender …' : 'Send lenke'}</button>
+      <button type="button" class="btn link small" style="align-self:flex-start" data-a="mode" data-v="in">Tilbake til innlogging</button>
+    </form>`;
+  document.getElementById('fform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('femail').value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { cerr = 'Skriv inn en gyldig e-postadresse.'; document.getElementById('ferr').textContent = cerr; return; }
+    cbusy = true; cerr = ''; render();
+    try {
+      await Cloud.resetPassword(email);
+      // Samme svar om kontoen finnes eller ikke, så ingen kan sjekke hvem som har konto
+      cbusy = false; cmsg = `Hvis det finnes en konto med ${email}, har vi sendt en lenke dit. Trykk på den for å lage et nytt passord. Lenken virker i én time. Finner du ikke e-posten, sjekk søppelpost.`; mode = 'in'; render();
+    } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+  });
+}
+// Lag nytt passord etter at du har trykket på lenken
+function renderNewPass(box) {
+  box.innerHTML = `<h1>Lag nytt passord</h1><p class="muted">For ${H.esc(H.S.user.email || H.S.user.name)}.</p>
+    <form class="stack" id="pform" novalidate>
+      <label class="field"><span class="label">Nytt passord</span><input class="inp" id="np1" type="password" maxlength="72" minlength="8" autocomplete="new-password" required><span class="hint">Minst 8 tegn.</span></label>
+      <label class="field"><span class="label">Gjenta passordet</span><input class="inp" id="np2" type="password" maxlength="72" autocomplete="new-password" required></label>
+      <span class="err-text" id="perr" role="alert">${H.esc(cerr)}</span>
+      <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Lagrer …' : 'Lagre nytt passord'}</button>
+    </form>`;
+  document.getElementById('pform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const a = document.getElementById('np1').value, b = document.getElementById('np2').value;
+    const err = (t) => { cerr = t; document.getElementById('perr').textContent = t; };
+    if (a.length < 8) return err('Passordet må ha minst 8 tegn.');
+    if (a !== b) return err('Passordene er ikke like.');
+    cbusy = true; cerr = ''; render();
+    try {
+      await Cloud.setPassword(a);
+      H.flash('Passordet er endret. Du er logget inn.');
+      location.href = 'min-side.html';
+    } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+  });
+}
 H.boot(render);
 </script>
 </body>

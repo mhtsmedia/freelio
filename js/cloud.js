@@ -17,7 +17,12 @@
 
   if (!cfg.supabaseUrl || !cfg.supabaseKey || !window.supabase) { H.prune(); runPageScripts(); return; }
 
+  // Lenken fra «Glemt passord»-e-posten. Leses før Supabase rydder adressen.
+  const hashQ = new URLSearchParams(location.hash.replace(/^#/, ''));
+  C.recovery = hashQ.get('type') === 'recovery' || new URLSearchParams(location.search).has('nytt-passord');
+  C.linkError = hashQ.get('error_code') || hashQ.get('error') || '';
   const sb = (C.sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey));
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') C.recovery = true; });
   C.on = true;
   H.LOAD_MS = 0;
 
@@ -412,6 +417,13 @@
     return !!r.data.session;
   };
   C.signIn = async (email, password) => { const r = await sb.auth.signInWithPassword({ email, password }); if (r.error) throw r.error; };
+  // Sender e-post med lenke for å lage nytt passord. Lenken går tilbake til logg-inn.html.
+  C.resetPassword = async (email) => {
+    const back = location.href.replace(/[^/]*$/, '') + 'logg-inn.html?nytt-passord=1';
+    const r = await sb.auth.resetPasswordForEmail(email, { redirectTo: back });
+    if (r.error) throw r.error;
+  };
+  C.setPassword = async (password) => { const r = await sb.auth.updateUser({ password }); if (r.error) throw r.error; C.recovery = false; };
   C.signOut = async () => { await H.flush(); await sb.auth.signOut(); };
   C.deleteAccount = async () => { await H.flush(); const r = await sb.rpc('delete_my_account'); if (r.error) throw r.error; await sb.auth.signOut(); };
   C.authError = (e) => {
@@ -420,7 +432,9 @@
     if (/already registered|already been registered/i.test(m)) return 'Det finnes allerede en konto med denne e-posten. Logg inn i stedet.';
     if (/Email not confirmed/i.test(m)) return 'Du må bekrefte e-posten din først. Sjekk innboksen.';
     if (/sending (confirmation|magic link|recovery)? ?e-?mail|error sending/i.test(m)) return 'Vi fikk ikke sendt bekreftelses-e-posten. Prøv igjen om litt, eller meld fra til oss.';
+    if (/different from the old|same as the old|same_password/i.test(m)) return 'Det nye passordet må være forskjellig fra det gamle.';
     if (/at least \d+|Password should/i.test(m)) return 'Passordet må ha minst 8 tegn.';
+    if (/session missing|not authenticated|Auth session/i.test(m)) return 'Lenken er ugyldig eller utløpt. Be om en ny lenke.';
     if (/valid email|invalid format/i.test(m)) return 'Skriv inn en gyldig e-postadresse.';
     if (/rate limit|too many/i.test(m)) return 'For mange forsøk. Vent litt og prøv igjen.';
     if (/signups? (are|is) disabled|signups not allowed/i.test(m)) return 'Det er ikke mulig å opprette nye kontoer akkurat nå. (Supabase: e-postinnlogging eller nye registreringer er slått av.)';
