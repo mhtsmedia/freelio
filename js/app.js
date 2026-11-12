@@ -152,6 +152,9 @@
     if (S.profile && S.profile.published) list.push(withReviews(S.profile));
     // Skjulte profiler (bare admin får dem fra databasen) tas med når en enkelt profil slås opp
     if (withHidden) (D.HIDDEN || []).forEach((f) => { if (!list.some((x) => x.id === f.id)) list.push(withReviews(f)); });
+    // Fast rekkefølge: Martinus Halvorsen først, Ole Theiste sist. Resten står som før.
+    const rank = (f) => { const n = String(f.name || '').trim().toLowerCase(); return n === 'martinus halvorsen' ? -1 : n === 'ole theiste' ? 1 : 0; };
+    list.sort((a, b) => rank(a) - rank(b));
     return list;
   };
   H.byId = (id) => H.all(true).find((f) => f.id === id);
