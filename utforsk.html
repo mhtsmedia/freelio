@@ -12,14 +12,10 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="utforsk">
 <div id="site-header"></div>
@@ -30,12 +26,12 @@
   </div>
 </main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">
 let cat = 'alle';
 let draft = null, busy = '', caption = '';
@@ -47,7 +43,8 @@ function composer() {
   if (!draft) return `<div class="card row" style="gap:12px">${H.avatar(S.profile, 40)}<span class="grow muted">Del noe du har laget nylig</span><label class="btn primary sm" for="postFile">${H.icon('plus', 16, 2.2)} Nytt innlegg</label><input type="file" id="postFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="sr"></div><span class="hint" id="postStatus" style="margin-top:-10px">${H.esc(busy)}</span>`;
   return `<div class="card stack" style="gap:12px"><b>Nytt innlegg</b>
     <div class="post-media" style="max-width:320px">${draft.type === 'video' ? `<video src="${draft.preview}" muted playsinline controls></video>` : `<img src="${draft.preview}" alt="Forhåndsvisning">`}</div>
-    <label class="field"><span class="label">Tekst</span><textarea class="inp" id="postCap" rows="3" maxlength="600" placeholder="Fortell kort om jobben, for eksempel sted, kunde eller utstyr.">${H.esc(caption)}</textarea></label>
+    <label class="field"><span class="label">Tekst</span><textarea class="inp" id="postCap" rows="3" maxlength="600" placeholder="Fortell kort om jobben, for eksempel sted eller utstyr.">${H.esc(caption)}</textarea></label>
+    <label class="check"><input type="checkbox" id="postOk" ${postOk ? 'checked' : ''}> <span>Jeg har laget dette selv og har rett til å vise det. Personer som kan kjennes igjen, har samtykket.</span></label>
     <div class="row"><button class="btn primary" data-a="publish" ${busy ? 'disabled' : ''}>${busy ? H.esc(busy) : 'Publiser'}</button><button class="btn soft" data-a="cancelPost" ${busy ? 'disabled' : ''}>Avbryt</button></div></div>`;
 }
 function render() {
@@ -55,6 +52,7 @@ function render() {
   document.getElementById('compose').innerHTML = composer();
   const fIn = document.getElementById('postFile'); if (fIn) fIn.addEventListener('change', () => pick(fIn));
   const cap = document.getElementById('postCap'); if (cap) cap.addEventListener('input', () => (caption = cap.value));
+  const pok = document.getElementById('postOk'); if (pok) pok.addEventListener('change', () => (postOk = pok.checked));
   const posts = visible();
   document.getElementById('feed').innerHTML = posts.length ? posts.map(({ p, f }) => `<button class="xtile" data-a="openReel" data-v="${p.id}" aria-label="${p.type === 'video' ? 'Video' : 'Bilde'} fra ${H.esc(f.name)}${p.cap ? ': ' + H.esc(p.cap.slice(0, 80)) : ''}">
       <img src="${H.esc(p.thumb || p.url)}" alt="" loading="lazy">${p.type === 'video' ? `<span class="xtile-play" aria-hidden="true">${H.icon('play', 18, 2, 'currentColor')}</span>` : ''}
@@ -88,7 +86,7 @@ function openReel(startId) {
           <div class="reel-info">
             <a class="reel-by" href="frilanser.html?id=${f.id}">${H.avatar(f, 40)}<span><b>${H.esc(f.name)} ${H.verified(f)}</b><span>${H.esc(f.role)} · ${H.esc(f.area)} · ${ago(p.at)}</span></span></a>
             ${p.cap ? `<p class="reel-cap">${H.esc(p.cap)}</p>` : ''}
-            <div class="reel-btns"><a class="btn sm reel-light" href="frilanser.html?id=${f.id}">Se profil</a><a class="btn primary sm" href="book.html?id=${f.id}">Book · ${H.priceTxt(f)}</a>${p.fid === mineId ? '<button class="btn sm reel-light" data-r="del">Slett innlegget</button>' : ''}</div>
+            <div class="reel-btns"><a class="btn sm reel-light" href="frilanser.html?id=${f.id}">Se profil</a><a class="btn primary sm" href="book.html?id=${f.id}">Book · ${H.priceTxt(f)}</a>${p.fid === mineId ? '<button class="btn sm reel-light" data-r="del">Slett innlegget</button>' : `<a class="btn link sm" style="color:inherit" href="${H.reportImageLink('utforsk.html?p=' + encodeURIComponent(p.id))}">Meld bilde</a>`}</div>
           </div>
         </div>
         <div class="reel-actions">
@@ -226,9 +224,11 @@ async function pick(input) {
   busy = ''; render();
 }
 H.actions.cat = (v) => { cat = v; render(); };
-H.actions.cancelPost = () => { draft = null; caption = ''; render(); };
+H.actions.cancelPost = () => { draft = null; caption = ''; postOk = false; render(); };
+let postOk = false;
 H.actions.publish = async () => {
   if (!draft || busy) return;
+  if (!postOk) { H.toast('Bekreft at du har rett til å vise innlegget, og at personene på det har samtykket.'); return; }
   busy = 'Laster opp …'; render();
   try {
     let post;

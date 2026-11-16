@@ -272,6 +272,12 @@
     if (r.error) throw new Error(errText(r.error));
     D.JOBS = D.JOBS.filter((j) => j.id !== id);
   };
+  /* ---------- sak hos Freelio (database/juridisk.sql) ---------- */
+  // Bare admin. Databasen sjekker det selv, logger hva som leses, og viser begrunnelsen til begge parter.
+  const caseErr = (e) => (/does not exist|schema cache|PGRST202|42883/i.test((e && (e.message || e.code)) || '') ? 'Saker er ikke slått på ennå. Kjør database/juridisk.sql i Supabase.' : errText(e));
+  H.adminCases = async () => { const r = await sb.rpc('admin_cases'); if (r.error) throw new Error(caseErr(r.error)); return r.data || []; };
+  H.adminCaseMessages = async (id) => { const r = await sb.rpc('admin_case_messages', { p_id: id }); if (r.error) throw new Error(caseErr(r.error)); return r.data || []; };
+  H.adminResolveCase = async (id, refund, note) => { const r = await sb.rpc('admin_resolve_case', { p_id: id, p_refund: Math.round(refund), p_note: note }); if (r.error) throw new Error(caseErr(r.error)); };
   /* ---------- meld feil (database/feil.sql) ---------- */
   // Alle kan sende inn. Bare admin kan lese og endre status. Mangler tabellen, sier vi hva som må kjøres.
   const bugTable = (e) => (/does not exist|schema cache|PGRST205|42P01/i.test((e && (e.message || e.code)) || '') ? 'Meld feil er ikke slått på ennå. Kjør database/feil.sql i Supabase.' : errText(e));

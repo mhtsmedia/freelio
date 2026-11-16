@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Logg inn | Freelio</title>
-<meta name="description" content="Logg inn med Vipps eller BankID.">
+<meta name="description" content="Logg inn eller lag konto på Freelio.">
 <script>try{var t=localStorage.getItem("freelio:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,25 +12,21 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="logg-inn">
 <div id="site-header"></div>
 <main id="main"><div class="wrap" style="max-width:460px"><div class="section" id="box"></div></div></main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
 const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
@@ -38,27 +34,24 @@ let busy = null, step = 'start', name = '';
 function render() {
   const box = document.getElementById('box');
   if (window.Cloud && Cloud.on) return renderCloud(box);
-  if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, verifisert med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
+  if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, logget inn med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (step === 'name') {
-    box.innerHTML = `<h1>Velkommen!</h1><p class="muted">Navnet ditt er bekreftet med ${H.esc(busy)}. Hvilket navn vil du vise til frilanserne?</p>
+    box.innerHTML = `<h1>Velkommen!</h1><p class="muted">Hvilket navn vil du vise til frilanserne?</p>
       <form class="stack" id="nform"><label class="field"><span class="label">Visningsnavn</span><input class="inp" id="name" maxlength="60" value="${H.esc(name)}" autocomplete="name"></label>
-      <label class="check"><input type="checkbox" id="terms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
+      <label class="check"><input type="checkbox" id="terms"> <span>Jeg er over 18 år, godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
       <span class="err-text" id="err"></span><button class="btn primary" type="submit">Opprett konto</button></form>`;
     document.getElementById('nform').addEventListener('submit', (e) => {
       e.preventDefault();
       const n = document.getElementById('name').value.trim();
       if (!n) { document.getElementById('err').textContent = 'Skriv inn et navn.'; return; }
-      if (!document.getElementById('terms').checked) { document.getElementById('err').textContent = 'Du må godta vilkårene for å fortsette.'; return; }
+      if (!document.getElementById('terms').checked) { document.getElementById('err').textContent = 'Du må bekrefte at du er over 18 år og godta vilkårene for å fortsette.'; return; }
       H.S.user = { name: n, method: busy, since: H.today() }; H.save();
       H.flash(`Logget inn som ${n}.`); location.href = safeNext;
     });
     return;
   }
-  box.innerHTML = `<h1>Logg inn</h1><p class="muted">Vi bruker Vipps eller BankID, så alle på Freelio har bekreftet hvem de er. Ingen passord å huske.</p>
-    <button class="btn dark" data-a="login" data-v="Vipps" ${busy ? 'disabled' : ''}>${busy === 'Vipps' ? 'Venter på godkjenning i Vipps …' : 'Fortsett med Vipps'}</button>
-    <button class="btn ghost" data-a="login" data-v="BankID" ${busy ? 'disabled' : ''}>${busy === 'BankID' ? 'Bekrefter med BankID …' : 'Fortsett med BankID'}</button>
-    <div class="banner acc">${H.icon('shield', 20)}<span>Vi får bare navnet ditt og at du er over 18 år. Personnummeret ditt lagres ikke hos oss.</span></div>
-    <p class="hint">Demo: ingen ekte innlogging. Trykk på en knapp for å fortsette.</p>`;
+  box.innerHTML = `<h1>Logg inn</h1><p class="muted">Dette er en demo uten ekte innlogging. Ingenting lagres andre steder enn i nettleseren din.</p>
+    <button class="btn dark" data-a="login" data-v="Demo" ${busy ? 'disabled' : ''}>${busy ? 'Vent litt …' : 'Fortsett med demo-konto'}</button>`;
 }
 H.actions.login = (v) => { busy = v; render(); setTimeout(() => { name = 'Kari Nordmann'; step = 'name'; render(); }, 1300); };
 // Innlogging mot Supabase med e-post og passord
@@ -73,11 +66,11 @@ function renderCloud(box) {
       ${up ? '<label class="field"><span class="label">Navn</span><input class="inp" id="aname" maxlength="60" autocomplete="name" required></label>' : ''}
       <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" maxlength="254" autocomplete="email" required></label>
       <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" maxlength="72" autocomplete="${up ? 'new-password' : 'current-password'}" ${up ? 'minlength="8" ' : ''}required>${up ? '<span class="hint">Minst 8 tegn.</span>' : ''}</label>
-      ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
+      ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg er over 18 år, godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
       <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
       <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>
     </form>
-    <p class="hint">Innlogging med Vipps og BankID kommer senere.</p>`;
+    <p class="hint">Vi ber aldri om fødselsnummer eller kortnummer når du lager konto.</p>`;
   document.getElementById('aform').addEventListener('submit', async (e) => {
     e.preventDefault();
     const val = (id) => (document.getElementById(id) || {}).value || '';
@@ -90,7 +83,7 @@ function renderCloud(box) {
     // så eldre kontoer med kortere passord fortsatt kommer inn.
     if (up && v('apass').length < 8) return err('Passordet må ha minst 8 tegn.');
     if (!up && !v('apass')) return err('Skriv inn passordet ditt.');
-    if (up && !document.getElementById('aterms').checked) return err('Du må godta vilkårene for å opprette konto.');
+    if (up && !document.getElementById('aterms').checked) return err('Du må bekrefte at du er over 18 år og godta vilkårene for å opprette konto.');
     cbusy = true; cerr = ''; render();
     try {
       if (up) {

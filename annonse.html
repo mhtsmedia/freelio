@@ -12,33 +12,36 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="annonse">
 <div id="site-header"></div>
 <main id="main" data-skel="page"></main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">
 const jid = H.qs('id');
 let confirmDelete = false, confirmAdmin = false, offerPrice = '', offerMsg = '';
 // Tilbudet kunden holder på å godta, og avtalen som må godtas først
-let acceptAt = -1, acTerms = '', acOk = false, acTried = false;
-const offerContract = (j, o, f) => H.makeContract(f, { title: j.title, price: o.price, desc: String(j.desc || '').slice(0, 1000), date: j.date, place: j.area, cTerms: acTerms.trim() });
+let acceptAt = -1, acTerms = '', acOk = false, acTried = false, acUsage = 'p', acPortfolio = false, acEarly = false;
+// Angrerett gjelder når frilanseren ikke selger som privatperson. Er datoen innen 14 dager, må kunden be om tidlig start.
+const acSoon = (j, f) => { const d = H.daysTo({ date: j.date }); return f.seller !== 'privat' && d !== null && d < H.REGRET_DAYS; };
+const offerContract = (j, o, f) => H.makeContract(f, { title: j.title, price: o.price, desc: String(j.desc || '').slice(0, 1000), date: j.date, place: j.area, cTerms: acTerms.trim(), usage: acUsage, portfolio: acPortfolio, early: f.seller !== 'privat' && acEarly });
 const confirmCard = (j, o, f) => `<div class="card stack ctr-box" style="gap:12px"><b style="font-size:16px">${H.icon('clipboard', 18)} Oppdragsavtale med ${H.esc(H.first(f.name))}</b>
-  <p class="hint" style="margin:0">Når du godtar, betaler du ${H.kr(o.price)}. Pengene holdes trygt til du har godkjent leveransen, og ${H.esc(H.first(f.name))} eier bildene frem til du godkjenner.</p>
+  <p class="hint" style="margin:0">Når du godtar, betaler du ${H.kr(o.price)}${f.mva ? ' (inkl. mva)' : ''}. Pengene holdes av betalingspartneren til du har godkjent leveransen. ${H.sellerLine(f)}</p>
+  <label class="field"><span class="label">Bruk av bildene</span><select class="inp" id="acUsage"><option value="p" ${acUsage === 'p' ? 'selected' : ''}>Privat bruk</option><option value="k" ${acUsage === 'k' ? 'selected' : ''}>Kommersiell bruk (reklame og næring)</option></select><span class="hint">${H.usageHint(acUsage)} ${H.esc(H.first(f.name))} må godta avtalen før jobben leveres.</span></label>
+  <label class="check"><input type="checkbox" id="acPortfolio" ${acPortfolio ? 'checked' : ''}> <span>${H.esc(H.first(f.name))} kan vise utvalgte bilder fra oppdraget i porteføljen sin (valgfritt).</span></label>
+  ${f.seller !== 'privat' ? `<p class="hint" style="margin:0">Booker du som privatperson, har du ${H.REGRET_DAYS} dagers angrerett fra i dag. <a href="vilkar.html#angrerett" target="_blank">Les mer og se angreskjema</a>.</p>
+  <label class="check"><input type="checkbox" id="acEarly" ${acEarly ? 'checked' : ''}> <span>Jeg ber om at oppdraget kan gjøres før angrefristen er ute. Jeg forstår at angreretten faller bort når oppdraget er fullført.</span></label>
+  ${acTried && acSoon(j, f) && !acEarly ? `<span class="err-text">Datoen er innen ${H.REGRET_DAYS} dager. Kryss av for at oppdraget kan gjøres før angrefristen er ute.</span>` : ''}` : ''}
   ${f.terms ? `<div class="banner acc" style="margin:0">${H.icon('pen', 18)}<span>${H.esc(H.first(f.name))} har egne vilkår. De står i punkt 8 i avtalen.</span></div>` : ''}
   <details class="ctr-more"><summary>Les hele avtalen</summary><div class="ctr">${H.contractHTML(offerContract(j, o, f))}</div></details>
   <label class="field"><span class="label">Tillegg til avtalen (valgfritt)</span><textarea class="inp" id="acTerms" rows="2" maxlength="2000" placeholder="F.eks. Bildene skal ikke publiseres før 1. juni.">${H.esc(acTerms)}</textarea></label>
@@ -107,6 +110,9 @@ function render() {
       <aside>${side}<div class="banner acc">${H.icon('lock', 20)}<span>Betaling skjer i Freelio. Pengene holdes til jobben er levert og godkjent.</span></div></aside>
     </div></div>`;
   const act = document.getElementById('acTerms'); if (act) act.addEventListener('input', () => (acTerms = act.value));
+  const aus = document.getElementById('acUsage'); if (aus) aus.addEventListener('change', () => { acUsage = aus.value === 'k' ? 'k' : 'p'; render(); });
+  const apf = document.getElementById('acPortfolio'); if (apf) apf.addEventListener('change', () => (acPortfolio = apf.checked));
+  const aea = document.getElementById('acEarly'); if (aea) aea.addEventListener('change', () => (acEarly = aea.checked));
   const aok = document.getElementById('acOk'); if (aok) aok.addEventListener('change', () => { acOk = aok.checked; if (acOk && acTried) { acTried = false; render(); } });
   const of = document.getElementById('oform');
   if (of) {
@@ -133,12 +139,12 @@ Object.assign(H.actions, {
   confirmAccept: () => {
     const j = H.S.myJobs.find((x) => x.id === jid); const o = H.jobOffers(j)[acceptAt];
     if (!o) return;
-    if (!acOk) { acTried = true; render(); return; }
     const f = H.byId(o.fid);
+    if (!acOk || (acSoon(j, f) && !acEarly)) { acTried = true; render(); return; }
     const order = H.createOrder({ fid: o.fid, title: j.title, price: o.price, date: j.date, place: j.area, jobId: j.id, contract: offerContract(j, o, f) });
     acceptAt = -1;
     j.status = 'booked'; j.acceptedFid = o.fid; j.orderId = order.id; H.save();
-    H.flash(`Tilbudet er godtatt. ${H.kr(o.price)} er betalt og holdes trygt.`);
+    H.flash('Tilbudet er godtatt. Freelio er i testfase, så ingen penger er trukket.');
     H.go('bestilling.html?id=' + order.id);
   },
   compareOffers: () => { const j = H.S.myJobs.find((x) => x.id === jid); H.S.cmp = H.jobOffers(j).slice(0, 3).map((o) => o.fid); H.save(); H.go('sammenlign.html'); },

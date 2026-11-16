@@ -12,14 +12,10 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="meld-feil" data-needs="">
 <div id="site-header"></div>
@@ -30,12 +26,12 @@
   </div>
 </main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">
 const S = H.S, $ = (id) => document.getElementById(id);
 const OWN = /^[a-z0-9-]+\.html(\?[^#]*)?$/i;
@@ -47,7 +43,9 @@ const from = (() => {
 })();
 const PAGES = [['index', 'Forsiden'], ['sok', 'Finn frilanser (søk)'], ['utforsk', 'Utforsk'], ['kart', 'Kart'], ['frilanser', 'En frilanserprofil'], ['sammenlign', 'Sammenlign'], ['oppdrag', 'Ledige oppdrag'], ['annonse', 'Et oppdrag (annonse)'], ['ny-annonse', 'Legg ut oppdrag'], ['book', 'Booking og betaling'], ['mine-oppdrag', 'Mine oppdrag'], ['bestilling', 'En bestilling'], ['avtale', 'Oppdragsavtalen'], ['meldinger', 'Meldinger'], ['lagret', 'Lagret'], ['min-side', 'Min side'], ['bli-frilanser', 'Bli frilanser eller rediger profil'], ['logg-inn', 'Logg inn eller ny konto'], ['hjelp', 'Hjelp'], ['assistent', 'Assistent']];
 const fromPage = from.split(/[.?]/)[0];
-const KINDS = [['liten', 'Småting', 'Ser rart ut eller er litt feil'], ['virker-ikke', 'Noe virker ikke', 'En knapp eller funksjon gjør ikke det den skal'], ['stopper', 'Jeg kommer ikke videre', 'Jeg får ikke gjort det jeg prøvde på']];
+// ?bilde=1: noen vil melde et bilde (av seg selv uten samtykke, eller tatt fra andre). Krever database/juridisk.sql.
+const IMG = !!H.qs('bilde');
+const KINDS = [['bilde', 'Meld et bilde', 'Et bilde av meg uten samtykke, eller et bilde som er tatt fra noen andre'], ['liten', 'Småting', 'Ser rart ut eller er litt feil'], ['virker-ikke', 'Noe virker ikke', 'En knapp eller funksjon gjør ikke det den skal'], ['stopper', 'Jeg kommer ikke videre', 'Jeg får ikke gjort det jeg prøvde på']];
 let busy = false, sent = null;
 
 // Det som sendes med automatisk. Holdes kort, så det ikke blir for stort for databasen.
@@ -63,15 +61,15 @@ const infoList = (i) => `<dl>${Object.entries(i).map(([k, val]) => `<dt>${H.esc(
 
 function form() {
   const where = PAGES.some(([p]) => p === fromPage) ? fromPage : '';
-  $('box').innerHTML = `<div class="stack" style="gap:8px"><span class="pill new" style="align-self:flex-start">${H.icon('bug', 14, 2)} Testfase</span><h1>Meld feil</h1>
-    <p class="muted" style="font-size:16px">Freelio er nytt, og noe virker sikkert ikke som det skal ennå. Fortell oss hva som skjedde, så fikser vi det. Det tar under ett minutt.</p></div>
+  $('box').innerHTML = `<div class="stack" style="gap:8px"><span class="pill new" style="align-self:flex-start">${H.icon('bug', 14, 2)} Testfase</span><h1>${IMG ? 'Meld et bilde' : 'Meld feil'}</h1>
+    <p class="muted" style="font-size:16px">${IMG ? 'Er det et bilde av deg som du ikke har sagt ja til, eller et bilde som er tatt fra noen andre? Fortell oss hvilket bilde det gjelder og hvorfor. Vi vurderer meldingen og fjerner normalt bildet innen 3 virkedager hvis det bryter reglene.' : 'Freelio er nytt, og noe virker sikkert ikke som det skal ennå. Fortell oss hva som skjedde, så fikser vi det. Det tar under ett minutt.'}</p></div>
     <form class="card stack" id="bform" novalidate style="gap:18px">
       <label class="field"><span class="label">Hvor skjedde det?</span><select class="inp" id="where">
         <option value="">Velg side</option>
         ${PAGES.map(([p, t]) => `<option value="${p}" ${p === where ? 'selected' : ''}>${t}${p === where ? ' (siden du kom fra)' : ''}</option>`).join('')}
         <option value="annet">Annet, eller vet ikke</option></select></label>
       <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Hvor ille er det?</legend>
-        <div class="kinds">${KINDS.map(([k, t, d]) => `<label class="check card"><input type="radio" name="kind" value="${k}" ${k === 'virker-ikke' ? 'checked' : ''}> <span><b>${t}</b><span class="muted">${d}</span></span></label>`).join('')}</div></fieldset>
+        <div class="kinds">${KINDS.map(([k, t, d]) => `<label class="check card"><input type="radio" name="kind" value="${k}" ${k === (IMG ? 'bilde' : 'virker-ikke') ? 'checked' : ''}> <span><b>${t}</b><span class="muted">${d}</span></span></label>`).join('')}</div></fieldset>
       <label class="field"><span class="label">Hva skjedde? *</span><textarea class="inp" id="what" rows="5" maxlength="2000" placeholder="F.eks. Jeg trykket på «Send tilbud», men ingenting skjedde. Det sto ingen feilmelding."></textarea><span class="hint" id="whatCount">Skriv med egne ord hva du gjorde og hva som skjedde.</span></label>
       <label class="field"><span class="label">Hva trodde du skulle skje? (valgfritt)</span><textarea class="inp" id="exp" rows="2" maxlength="1000" placeholder="F.eks. At tilbudet ble sendt til kunden."></textarea></label>
       <label class="field"><span class="label">E-post (valgfritt)</span><input class="inp" id="email" type="email" maxlength="254" autocomplete="email" value="${H.esc((S.user && S.user.email) || '')}" placeholder="navn@eksempel.no"><span class="hint">Bare hvis vi kan spørre deg om mer. Vises ikke for andre.</span></label>
@@ -124,7 +122,7 @@ async function loadAdmin() {
 }
 function drawAdmin() {
   const box = $('admin'); box.hidden = false;
-  const KIND = { liten: ['acc', 'Småting'], 'virker-ikke': ['warn', 'Virker ikke'], stopper: ['bad', 'Stopper'] };
+  const KIND = { bilde: ['bad', 'Meld bilde'], liten: ['acc', 'Småting'], 'virker-ikke': ['warn', 'Virker ikke'], stopper: ['bad', 'Stopper'] };
   const STATUS = { ny: ['new', 'Ny'], fikset: ['ok', 'Fikset'], avvist: ['', 'Avvist'] };
   const list = (reports || []).filter((r) => show === 'alle' || r.status === show);
   const count = (s) => (reports || []).filter((r) => s === 'alle' || r.status === s).length;

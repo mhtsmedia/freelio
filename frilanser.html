@@ -12,25 +12,21 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="frilanser">
 <div id="site-header"></div>
 <main id="main" data-skel="profile"></main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">
 const id = H.qs('id');
 let tab = location.hash === '#omtaler' ? 'rv' : 'work';
@@ -54,14 +50,14 @@ function render() {
   const body = {
     work: (f.portfolio && f.portfolio.length) ? `${pcats.length > 1 ? `<div class="chips scroll" style="margin-bottom:14px">${['alle'].concat(pcats).map((c) => `<button class="chip" data-a="pcat" data-v="${c}" aria-pressed="${pc === c}">${c === 'alle' ? 'Alle' : H.cat(c).name}</button>`).join('')}</div>` : ''}<div class="gallery">${f.portfolio.map((x, i) => pc !== 'alle' && (x.cat || f.cat) !== pc ? '' : x.type === 'video' ? `<button class="ph has-img" data-a="viewPf" data-v="${i}" aria-label="Spill av video ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb)}" alt="" loading="lazy"><span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span></button>` : `<button class="ph has-img" data-a="viewPf" data-v="${i}" aria-label="Vis bilde ${i + 1} fra ${H.esc(f.name)}"><img class="cover" src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy"></button>`).join('')}</div>`
       : f.demo === false ? `<div class="empty">${H.esc(H.first(f.name))} har ikke lastet opp bilder ennå.</div>` : `<div class="gallery">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<span class="ph" role="img" aria-label="Arbeid ${i + 1} fra ${H.esc(f.name)}" style="${H.phStyle(f.pal + i)}"></span>`).join('')}</div>`,
-    pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}<p class="hint">Booking skjer med <a href="avtale.html">Freelios oppdragsavtale</a>${f.terms ? ` og vilkårene til ${H.esc(H.first(f.name))} (under Om)` : ''}. Du godtar den før du betaler.</p>
+    pk: `<div class="stack">${f.pk.map((p, i) => `<a class="card pkg" href="book.html?id=${f.id}&pk=${i}" style="text-decoration:none;color:var(--fg)"><span class="pkg-top"><span>${H.esc(p[0])}</span><span>${H.kr(p[1])}</span></span><span class="muted">${H.esc(p[2])}</span><span class="meta">${H.usageTxt(p[3])}${f.mva ? ' · inkl. mva' : ''}</span><span class="small" style="font-weight:700">Book denne pakken →</span></a>`).join('')}<p class="hint">Booking skjer med <a href="avtale.html">Freelios oppdragsavtale</a>${f.terms ? ` og vilkårene til ${H.esc(H.first(f.name))} (under Om)` : ''}. Du godtar den før du betaler.</p>
       <p class="hint">Trenger du noe annet? Send en melding, eller legg ut et oppdrag med eget budsjett.</p></div>`,
     rv: f.reviews === 0 ? `<div class="empty"><b style="color:var(--fg)">Ingen omtaler ennå</b><span>Omtaler kommer fra kunder som har booket og betalt via Freelio.</span></div>`
       : `<div class="stack" style="gap:20px">${f.demo !== false && f.sum ? `<div class="banner acc">${H.icon('spark', 20)}<span><b>Oppsummert av assistenten.</b> ${H.esc(f.sum)}</span></div>` : ''}
       <div class="grid2"><div class="stack" style="gap:2px"><span style="font-family:var(--f-display);font-size:48px;font-weight:800;line-height:1">${H.ratingTxt(f)}</span><span class="rate" aria-label="${H.ratingTxt(f)} av 5 stjerner">${[1, 2, 3, 4, 5].map((k) => `<span style="color:${k <= Math.round(f.rating) ? 'var(--star)' : 'var(--surface2)'};display:inline-flex">${H.star(18)}</span>`).join('')}</span><span class="muted small">${f.reviews} ${f.reviews === 1 ? 'omtale' : 'omtaler'} fra kunder som har betalt via Freelio</span></div>
       <div class="bars">${dist.map(([s, c]) => `<div><span>${s} ${s === 1 ? 'stjerne' : 'stjerner'}</span><i><b style="width:${f.reviews ? (c / f.reviews) * 100 : 0}%"></b></i><span>${c}</span></div>`).join('')}</div></div>
       <div>${f.rv.map((r) => `<div class="rev"><div class="row" style="justify-content:space-between"><b>${H.esc(r[0])}</b><span class="rate" style="color:var(--star)">${H.star(14).repeat(r[1])}<span class="sr">${r[1]} av 5</span></span></div><span class="meta">${H.esc(r[2])}</span><span>${H.esc(r[3])}</span>${r[4] ? '<span class="pill acc" style="align-self:flex-start">Din omtale</span>' : ''}</div>`).join('')}</div></div>`,
-    about: `<div class="prose"><p>${H.esc(f.bio)}</p><ul><li>Område: ${H.esc(f.area)} og omegn</li><li>Spesialiserer seg på: ${f.tags.map(H.esc).join(', ')}</li><li>Medlem siden ${H.esc(f.joined)}</li>${f.verified ? '<li>Identitet bekreftet med BankID</li>' : ''}</ul>${f.terms ? `<h2>Vilkår fra ${H.esc(H.first(f.name))}</h2><p style="white-space:pre-line">${H.esc(f.terms)}</p>` : ''}<p class="hint">Alle bookinger følger <a href="avtale.html">Freelios oppdragsavtale</a>. Pengene holdes trygt til du har godkjent leveransen, og ${H.esc(H.first(f.name))} eier bildene frem til du godkjenner.</p></div>`
+    about: `<div class="prose"><p>${H.esc(f.bio)}</p><ul><li>Område: ${H.esc(f.area)} og omegn</li><li>Spesialiserer seg på: ${f.tags.map(H.esc).join(', ')}</li><li>Medlem siden ${H.esc(f.joined)}</li>${f.demo === false || f.seller ? `<li>Selger som: ${H.sellerLine(f)}</li>` : ''}</ul>${f.terms ? `<h2>Vilkår fra ${H.esc(H.first(f.name))}</h2><p style="white-space:pre-line">${H.esc(f.terms)}</p>` : ''}<p class="hint">Alle bookinger følger <a href="avtale.html">Freelios oppdragsavtale</a>. Pengene holdes av betalingspartneren til du har godkjent leveransen, og ${H.esc(H.first(f.name))} har opphavsretten til bildene.</p></div>`
   }[tab];
   const similar = H.all().filter((x) => x.id !== f.id && (f.niches || [f.cat]).some((n) => H.inCat(x, n))).slice(0, 4);
   main.innerHTML = `
@@ -72,7 +68,7 @@ function render() {
   </div>
   <div class="wrap prof-grid">
     <div class="stack" style="gap:20px">
-      <div class="row small muted" style="gap:16px">${f.verified ? '<span class="row" style="gap:6px">' + H.icon('shield', 15, 2) + ' BankID-verifisert</span>' : ''}<span class="row" style="gap:6px">${H.icon('clock', 15, 2)} Svarer innen ${H.esc(f.resp)}</span><span class="row" style="gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:${f.free ? 'var(--ok)' : 'var(--warn)'}"></span>${f.free ? 'Ledig kapasitet' : 'Få ledige datoer'}</span></div>
+      <div class="row small muted" style="gap:16px">${f.seller ? `<span class="row" style="gap:6px">${H.icon('shield', 15, 2)} ${H.sellerTxt(f)}</span>` : ''}<span class="row" style="gap:6px">${H.icon('clock', 15, 2)} Svarer innen ${H.esc(f.resp)}</span><span class="row" style="gap:6px"><span style="width:7px;height:7px;border-radius:4px;background:${f.free ? 'var(--ok)' : 'var(--warn)'}"></span>${f.free ? 'Ledig kapasitet' : 'Få ledige datoer'}</span></div>
       <div class="stats"><div><b>${H.ratingTxt(f)}</b><span>${f.reviews ? f.reviews + (f.reviews === 1 ? ' omtale' : ' omtaler') : 'Ingen omtaler ennå'}</span></div><div><b>${f.years} år</b><span>erfaring</span></div><div><b>${f.delD ? f.delD + ' d' : 'Samme dag'}</b><span>levering</span></div><div><b>${f.jobs}</b><span>oppdrag</span></div></div>
       <div class="tabs" role="tablist">${Object.entries(tabs).map(([k, t]) => `<button role="tab" aria-selected="${tab === k}" data-a="tab" data-v="${k}">${t}</button>`).join('')}</div>
       <div role="tabpanel">${body}</div>
@@ -106,7 +102,7 @@ H.actions.viewPf = (v) => {
   const lb = document.createElement('div'); lb.className = 'lb'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', 'Porteføljen til ' + f.name);
   const draw = () => {
     const x = pfl[list[at]];
-    lb.innerHTML = `<div class="lb-top"><span class="small" aria-live="polite">${at + 1} / ${list.length}</span><button class="ibtn" data-lb="close" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div>
+    lb.innerHTML = `<div class="lb-top"><span class="small" aria-live="polite">${at + 1} / ${list.length}</span><a class="small" style="color:inherit;margin-left:auto;margin-right:12px" href="${H.reportImageLink()}">Meld bilde</a><button class="ibtn" data-lb="close" aria-label="Lukk">${H.icon('close', 20, 2)}</button></div>
       <div class="lb-stage">${x.type === 'video' ? `<video src="${H.esc(x.url)}" poster="${H.esc(x.thumb)}" controls autoplay playsinline></video>` : `<img src="${H.esc(x.url)}" alt="Bilde ${at + 1} av ${list.length} fra ${H.esc(f.name)}">`}
       ${list.length > 1 ? `<button class="ibtn lb-nav prev" data-lb="prev" aria-label="Forrige">${H.icon('back', 22, 2)}</button><button class="ibtn lb-nav next" data-lb="next" aria-label="Neste">${H.icon('next', 22, 2)}</button>` : ''}</div>`;
     // Henter nabobildene på forhånd, så neste bilde vises med en gang

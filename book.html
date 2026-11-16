@@ -12,33 +12,32 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="book">
 <div id="site-header"></div>
 <main id="main" data-skel="page"></main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   const f = H.byId(H.qs('id') || '');
   let pk = Math.min(+(H.qs('pk') || 0), f ? f.pk.length - 1 : 0);
-  let method = 'vipps', busy = false, tried = false;
-  const form = { date: '', place: '', note: '', terms: false, cterms: '' };
+  let method = 'kort', busy = false, tried = false;
+  const form = { date: '', place: '', note: '', terms: false, cterms: '', early: false, portfolio: false };
+  // Angrerett gjelder når frilanseren ikke selger som privatperson. Er datoen innen 14 dager, må kunden be om tidlig start.
+  const regret = () => f && f.seller !== 'privat';
+  const soon = () => { if (!form.date) return false; const d = new Date(form.date + 'T00:00:00'); return !isNaN(d) && (d - Date.now()) / 864e5 < H.REGRET_DAYS; };
   // Avtalen slik den blir med det kunden har fylt inn nå
-  const draftContract = () => { const p = f.pk[pk]; return H.makeContract(f, { title: p[0], price: p[1], desc: p[2], date: form.date ? form.date.split('-').reverse().join('.') : '', place: form.place, cTerms: form.cterms.trim() }); };
+  const draftContract = () => { const p = f.pk[pk]; return H.makeContract(f, { title: p[0], price: p[1], desc: p[2], date: form.date ? form.date.split('-').reverse().join('.') : '', place: form.place, cTerms: form.cterms.trim(), usage: p[3], portfolio: form.portfolio, early: regret() && form.early }); };
   function render() {
     const main = document.getElementById('main');
     if (!f) { main.innerHTML = `<div class="wrap section"><div class="empty">Fant ikke frilanseren. <a class="btn primary sm" href="sok.html">Søk etter frilansere</a></div></div>`; return; }
@@ -50,17 +49,24 @@ if (H.requireLogin()) {
         <form class="stack" style="gap:20px" id="bform" novalidate>
           <h1>Book ${H.esc(H.first(f.name))}</h1>
           <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Velg pakke</legend>
-            ${f.pk.map((x, i) => `<button type="button" class="card pkg ${i === pk ? 'on' : ''}" data-a="pk" data-v="${i}" aria-pressed="${i === pk}"><span class="pkg-top"><span>${H.esc(x[0])}</span><span>${H.kr(x[1])}</span></span><span class="muted">${H.esc(x[2])}</span></button>`).join('')}</fieldset>
+            ${f.pk.map((x, i) => `<button type="button" class="card pkg ${i === pk ? 'on' : ''}" data-a="pk" data-v="${i}" aria-pressed="${i === pk}"><span class="pkg-top"><span>${H.esc(x[0])}</span><span>${H.kr(x[1])}</span></span><span class="muted">${H.esc(x[2])}</span><span class="meta">${H.usageTxt(x[3])}${f.mva ? ' · inkl. mva' : ''}</span></button>`).join('')}</fieldset>
           <div class="grid2">
             <label class="field"><span class="label">Dato *</span><input class="inp ${miss('date') ? 'err' : ''}" id="date" type="date" value="${H.esc(form.date)}" min="${H.dateMin()}" max="${H.dateMax()}"></label>
             <label class="field"><span class="label">Sted *</span><input class="inp ${miss('place') ? 'err' : ''}" id="place" maxlength="120" value="${H.esc(form.place)}" placeholder="Adresse eller sted"></label>
           </div>
           <label class="field"><span class="label">Melding til ${H.esc(H.first(f.name))}</span><textarea class="inp" id="note" rows="3" maxlength="1000" placeholder="Hva er viktig for deg? Tidspunkt, ønsker, praktisk info">${H.esc(form.note)}</textarea></label>
-          <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="label" style="margin-bottom:8px">Betalingsmåte</legend>
-            <label class="check card" style="padding:12px 14px"><input type="radio" name="m" value="vipps" ${method === 'vipps' ? 'checked' : ''}> Vipps</label>
-            <label class="check card" style="padding:12px 14px"><input type="radio" name="m" value="kort" ${method === 'kort' ? 'checked' : ''}> Bankkort</label></fieldset>
+          <section class="card stack" style="gap:10px"><b style="font-size:16px">Bruk av bildene</b>
+            <p class="hint" style="margin:0"><b>${H.usageTxt(p[3])}.</b> ${H.usageHint(p[3])} ${H.esc(H.first(f.name))} har opphavsretten.</p>
+            <label class="check"><input type="checkbox" id="portfolio" ${form.portfolio ? 'checked' : ''}> <span>${H.esc(H.first(f.name))} kan vise utvalgte bilder fra oppdraget i porteføljen sin (valgfritt).</span></label>
+          </section>
+          ${regret() ? `<section class="card stack" style="gap:10px"><b style="font-size:16px">Angrerett</b>
+            <p class="hint" style="margin:0">Booker du som privatperson, har du ${H.REGRET_DAYS} dagers angrerett fra i dag. Angrer du, trykker du «Avbestill» på bestillingen og får hele beløpet tilbake. <a href="vilkar.html#angrerett" target="_blank">Les mer og se angreskjema</a>.</p>
+            <label class="check"><input type="checkbox" id="early" ${form.early ? 'checked' : ''}> <span>Jeg ber om at oppdraget kan gjøres før angrefristen er ute. Jeg forstår at angreretten faller bort når oppdraget er fullført.</span></label>
+            ${tried && soon() && !form.early ? `<span class="err-text">Datoen er innen ${H.REGRET_DAYS} dager. Kryss av for at oppdraget kan gjøres før angrefristen er ute, eller velg en senere dato.</span>` : ''}
+          </section>` : ''}
           <section class="card stack ctr-box" style="gap:12px"><b style="font-size:16px">${H.icon('clipboard', 18)} Oppdragsavtale</b>
-            <p class="hint" style="margin:0">Avtalen gjelder mellom deg og ${H.esc(H.first(f.name))}. Pengene holdes trygt til du har godkjent leveransen, og ${H.esc(H.first(f.name))} eier bildene frem til du godkjenner.</p>
+            <p class="hint" style="margin:0">Avtalen gjelder mellom deg og ${H.esc(H.first(f.name))}. ${H.sellerLine(f)}</p>
+            <p class="hint" style="margin:0">Pengene holdes av betalingspartneren til du har godkjent leveransen. ${H.cancelRule}</p>
             ${f.terms ? `<div class="banner acc" style="margin:0">${H.icon('pen', 18)}<span>${H.esc(H.first(f.name))} har egne vilkår. De står i punkt 8 i avtalen.</span></div>` : ''}
             <details class="ctr-more"><summary>Les hele avtalen</summary><div class="ctr" id="ctrPreview">${H.contractHTML(draftContract())}</div></details>
             <label class="field"><span class="label">Tillegg til avtalen (valgfritt)</span><textarea class="inp" id="cterms" rows="2" maxlength="2000" placeholder="F.eks. Bildene skal ikke publiseres før 1. juni.">${H.esc(form.cterms)}</textarea><span class="hint">${H.esc(H.first(f.name))} må godta tillegget før jobben leveres.</span></label>
@@ -72,14 +78,14 @@ if (H.requireLogin()) {
         <aside>
           <div class="card stack">
             <div class="row">${H.avatar(f, 44)}<div class="stack grow" style="gap:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(p[0])}</span></div></div>
-            <div class="sum"><div><span>${H.esc(p[0])}</span><b>${H.kr(p[1])}</b></div><div class="muted"><span>Servicegebyr for deg</span><span>0 kr</span></div><div class="tot"><span>Du betaler</span><span>${H.kr(p[1])}</span></div></div>
+            <div class="sum"><div><span>${H.esc(p[0])}${f.mva ? ' (inkl. mva)' : ''}</span><b>${H.kr(p[1])}</b></div><div class="muted"><span>Servicegebyr for deg</span><span>0 kr</span></div><div class="tot"><span>Du betaler</span><span>${H.kr(p[1])}</span></div></div>
             <p class="hint">${H.esc(H.first(f.name))} får ${H.kr(p[1] - fee)} etter at du har godkjent leveransen. Freelio tar ${H.kr(fee)} (5 %).</p>
-            <button class="btn primary block" data-a="pay" ${busy ? 'disabled' : ''}>${busy ? (method === 'vipps' ? 'Godkjenn i Vipps …' : 'Behandler betaling …') : `Betal ${H.kr(p[1])}`}</button>
+            <button class="btn primary block" data-a="pay" ${busy ? 'disabled' : ''}>${busy ? 'Behandler …' : `Book og betal ${H.kr(p[1])}`}</button>
           </div>
-          <div class="banner acc">${H.icon('lock', 20)}<span>Pengene holdes trygt til jobben er levert og godkjent. Gratis avbestilling frem til 7 dager før.</span></div>
+          <div class="banner acc">${H.icon('lock', 20)}<span>Pengene holdes av betalingspartneren til jobben er levert og godkjent. Gratis avbestilling til og med ${H.CANCEL_FREE} dager før.${regret() ? ` ${H.REGRET_DAYS} dagers angrerett.` : ''} Betaling med kort.</span></div>
         </aside>
       </div></div>`;
-    const sync = () => { form.date = document.getElementById('date').value; form.place = document.getElementById('place').value; form.note = document.getElementById('note').value; form.terms = document.getElementById('terms').checked; form.cterms = document.getElementById('cterms').value; const m = document.querySelector('input[name=m]:checked'); method = m ? m.value : method; };
+    const sync = () => { form.date = document.getElementById('date').value; form.place = document.getElementById('place').value; form.note = document.getElementById('note').value; form.terms = document.getElementById('terms').checked; form.cterms = document.getElementById('cterms').value; form.portfolio = document.getElementById('portfolio').checked; const ea = document.getElementById('early'); form.early = !!(ea && ea.checked); };
     document.getElementById('bform').addEventListener('input', sync);
     document.getElementById('bform').addEventListener('change', sync);
     // Avtalen oppdateres med det du har fylt inn når du åpner den
@@ -87,7 +93,7 @@ if (H.requireLogin()) {
   }
   H.actions.pk = (v) => { pk = +v; render(); };
   H.actions.pay = () => {
-    if (!form.terms || !form.date || !form.place.trim()) { tried = true; render(); return; }
+    if (!form.terms || !form.date || !form.place.trim() || (regret() && soon() && !form.early)) { tried = true; render(); return; }
     const bad = H.dateErr(form.date) || H.textErr([['Sted', form.place], ['Melding', form.note], ['Tillegg til avtalen', form.cterms]]);
     if (bad) { tried = true; render(); H.toast(bad); return; }
     form.place = H.clip(form.place, 120); form.note = H.clip(form.note, 1000, true); form.cterms = H.clip(form.cterms, 2000, true);
@@ -95,10 +101,10 @@ if (H.requireLogin()) {
     setTimeout(() => {
       const p = f.pk[pk];
       const d = form.date.split('-').reverse().join('.');
-      const contract = H.makeContract(f, { title: p[0], price: p[1], desc: p[2], date: d, place: form.place, cTerms: form.cterms.trim() });
+      const contract = H.makeContract(f, { title: p[0], price: p[1], desc: p[2], date: d, place: form.place, cTerms: form.cterms.trim(), usage: p[3], portfolio: form.portfolio, early: regret() && form.early });
       const o = H.createOrder({ fid: f.id, title: p[0], price: p[1], date: d, place: form.place, note: form.note, method, contract });
       if (form.note.trim()) { (H.S.threads[f.id] = H.S.threads[f.id] || []).push({ who: 'me', text: 'Booking: ' + p[0] + ' ' + d + '. ' + form.note.trim(), at: Date.now() }); H.save(); }
-      H.flash(`Betalt. ${H.kr(p[1])} holdes trygt til jobben er levert.`);
+      H.flash(`Booket. Freelio er i testfase, så ingen penger er trukket.`);
       H.go('bestilling.html?id=' + o.id);
     }, 1500);
   };

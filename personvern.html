@@ -12,49 +12,98 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="personvern">
 <div id="site-header"></div>
 <main id="main"><div class="wrap"><article class="section prose">
   <h1>Personvernerklæring</h1>
-  <div class="banner warn">Utkast. Teksten må gjennomgås av advokat før lansering.</div>
-  <p>[SELSKAPSNAVN] er behandlingsansvarlig for personopplysningene som behandles i Freelio.</p>
+  <div class="banner warn">Utkast. Teksten må gjennomgås av advokat før lansering. Freelio er i testfase.</div>
+  <p class="muted">Sist oppdatert: 16. november 2026</p>
+  <p>[SELSKAPSNAVN] er behandlingsansvarlig for personopplysningene som behandles i Freelio. Her står det hva vi lagrer, hvorfor, og hvem som får se det.</p>
+
+  <h2>Kort fortalt</h2>
+  <ul>
+    <li>Du lager konto med navn, e-post og passord. Vi spør ikke om fødselsnummer, kontonummer eller kortnummer på nettsiden.</li>
+    <li>Passordet lagres som en enveis kode (hash). Vi kan ikke lese det.</li>
+    <li>Vi bruker ingen sporing, statistikk eller annonseverktøy i dag.</li>
+    <li>Vi selger aldri personopplysninger.</li>
+  </ul>
+
   <h2>Hva vi samler inn</h2>
   <ul>
-    <li><b>Fra Vipps eller BankID:</b> navn og bekreftelse på at du er over 18 år. Vi lagrer ikke personnummer.</li>
-    <li><b>Det du legger inn:</b> profil, bilder, annonser, meldinger og omtaler.</li>
-    <li><b>Betaling:</b> beløp og status. Kortnummer og kontonummer lagres hos betalingspartneren, ikke hos oss.</li>
-    <li><b>Posisjon:</b> bare hvis du gir tillatelse, og bare til å vise frilansere i nærheten. Frilanseres posisjon vises omtrentlig.</li>
-    <li><b>Bruk av tjenesten:</b> bare hvis du har samtykket til statistikk-cookies.</li>
+    <li><b>Konto:</b> navn, e-postadresse, passord (som hash) og at du har bekreftet at du er over 18 år.</li>
+    <li><b>Det du legger inn:</b> profil, profilbilde, portefølje, innlegg, annonser, tilbud, meldinger med vedlegg, omtaler og lagrede mapper.</li>
+    <li><b>Frilansere:</b> om du er næringsdrivende eller privatperson, organisasjonsnummer hvis du har det, og om du er MVA-registrert. Dette vises til kundene.</li>
+    <li><b>Bestillinger:</b> oppdragsavtalen, beløp, status, leveransefiler og når hver av partene godtok.</li>
+    <li><b>Posisjon:</b> bare hvis du gir tillatelse, og bare i nettleseren din for å vise frilansere i nærheten. Frilanseres posisjon vises omtrentlig, ut fra området de har skrevet inn.</li>
+    <li><b>Varsler:</b> slår du på push-varsler, lagrer vi en adresse til nettleseren eller telefonen din, så varselet kommer frem.</li>
+    <li><b>Feilmeldinger:</b> bruker du «Meld feil» eller «Meld bilde», lagrer vi det du skriver, siden du kom fra, nettleser, skjermstørrelse og de siste feilene i nettleseren. Du kan sende inn uten å være logget inn.</li>
   </ul>
-  <h2>Hvorfor</h2>
-  <ul><li>For å levere tjenesten og gjennomføre betaling (avtale).</li><li>For å oppfylle bokføringsloven (rettslig plikt).</li><li>For å hindre svindel og misbruk (berettiget interesse).</li><li>For statistikk og markedsføring (samtykke).</li></ul>
-  <h2>Hvem vi deler med</h2>
-  <p>Betalingspartner, innloggingsleverandør (Vipps, BankID), driftsleverandør og leverandøren av assistenten. Alle har databehandleravtale med oss. Vi selger aldri personopplysninger.</p>
+
+  <h2>Når betaling og utbetaling slås på</h2>
+  <p>Betaling er ikke koblet på ennå. Når det skjer, gjelder dette:</p>
+  <ul>
+    <li><b>Kunder:</b> kortopplysninger legges inn hos betalingspartneren. Freelio ser og lagrer ikke kortnummeret.</li>
+    <li><b>Frilansere:</b> betalingspartneren bekrefter identitet og bankkonto før utbetaling, slik loven krever av betalingstjenester. Det skjer på betalingspartnerens egen side.</li>
+    <li><b>Skatteetaten:</b> digitale plattformer må fra 2026 rapportere hva selgere har tjent gjennom plattformen (skatteforvaltningsloven § 7-11). Derfor må Freelio behandle navn, adresse, fødselsdato, fødselsnummer eller organisasjonsnummer, kontonummer og beløp for frilansere som får utbetalinger. Opplysningene samles inn først når utbetaling slås på, brukes bare til rapporteringen og utbetalingen, og vises aldri til andre brukere.</li>
+  </ul>
+  <p>Vi oppdaterer erklæringen og gir beskjed før dette starter.</p>
+
+  <h2>Hvorfor, og med hvilket grunnlag</h2>
+  <ul>
+    <li><b>Avtale:</b> for å gi deg konto, vise profilen din, formidle oppdrag og meldinger og gjennomføre bestillinger.</li>
+    <li><b>Rettslig plikt:</b> bokføring, og rapportering til Skatteetaten når utbetaling er slått på.</li>
+    <li><b>Berettiget interesse:</b> for å hindre svindel og misbruk, rette feil og behandle saker mellom kunde og frilanser.</li>
+    <li><b>Samtykke:</b> posisjon, push-varsler, og statistikk eller markedsføring hvis vi tar det i bruk senere. Du kan trekke samtykket når som helst.</li>
+  </ul>
+
+  <h2>Hvem som behandler opplysninger for oss</h2>
+  <div class="scroll-x"><table class="cmp-table" style="min-width:560px">
+    <thead><tr><th scope="col" style="text-align:left">Leverandør</th><th scope="col" style="text-align:left">Hva</th><th scope="col" style="text-align:left">Hvor</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Supabase</th><td style="text-align:left">Database, innlogging og lagring av bilder og filer</td><td style="text-align:left">[REGION I SUPABASE]</td></tr>
+      <tr><th scope="row">GitHub Pages</th><td style="text-align:left">Leverer selve nettsiden. Ser IP-adressen din når siden lastes</td><td style="text-align:left">USA, EUs standardavtaler</td></tr>
+      <tr><th scope="row">[E-POSTLEVERANDØR]</th><td style="text-align:left">Sender e-post for å bekrefte kontoen</td><td style="text-align:left">[LAND]</td></tr>
+      <tr><th scope="row">Google, Apple, Mozilla</th><td style="text-align:left">Leverer push-varsler til nettleseren din, bare hvis du har slått dem på</td><td style="text-align:left">USA, EUs standardavtaler</td></tr>
+      <tr><th scope="row">OpenStreetMap</th><td style="text-align:left">Kartbilder og oppslag av stedsnavn. Ser IP-adressen din når du åpner kartet</td><td style="text-align:left">EU og Storbritannia</td></tr>
+      <tr><th scope="row">Cloudflare (cdnjs)</th><td style="text-align:left">Leverer kartbiblioteket. Ser IP-adressen din når du åpner kartet</td><td style="text-align:left">Nærmeste datasenter</td></tr>
+      <tr><th scope="row">Betalingspartner</th><td style="text-align:left">Betaling og utbetaling. Ikke i bruk ennå</td><td style="text-align:left">[FYLLES INN]</td></tr>
+    </tbody></table></div>
+  <p>Skriftene og resten av koden ligger på Freelios egen adresse, så ingen andre får vite at du besøker siden. Leverandører som behandler personopplysninger for oss, har databehandleravtale med oss.</p>
+
+  <h2>Bilder i leveranser</h2>
+  <p>Frilanseren er ansvarlig for bildene og videoene som tas i et oppdrag, og for at de som er med, vet hvordan bildene brukes. Freelio lagrer leveransen på vegne av frilanseren, så kunden kan se og laste den ned. Bare kunden og frilanseren har tilgang.</p>
+
   <h2>Assistenten</h2>
-  <p>Spørsmål du stiller assistenten behandles av [LEVERANDØR] for å lage svar. Ikke skriv sensitive opplysninger i assistenten.</p>
+  <p>Assistenten gir forhåndsskrevne svar. Det du skriver, sendes ikke til noen språkmodell eller annen tjeneste i dag.</p>
+
   <h2>Hvor lenge</h2>
-  <p>Så lenge du har konto. Kvitteringer og regnskapsdata lagres i 5 år etter bokføringsloven.</p>
+  <ul>
+    <li><b>Konto og profil:</b> til du sletter kontoen.</li>
+    <li><b>Meldinger:</b> så lenge en av partene i samtalen har konto. Sletter du kontoen, ser den andre fortsatt samtalen, men du står som «Slettet bruker».</li>
+    <li><b>Leveranser:</b> minst 90 dager etter godkjenning, og til bestillingen eller kontoen slettes.</li>
+    <li><b>Bestillinger, kvitteringer og regnskapsdata:</b> 5 år etter bokføringsloven.</li>
+    <li><b>Feilmeldinger:</b> slettes når testfasen er over.</li>
+    <li><b>Push-adresser:</b> til du slår av varsler eller sletter kontoen.</li>
+  </ul>
+
   <h2>Dine rettigheter</h2>
-  <p>Du kan be om innsyn, retting, sletting, begrensning og dataportabilitet. Last ned eller slett data fra <a href="min-side.html?vis=personvern">Min side</a>. Du kan klage til Datatilsynet.</p>
+  <p>Du kan be om innsyn, retting, sletting, begrensning og dataportabilitet. Du kan protestere mot behandling som bygger på berettiget interesse, og trekke samtykker du har gitt. Last ned eller slett data fra <a href="min-side.html?vis=personvern">Min side</a>. Du kan klage til Datatilsynet.</p>
+
   <h2>Kontakt</h2>
   <p>[E-POST FOR PERSONVERN]</p>
 </article></div></main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
 <script type="text/freelio">H.boot();</script>
 </body>
 </html>

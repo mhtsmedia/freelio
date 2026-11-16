@@ -12,32 +12,28 @@
 <meta name="apple-mobile-web-app-title" content="Freelio">
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/style.css?v=496ed689">
-<link rel="stylesheet" href="css/ny.css?v=1e9d559f" id="ny-css">
-<script src="js/design.js?v=7c71ad27"></script>
+<link rel="stylesheet" href="css/style.css?v=7fb25422">
+<link rel="stylesheet" href="css/ny.css?v=95842c6b" id="ny-css">
+<script src="js/design.js?v=ad734456"></script>
 </head>
 <body data-page="bestilling">
 <div id="site-header"></div>
 <main id="main" data-skel="page"></main>
 <div id="site-footer"></div>
-<script src="js/logo.js?v=e81a0a03"></script>
-<script src="js/data.js?v=13ca9b41"></script>
-<script src="js/config.js?v=8c092c05"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
-<script src="js/app.js?v=c91c1945"></script>
-<script src="js/cloud.js?v=5f349e7d"></script>
-<script src="js/media.js?v=839f9ee7"></script>
+<script src="js/logo.js?v=f0d4288f"></script>
+<script src="js/data.js?v=d89e1e6a"></script>
+<script src="js/config.js?v=ba80519f"></script>
+<script src="js/vendor/supabase-2.117.3.js"></script>
+<script src="js/app.js?v=a39b0e63"></script>
+<script src="js/cloud.js?v=b4cc78ee"></script>
+<script src="js/media.js?v=77c5d8dc"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   const o = H.orderById(H.qs('id'));
   let stars = 0, text = '', confirmDispute = false, reason = '', confirmCancel = false;
   // Avtalen: frilanseren godtar før levering, kunden bekrefter godkjenningen, frilanseren kan avlyse
-  let fAccOk = false, fAccTried = false, confirmApprove = false, apOk = false, apTried = false, confirmFCancel = false;
+  let fAccOk = false, fAccTried = false, confirmApprove = false, apOk = false, apTried = false, confirmFCancel = false, confirmCase = false, caseWhy = '';
   // Originalene kan først lastes ned når kunden har godkjent. Da kan ingen laste ned og så nekte å betale.
   const LOCK_UNTIL_APPROVED = true;
   let pending = [], busy = 0, note = '', lb = -1, prog = '';
@@ -69,25 +65,33 @@ if (H.requireLogin()) {
     const autoAt = st === 'delivered' && o.deliveredAt ? Date.parse(o.deliveredAt) + H.APPROVE_DAYS * 864e5 : 0;
     const canAuto = asFreelancer && autoAt && autoAt <= Date.now();
     const autoTxt = autoAt ? new Date(autoAt).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }) : '';
-    const reached = { paid: 1, delivered: 2, dispute: 2, approved: 4, cancelled: 1 }[st];
+    const reached = { paid: 1, delivered: 2, dispute: 2, case: 2, approved: 4, cancelled: 1 }[st];
+    // Sak hos Freelio: kunden kan sende saken når frilanseren ikke har levert på nytt innen fristen, eller etter to runder med feil.
+    const fixAt = st === 'dispute' && o.disputeAt ? Date.parse(o.disputeAt) + H.FIX_DAYS * 864e5 : 0;
+    const fixTxt = fixAt ? new Date(fixAt).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long' }) : '';
+    const canCase = asFreelancer ? st === 'dispute' : (st === 'delivered' && disputes >= H.MAX_DISPUTES) || (st === 'dispute' && (!fixAt || fixAt <= Date.now()));
+    const cterms = st === 'paid' && !asFreelancer ? H.cancelTerms(o) : null;
+    const refundTxt = +o.refund > 0 ? `${H.kr(o.refund)} blir refundert, normalt innen noen virkedager.` : 'Ingen refusjon.';
     const steps = [
-      ['Betalt og holdt trygt', `Du betalte ${H.kr(o.price)}${o.method === 'kort' ? ' med kort' : ' med Vipps'}. Pengene holdes av betalingspartneren.`],
+      ['Betalt og holdt trygt', `Du betalte ${H.kr(o.price)}. Pengene holdes av betalingspartneren.`],
       ['Levert', st === 'paid' ? `${fn} laster opp leveransen her når jobben er gjort.` : `Leveranse: ${H.esc(o.delivered)}.`],
-      ['Godkjent av deg', st === 'dispute' ? `${fn} har fått beskjed og har ${H.FIX_DAYS} dager på å rette opp.` : `Du har ${H.APPROVE_DAYS} dager på å se over${autoTxt ? ` (til ${autoTxt})` : ''}. Svarer du ikke, godkjennes leveransen automatisk. Bildene tilhører ${fn} til du godkjenner.`],
-      ['Utbetalt', `${fn} får ${H.kr(o.price - fee)} innen 2 virkedager.`]
+      ['Godkjent av deg', st === 'case' ? 'Saken ligger hos Freelio. Ingen penger betales ut før den er avgjort.' : st === 'dispute' ? `${fn} har fått beskjed og har ${H.FIX_DAYS} dager på å rette opp${fixTxt ? ` (til ${fixTxt})` : ''}.` : `Du har ${H.APPROVE_DAYS} dager på å se over${autoTxt ? ` (til ${autoTxt})` : ''}. Svarer du ikke, betales pengene ut. Du kan fortsatt reklamere etter vanlige regler. Bildene tilhører ${fn} til du godkjenner.`],
+      ['Utbetalt', `${fn} får ${H.kr(o.price - fee)}, normalt innen noen virkedager.`]
     ];
     const banner = asFreelancer ? {
       paid: acc ? ['warn', `${cn} har betalt ${H.kr(o.price)}. Godta oppdragsavtalen for å starte. Du kan ikke levere før du har godtatt den.`] : ['acc', `${cn} har betalt ${H.kr(o.price)}. Pengene holdes trygt. Last opp leveransen når jobben er gjort.`],
       delivered: ['acc', `Leveransen er sendt. Venter på at ${cn} godkjenner.`],
-      approved: ['ok', `Godkjent. Du får ${H.kr(o.price - fee)} utbetalt innen 2 virkedager.`],
-      dispute: ['bad', `${cn} har meldt fra om feil. Se meldingene og last opp en ny leveranse.`],
-      cancelled: ['warn', o.cancelledBy === 'frilanser' ? 'Du har avlyst oppdraget. Kunden får hele beløpet tilbake.' : 'Kunden har avbestilt oppdraget.']
+      approved: ['ok', o.approvedBy === 'freelio' ? `Freelio har avgjort saken. ${+o.refund > 0 ? `${cn} får ${H.kr(o.refund)} tilbake, og du får resten minus avgift.` : `Du får ${H.kr(o.price - fee)} utbetalt.`}${o.caseNote ? ' Begrunnelse: ' + H.esc(o.caseNote) : ''}` : `Godkjent. Du får ${H.kr(o.price - fee)} utbetalt, normalt innen noen virkedager.`],
+      dispute: ['bad', `${cn} har meldt fra om feil. Se meldingene og last opp en ny leveranse${fixTxt ? ` innen ${fixTxt}` : ''}. Mener du leveransen er som avtalt, kan du sende saken til Freelio.`],
+      case: ['warn', `Saken ligger hos Freelio. All utbetaling er stoppet. Vi ser på avtalen, leveransen og meldingene, og avgjør normalt innen ${H.CASE_DAYS} dager. Skriv gjerne din side av saken i meldingene.`],
+      cancelled: ['warn', o.cancelledBy === 'freelio' ? `Freelio har avgjort saken. ${cn} får hele beløpet tilbake.${o.caseNote ? ' Begrunnelse: ' + H.esc(o.caseNote) : ''}` : o.cancelledBy === 'frilanser' ? 'Du har avlyst oppdraget. Kunden får hele beløpet tilbake.' : `Kunden har avbestilt oppdraget.${+o.refund < o.price ? ` Kunden får ${H.kr(o.refund)} tilbake, og du får resten minus avgift.` : ''}`]
     }[st] : {
       paid: ['acc', acc ? `Pengene er trygge. Venter på at ${fn} godtar oppdragsavtalen.` : `Pengene er trygge. ${fn} får dem først når du har godkjent leveransen.`],
-      delivered: ['acc', `Leveransen er klar. Se over og godkjenn, eller meld fra hvis noe ikke er som avtalt${autoTxt ? `. Svarer du ikke, godkjennes den automatisk ${autoTxt}` : ''}.`],
-      approved: ['ok', o.reviewed ? 'Fullført og vurdert. Takk for at du bruker Freelio!' : `Fullført. ${fn} har fått betalt. Gi gjerne en omtale.`],
-      dispute: ['bad', 'Saken er meldt. Pengene holdes til den er løst. Meldingene deres brukes som dokumentasjon.'],
-      cancelled: ['warn', `${o.cancelledBy === 'frilanser' ? `${fn} har avlyst oppdraget` : 'Avbestilt'}. ${H.kr(o.refund)} blir refundert til deg innen 5 virkedager.`]
+      delivered: ['acc', `Leveransen er klar. Se over og godkjenn, eller meld fra hvis noe ikke er som avtalt${autoTxt ? `. Svarer du ikke, betales pengene ut ${autoTxt}` : ''}.`],
+      approved: ['ok', o.approvedBy === 'freelio' ? `Freelio har avgjort saken. ${+o.refund > 0 ? `Du får ${H.kr(o.refund)} tilbake.` : `${fn} får beløpet utbetalt.`}${o.caseNote ? ' Begrunnelse: ' + H.esc(o.caseNote) : ''}` : o.reviewed ? 'Fullført og vurdert. Takk for at du bruker Freelio!' : `Fullført. ${fn} har fått betalt. Gi gjerne en omtale.`],
+      dispute: ['bad', `Du har meldt fra om feil. Pengene holdes til saken er løst. ${fn} har ${fixTxt ? `frist til ${fixTxt}` : `${H.FIX_DAYS} dager`} på å levere på nytt. Meldingene deres brukes som dokumentasjon.`],
+      case: ['warn', `Saken ligger hos Freelio. All utbetaling er stoppet. Vi ser på avtalen, leveransen og meldingene, og avgjør normalt innen ${H.CASE_DAYS} dager. Skriv gjerne din side av saken i meldingene.`],
+      cancelled: ['warn', `${o.cancelledBy === 'freelio' ? 'Freelio har avgjort saken' : o.cancelledBy === 'frilanser' ? `${fn} har avlyst oppdraget` : 'Avbestilt'}. ${refundTxt}${o.cancelledBy === 'freelio' && o.caseNote ? ' Begrunnelse: ' + H.esc(o.caseNote) : ''}`]
     }[st];
     main.innerHTML = `<div class="wrap" style="max-width:1300px">
       <div class="crumbs"><a href="mine-oppdrag.html">Mine oppdrag</a><span>/</span><span>${H.esc(o.title)}</span></div>
@@ -95,9 +99,9 @@ if (H.requireLogin()) {
         <div class="stack" style="gap:20px">
           <div class="row">${H.avatar(asFreelancer ? H.partner(chatKey) : f, 56)}<div class="stack grow" style="gap:2px"><h1 style="font-size:28px">${H.esc(o.title)}</h1><span class="muted">${asFreelancer ? 'Kunde: ' + H.esc(o.customerName || 'Kunde') : H.esc(f.name)} · ${H.esc(o.date)}${o.place ? ' · ' + H.esc(o.place) : ''}</span></div></div>
           <div class="banner ${banner[0]}">${H.icon('shield', 20)}<span>${banner[1]}</span></div>
-          <ol class="steps">${steps.map((s, i) => { const n = i + 1; const cls = st === 'dispute' && n === 3 ? 'warn' : n <= reached ? 'done' : n === reached + 1 ? 'cur' : ''; return `<li class="${cls}"><div class="rail"><span class="n">${cls === 'done' ? H.icon('check', 14, 3) : n}</span>${n < 4 ? '<span class="ln"></span>' : ''}</div><div class="t"><b>${s[0]}</b><span class="muted small">${s[1]}</span></div></li>`; }).join('')}</ol>
+          <ol class="steps">${steps.map((s, i) => { const n = i + 1; const cls = (st === 'dispute' || st === 'case') && n === 3 ? 'warn' : n <= reached ? 'done' : n === reached + 1 ? 'cur' : ''; return `<li class="${cls}"><div class="rail"><span class="n">${cls === 'done' ? H.icon('check', 14, 3) : n}</span>${n < 4 ? '<span class="ln"></span>' : ''}</div><div class="t"><b>${s[0]}</b><span class="muted small">${s[1]}</span></div></li>`; }).join('')}</ol>
           ${asFreelancer && acc && ctr ? `<section class="card stack ctr-box" style="gap:12px"><b style="font-size:16px">${H.icon('clipboard', 18)} Godta avtalen for å starte</b>
-            <p class="hint" style="margin:0">${cn} har booket og betalt ${H.kr(o.price)}. Du eier bildene frem til kunden godkjenner leveransen. Pengene utbetales når kunden godkjenner, eller automatisk ${H.APPROVE_DAYS} dager etter levering.</p>
+            <p class="hint" style="margin:0">${cn} har booket og betalt ${H.kr(o.price)}. Du eier bildene frem til kunden godkjenner leveransen. Pengene utbetales når kunden godkjenner, eller ${H.APPROVE_DAYS} dager etter levering hvis kunden ikke svarer. ${ctr.portfolio ? 'Kunden har sagt ja til at du kan vise utvalgte bilder i porteføljen.' : 'Kunden har ikke sagt ja til at bildene vises i porteføljen din.'}</p>
             ${ctr.cTerms ? `<div class="banner warn" style="margin:0">${H.icon('pen', 18)}<span>${cn} har lagt til egne vilkår i punkt 8. Les dem før du godtar.</span></div>` : ''}
             <details class="ctr-more" ${ctr.cTerms ? 'open' : ''}><summary>Les hele avtalen</summary><div class="ctr">${H.contractHTML(ctr)}</div></details>
             <label class="check"><input type="checkbox" id="fAccOk" ${fAccOk ? 'checked' : ''}> <span>Jeg har lest og godtar oppdragsavtalen${ctr.cTerms ? ', også kundens tillegg' : ''}.</span></label>
@@ -111,7 +115,7 @@ if (H.requireLogin()) {
             <label class="field"><span class="label">Melding til kunden</span><textarea class="inp" id="dnote" rows="2" maxlength="1000" placeholder="F.eks. Her er de redigerte bildene. Si fra hvis du vil ha noe justert.">${H.esc(note)}</textarea></label>
             <div class="row"><button class="btn primary" data-a="sendDelivery" ${pending.length && !busy ? '' : 'disabled'}>Send leveranse</button>${asFreelancer ? '' : `<button class="btn link" data-a="sampleFiles" ${busy ? 'disabled' : ''}>Bruk eksempelbilder</button>`}</div>
           </section>` : ''}
-          ${['delivered', 'approved', 'dispute'].includes(st) ? (o.files && o.files.length ? `<section class="card stack" style="gap:16px">
+          ${['delivered', 'approved', 'dispute', 'case'].includes(st) ? (o.files && o.files.length ? `<section class="card stack" style="gap:16px">
             <div class="row" style="justify-content:space-between"><div class="stack" style="gap:0"><b style="font-size:16px">Leveranse</b><span class="meta">${o.files.length} ${o.files.length === 1 ? 'fil' : 'filer'} · ${total(o.files)} i full kvalitet</span></div>
               ${locked() ? `<span class="pill">${H.icon('lock', 12, 2)} Låses opp når du godkjenner</span>` : `<button class="btn soft sm" data-a="dlAll">${H.icon('download', 16, 2)} Last ned alle</button>`}</div>
             ${o.deliveryNote ? `<div class="bubble them" style="max-width:100%">${H.esc(o.deliveryNote)}</div>` : ''}
@@ -122,32 +126,36 @@ if (H.requireLogin()) {
           ${st === 'approved' && !o.reviewed && !asFreelancer ? `<div class="card stack"><h2 style="font-size:20px">Hvordan var ${fn}?</h2>
             <div class="stars" role="radiogroup" aria-label="Antall stjerner">${[1, 2, 3, 4, 5].map((k) => `<button role="radio" aria-checked="${k === stars}" aria-label="${k} stjerner" class="${k <= stars ? 'on' : ''}" data-a="stars" data-v="${k}">${H.star(24)}</button>`).join('')}</div>
             <label class="field"><span class="label">Fortell andre om oppdraget</span><textarea class="inp" id="rtext" rows="4" maxlength="1500" placeholder="Hva var bra? Var noe annerledes enn avtalt?">${H.esc(text)}</textarea></label>
-            <p class="hint">Omtalen publiseres når ${fn} også har vurdert deg, eller etter 14 dager. Da kan ingen av dere svare på den andres omtale først.</p>
+            <p class="hint">Omtalen vises på profilen til ${fn} med en gang. Skriv ærlig og saklig, uten personopplysninger.</p>
             <button class="btn primary" data-a="review" ${stars ? '' : 'disabled'}>Send omtale</button></div>` : ''}
         </div>
         <aside>
           <div class="card stack">
             <div class="sum"><div><span>Oppdrag</span><b>${H.kr(o.price)}</b></div><div class="muted"><span>Plattformavgift 5 %</span><span>− ${H.kr(fee)}</span></div><div class="tot"><span>${fn} får</span><span>${H.kr(o.price - fee)}</span></div></div>
-            ${st === 'delivered' && !confirmDispute && !asFreelancer && !confirmApprove ? `<button class="btn primary block" data-a="askApprove">Godkjenn og betal ut</button>${disputes < H.MAX_DISPUTES ? '<button class="btn ghost block" data-a="askDispute">Meld fra om feil</button>' : `<p class="hint">Du har meldt fra om feil ${H.MAX_DISPUTES} ganger. Er du fortsatt ikke fornøyd, <a href="hjelp.html">kontakt Freelio</a>, så avgjør vi saken.</p>`}` : ''}
+            ${st === 'delivered' && !confirmDispute && !asFreelancer && !confirmApprove ? `<button class="btn primary block" data-a="askApprove">Godkjenn og betal ut</button>${disputes < H.MAX_DISPUTES ? '<button class="btn ghost block" data-a="askDispute">Meld fra om feil</button>' : (confirmCase ? '' : `<button class="btn ghost block" data-a="askCase">Send saken til Freelio</button><p class="hint">Du har meldt fra om feil ${H.MAX_DISPUTES} ganger. Er du fortsatt ikke fornøyd, kan Freelio avgjøre saken. Da stopper all utbetaling.</p>`)}` : ''}
+            ${st === 'dispute' && canCase && !confirmCase ? `<button class="btn ghost block" data-a="askCase">Send saken til Freelio</button><p class="hint">${asFreelancer ? 'Mener du leveransen er som avtalt, kan Freelio avgjøre saken.' : `${fn} har ikke levert på nytt innen fristen.`} Da stopper all utbetaling til saken er avgjort.</p>` : ''}
+            ${st === 'dispute' && !asFreelancer && !canCase ? `<p class="hint">${fn} har frist til ${fixTxt} på å levere på nytt. Skjer ikke det, kan du sende saken til Freelio.</p>` : ''}
+            ${confirmCase && canCase ? `<div class="stack small"><label class="field"><span class="label">Hva er dere uenige om?</span><textarea class="inp" id="caseWhy" rows="3" maxlength="1000" placeholder="Beskriv kort saken slik du ser den">${H.esc(caseWhy)}</textarea></label><div class="row"><button class="btn soft sm grow" data-a="noCase">Avbryt</button><button class="btn dark sm grow" data-a="toCase">Send til Freelio</button></div></div>` : ''}
             ${st === 'delivered' && confirmApprove && !asFreelancer ? `<div class="stack small"><label class="check"><input type="checkbox" id="apOk" ${apOk ? 'checked' : ''}> <span>Jeg har sett over leveransen og godkjenner den. ${fn} får betalt, og rettighetene til filene blir mine.</span></label>${apTried && !apOk ? '<span class="err-text">Kryss av for å godkjenne.</span>' : ''}<div class="row"><button class="btn soft sm grow" data-a="noApprove">Avbryt</button><button class="btn primary sm grow" data-a="approve">Godkjenn</button></div></div>` : ''}
             ${st === 'delivered' && asFreelancer ? (canAuto ? `<button class="btn primary block" data-a="autoApprove">Be om utbetaling</button><p class="hint">${cn} har ikke svart på ${H.APPROVE_DAYS} dager, så leveransen regnes som godkjent.</p>` : autoTxt ? `<p class="hint">${cn} har frist til ${autoTxt} på å svare. Etter det kan du be om utbetaling.</p>` : '') : ''}
             ${st === 'paid' && asFreelancer && !confirmFCancel ? '<button class="btn ghost block" data-a="askFCancel">Avlys oppdraget</button>' : ''}
             ${st === 'paid' && asFreelancer && confirmFCancel ? `<div class="stack small"><span>Avlyser du, får ${cn} hele beløpet tilbake. Vil du avlyse?</span><div class="row"><button class="btn soft sm grow" data-a="noFCancel">Nei</button><button class="btn dark sm grow" data-a="fCancel">Ja, avlys</button></div></div>` : ''}
-            ${st === 'paid' && !confirmCancel && !asFreelancer ? `<button class="btn ghost block" data-a="askCancel">Avbestill</button>` : ''}
-            ${st === 'paid' && confirmCancel ? `<div class="stack small"><span>${o.refundAll ? 'Du får hele beløpet tilbake.' : 'Avbestilling nærmere enn 7 dager før gir 50 % tilbake.'} Vil du avbestille?</span><div class="row"><button class="btn soft sm grow" data-a="noCancel">Nei</button><button class="btn dark sm grow" data-a="cancel">Ja, avbestill</button></div></div>` : ''}
+            ${st === 'paid' && !confirmCancel && !asFreelancer && cterms ? `<button class="btn ghost block" data-a="askCancel">Avbestill</button>` : ''}
+            ${st === 'paid' && confirmCancel && cterms ? `<div class="stack small"><span>${H.esc(cterms.why)} ${cterms.pct === 100 ? '' : `Du får ${H.kr(Math.round(o.price * cterms.pct / 100))} tilbake. `}Vil du avbestille?</span><div class="row"><button class="btn soft sm grow" data-a="noCancel">Nei</button><button class="btn dark sm grow" data-a="cancel">Ja, avbestill</button></div></div>` : ''}
             ${st === 'dispute' && !asFreelancer && f.demo !== false ? `<button class="btn soft block" style="border:1.5px dashed var(--muted)" data-a="resolve">Demo: ${fn} retter opp</button>` : ''}
             ${ctr ? `<div class="ctr-status"><b>${H.icon('clipboard', 16)} Oppdragsavtale</b><span>${H.icon('check', 14, 3)} ${asFreelancer ? cn : 'Du'} godtok ${H.esc(H.when(ctr.customerAt))}</span><span>${ctr.freelancerAt ? `${H.icon('check', 14, 3)} ${asFreelancer ? 'Du' : fn} godtok ${H.esc(H.when(ctr.freelancerAt))}` : `${H.icon('clock', 14, 2)} Venter på at ${asFreelancer ? 'du' : fn} godtar`}</span><a href="avtale.html?id=${encodeURIComponent(o.id)}">Se hele avtalen</a></div>` : ''}
             <a class="btn soft block" href="meldinger.html?med=${encodeURIComponent(chatKey)}">${H.icon('chat', 18)} Send melding til ${asFreelancer ? cn : fn}</a>
             ${asFreelancer ? '' : `<a class="btn link" href="frilanser.html?id=${f.id}">Se profilen til ${fn}</a>`}
             ${st === 'paid' && !asFreelancer && !canDeliver ? `<p class="hint">${fn} laster opp leveransen her. Du får beskjed når den er klar.</p>` : ''}
           </div>
-          ${st === 'paid' ? `<p class="hint">Avbestilling: gratis frem til 7 dager før. Etter det får du 50 % tilbake. <a href="hjelp.html">Les mer</a></p>` : ''}
+          ${st === 'paid' && !asFreelancer ? `<p class="hint">${cterms ? `Avbestilling: ${ctr && +ctr.v === 2 ? H.cancelRule : 'Gratis frem til 7 dager før avtalt dato. Etter det får du 50 % tilbake.'}` : 'Avtalt dato er passert, så oppdraget kan ikke avbestilles.'} <a href="vilkar.html#angrerett">Om angrerett og avbestilling</a></p>` : ''}
         </aside>
       </div></div>`;
     const rt = document.getElementById('rtext'); if (rt) rt.addEventListener('input', (e) => (text = e.target.value));
     const fa = document.getElementById('fAccOk'); if (fa) fa.addEventListener('change', () => (fAccOk = fa.checked));
     const ap = document.getElementById('apOk'); if (ap) ap.addEventListener('change', () => (apOk = ap.checked));
     const rs = document.getElementById('reason'); if (rs) rs.addEventListener('input', (e) => (reason = e.target.value));
+    const cw = document.getElementById('caseWhy'); if (cw) cw.addEventListener('input', (e) => (caseWhy = e.target.value));
     const dn = document.getElementById('dnote'); if (dn) dn.addEventListener('input', (e) => (note = e.target.value));
     const inp = document.getElementById('files'); if (inp) inp.addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
     const drop = document.getElementById('drop');
@@ -230,19 +238,23 @@ if (H.requireLogin()) {
     dlAll: async () => { if (locked()) return; H.toast(`Laster ned ${o.files.length} filer`); for (let i = 0; i < o.files.length; i++) { await dl(i); await new Promise((r) => setTimeout(r, 350)); } },
     askApprove: () => { confirmApprove = true; apOk = false; apTried = false; render(); },
     noApprove: () => { confirmApprove = false; render(); },
-    approve: () => { if (!apOk) { apTried = true; render(); return; } o.status = 'approved'; o.approvedBy = 'kunde'; confirmApprove = false; upd('Godkjent. Pengene er på vei til frilanseren, og filene er dine.'); },
+    approve: () => { if (!apOk) { apTried = true; render(); return; } o.status = 'approved'; o.approvedBy = 'kunde'; confirmApprove = false; upd('Godkjent. Utbetalingen til frilanseren starter, og du kan laste ned filene.'); },
     // Frilanseren: kunden har ikke svart innen fristen
-    autoApprove: () => { o.status = 'approved'; o.approvedBy = 'automatisk'; upd('Leveransen er godkjent automatisk. Pengene er på vei.'); },
+    autoApprove: () => { o.status = 'approved'; o.approvedBy = 'automatisk'; upd('Fristen er ute. Utbetalingen starter.'); },
     acceptContract: () => { if (!fAccOk) { fAccTried = true; render(); return; } o.contract = Object.assign({}, o.contract, { freelancerAt: new Date().toISOString() }); upd('Avtalen er godtatt. Nå kan du levere jobben.'); },
     askFCancel: () => { confirmFCancel = true; render(); },
     noFCancel: () => { confirmFCancel = false; render(); },
     fCancel: () => { o.status = 'cancelled'; o.refund = o.price; o.cancelledBy = 'frilanser'; confirmFCancel = false; upd('Oppdraget er avlyst. Kunden får hele beløpet tilbake.'); },
-    askCancel: () => { const d = String(o.date).split('.'); const when = d.length === 3 ? new Date(+d[2], +d[1] - 1, +d[0]) : null; o.refundAll = !when || when - Date.now() > 7 * 864e5; confirmCancel = true; render(); },
+    askCancel: () => { if (!H.cancelTerms(o)) return; confirmCancel = true; render(); },
     noCancel: () => { confirmCancel = false; render(); },
-    cancel: () => { o.status = 'cancelled'; o.refund = o.refundAll ? o.price : Math.round(o.price / 2); o.cancelledBy = 'kunde'; confirmCancel = false; upd('Bestillingen er avbestilt.'); },
+    cancel: () => { const t = H.cancelTerms(o); if (!t) return; o.status = 'cancelled'; o.refund = Math.round(o.price * t.pct / 100); o.cancelledBy = 'kunde'; confirmCancel = false; upd('Bestillingen er avbestilt.'); },
+    askCase: () => { confirmCase = true; render(); },
+    noCase: () => { confirmCase = false; render(); },
+    // Saken går til Freelio. Databasen stopper automatisk godkjenning til en admin har avgjort den (database/juridisk.sql).
+    toCase: () => { if (caseWhy.trim().length < 10) { H.toast('Beskriv saken med minst 10 tegn.'); return; } const key = o.role === 'freelancer' ? 'c:' + o.customerId : o.fid; o.status = 'case'; o.caseAt = new Date().toISOString(); o.caseBy = o.role === 'freelancer' ? 'frilanser' : 'kunde'; confirmCase = false; (H.S.threads[key] = H.S.threads[key] || []).push({ who: 'me', text: 'Sak sendt til Freelio: ' + caseWhy.trim(), at: Date.now() }); caseWhy = ''; upd('Saken er sendt til Freelio. All utbetaling er stoppet.'); },
     askDispute: () => { confirmDispute = true; render(); },
     cancelDispute: () => { confirmDispute = false; render(); },
-    dispute: () => { if (!reason.trim()) { H.toast('Skriv kort hva som er feil.'); return; } o.status = 'dispute'; o.disputes = (+o.disputes || 0) + 1; confirmDispute = false; (H.S.threads[o.fid] = H.S.threads[o.fid] || []).push({ who: 'sys', text: 'Kunden har meldt fra om feil: ' + reason.trim(), at: Date.now() }); upd('Sendt. Pengene holdes til saken er løst.'); },
+    dispute: () => { if (!reason.trim()) { H.toast('Skriv kort hva som er feil.'); return; } o.status = 'dispute'; o.disputes = (+o.disputes || 0) + 1; o.disputeAt = new Date().toISOString(); confirmDispute = false; (H.S.threads[o.fid] = H.S.threads[o.fid] || []).push({ who: 'sys', text: 'Kunden har meldt fra om feil: ' + reason.trim(), at: Date.now() }); upd('Sendt. Pengene holdes til saken er løst.'); },
     resolve: () => { o.status = 'delivered'; o.delivered += ' (rettet opp)'; upd('Frilanseren har levert på nytt.'); },
     stars: (v) => { stars = +v; render(); },
     review: () => {

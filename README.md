@@ -1,6 +1,6 @@
 # Freelio
 
-Markedsplass der folk finner, sammenligner og leier lokale fotografer og videografer. Flere fagfelt kommer senere. Pengene holdes trygt til jobben er levert og godkjent. Freelio tar 5 % av hvert oppdrag.
+Markedsplass der folk finner, sammenligner og leier lokale fotografer og videografer. Flere fagfelt kommer senere. Pengene skal holdes av en betalingspartner til jobben er levert og godkjent. Freelio tar 5 % av hvert oppdrag.
 
 Live: https://mhtsmedia.github.io/freelio/
 
@@ -17,7 +17,20 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+
+### Juridisk gjennomgang (november 2026)
+
+Kjør `database/juridisk.sql` i SQL Editor (etter `avtale.sql`, `admin.sql` og `feil.sql`), eller hele `database/oppdatering.sql`. Uten den virker ikke «Send saken til Freelio», «Meld bilde» eller de nye reglene for avbestilling.
+
+- **Pris og dato:** databasen henter prisen fra pakken eller tilbudet, og låser dato og sted ved booking.
+- **Avbestilling:** gratis til og med 30 dager før, 50 % fra 29 til 7 dager før, ingenting etter det, og ikke etter avtalt dato. 14 dagers angrerett gir full refusjon. Bestillinger fra før følger den gamle regelen.
+- **Sak hos Freelio:** ny status som stopper automatisk godkjenning. Admin avgjør saken på `saker.html` (lenken ligger i kontomenyen for admin). Alt logges i `admin_log`.
+- **Frilansere** oppgir om de er næringsdrivende eller privatperson, org.nr. og MVA-status. Nettsiden spør aldri om fødselsnummer eller kontonummer. Det samles inn hos betalingspartneren når utbetaling slås på.
+- **Meld bilde** bruker `meld-feil.html?bilde=1`. Når «Meld feil» fjernes etter testfasen, må «Meld bilde» få en egen side.
+- **Skrifter og supabase-js** ligger lokalt i `css/fonts` og `js/vendor`. Ingen kall til Google Fonts eller jsDelivr.
+
+Venter til betaling er koblet på: at bare betalingsleverandøren kan sette en bestilling til betalt, kvitteringer i frilanserens navn, innsamling av opplysninger til Skatteetaten, og fjerning av unntaket for demo-frilansere. Plassholdere i hakeparentes i `vilkar.html`, `frilansvilkar.html` og `personvern.html` fylles inn når selskapet er stiftet.
 
 ### Meld feil (midlertidig)
 
@@ -80,14 +93,15 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 | Bestilling med trygg betaling, avbestilling, feil og omtale | `bestilling.html?id=` | Ja |
 | Meldinger | `meldinger.html?med=` | Ja |
 | Assistent | `assistent.html` | Nei |
-| Logg inn med Vipps eller BankID | `logg-inn.html` | |
+| Logg inn eller lag konto med e-post og passord | `logg-inn.html` | |
 | Bli frilanser (lag og rediger profil) | `bli-frilanser.html` | Ja |
 | Min side: oversikt med fliser, og egne visninger for konto, frilanserprofil, varsler og personvern | `min-side.html?vis=` | Ja |
 | Lagret: mapper med frilansere, innlegg og oppdrag | `lagret.html?mappe=` | Nei |
 | Slik fungerer det, trygg betaling og priser | `slik-fungerer-det.html` | Nei |
 | Hjelpesenter med FAQ og kontaktskjema | `hjelp.html` | Nei |
 | Meld feil (midlertidig, mens Freelio testes). Admin ser innsendte feil nederst | `meld-feil.html?fra=` | Nei |
-| Om, vilkår, personvern, cookies, 404 | `om.html`, `vilkar.html`, `personvern.html`, `cookies.html`, `404.html` | Nei |
+| Om, vilkår, frilansvilkår, personvern, cookies, 404 | `om.html`, `vilkar.html`, `frilansvilkar.html`, `personvern.html`, `cookies.html`, `404.html` | Nei |
+| Saker hos Freelio (bare admin) | `saker.html` | Ja |
 
 ## Struktur
 

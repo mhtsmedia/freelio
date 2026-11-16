@@ -102,7 +102,7 @@
     if (!isCat(f.cat)) f.cat = D.CATS[0].id;
     f.niches = Array.isArray(f.niches) ? f.niches.filter(isCat) : [];
     f.tags = Array.isArray(f.tags) ? f.tags.map(str) : [];
-    f.pk = Array.isArray(f.pk) ? f.pk.filter(Array.isArray).map((x) => [str(x[0]), x[1] === '' ? '' : num(x[1]), str(x[2])]) : [];
+    f.pk = Array.isArray(f.pk) ? f.pk.filter(Array.isArray).map((x) => [str(x[0]), x[1] === '' ? '' : num(x[1]), str(x[2]), x[3] === 'k' ? 'k' : 'p']) : [];
     f.portfolio = Array.isArray(f.portfolio) ? f.portfolio.filter((x) => x && typeof x === 'object').map((x) => Object.assign({}, x, { url: str(x.url), thumb: x.thumb == null ? x.thumb : str(x.thumb), w: num(x.w), h: num(x.h), cat: x.cat == null || isCat(x.cat) ? x.cat : f.cat })) : [];
     if ('verified' in f) f.verified = f.verified === true;
     if ('free' in f) f.free = f.free === true;
@@ -409,7 +409,14 @@
       } catch (e) { err(e.message || 'Kunne ikke laste opp bildet.'); btn.textContent = 'Last opp bilde'; }
     });
   };
-  H.verified = (f) => (f.verified ? `<span style="color:var(--muted);display:inline-flex" role="img" aria-label="BankID-verifisert">${H.icon('shield', 14, 2)}</span>` : '');
+  // Merket for bekreftet identitet vises ikke før innlogging med BankID er på plass.
+  H.verified = () => '';
+  // Hvem kunden handler med: næringsdrivende (forbrukerreglene gjelder) eller privatperson. Frilanseren oppgir det selv i profilen.
+  H.isBusiness = (f) => !!(f && f.seller === 'naering');
+  H.sellerTxt = (f) => (f && f.seller === 'naering' ? 'Næringsdrivende' : f && f.seller === 'privat' ? 'Privatperson' : 'Ikke oppgitt');
+  H.sellerLine = (f) => (f && f.seller === 'naering' ? `Næringsdrivende${f.orgnr ? ', org.nr. ' + H.esc(String(f.orgnr).replace(/(\d{3})(?=\d)/g, '$1 ')) : ''}${f.mva ? ', MVA-registrert' : ''}` : f && f.seller === 'privat' ? 'Privatperson. Forbrukerkjøpsreglene og angreretten gjelder ikke når du handler med en privatperson.' : 'Har ikke oppgitt om hen er næringsdrivende eller privatperson.');
+  // Gyldig organisasjonsnummer: 9 sifre med kontrollsiffer (modulus 11)
+  H.orgnrOk = (v) => { const d = String(v || '').replace(/\s/g, ''); if (!/^[89]\d{8}$/.test(d)) return false; const w = [3, 2, 7, 6, 5, 4, 3, 2]; const r = 11 - (w.reduce((n, k, i) => n + k * +d[i], 0) % 11); return (r === 11 ? 0 : r) === +d[8]; };
 
   // Bla gjennom porteføljen rett fra kortet. Med et fagfelt valgt vises bare bilder fra det fagfeltet.
   // Ellers kortbildet (eller bakgrunnsbildet) først, så hele porteføljen.
@@ -529,11 +536,52 @@
      parter, pris, dato og begge parters egne vilkår, og styrer status og utbetaling (database/avtale.sql). */
   H.APPROVE_DAYS = 5; H.FIX_DAYS = 3; H.MAX_DISPUTES = 2;
   H.makeContract = (f, d) => ({
-    v: 1, title: d.title, price: d.price, date: d.date || '', place: d.place || '', desc: d.desc || '', delD: f.delD != null ? f.delD : 7,
+    v: 2, title: d.title, price: d.price, date: d.date || '', place: d.place || '', desc: d.desc || '', delD: f.delD != null ? f.delD : 7,
     freelancerName: f.name || '', customerName: (S.user && S.user.name) || '', fTerms: f.terms || '', cTerms: d.cTerms || '',
+    usage: d.usage === 'k' ? 'k' : 'p', portfolio: !!d.portfolio, early: !!d.early,
+    seller: f.seller === 'naering' || f.seller === 'privat' ? f.seller : '', orgnr: f.seller === 'naering' ? f.orgnr || '' : '', mva: f.seller === 'naering' && !!f.mva,
     customerAt: new Date().toISOString(), freelancerAt: null
   });
+  // Avbestilling: hvor mange prosent kunden får tilbake, ut fra antall dager til avtalt dato. Samme regel som i database/juridisk.sql.
+  H.CANCEL_FREE = 30; H.CANCEL_HALF = 7; H.REGRET_DAYS = 14; H.CASE_DAYS = 14; H.LATE_DAYS = 30; H.KEEP_DAYS = 90;
+  H.orderDate = (o) => { const d = String((o && o.contract && o.contract.date) || (o && o.date) || '').split('.'); const t = d.length === 3 ? new Date(+d[2], +d[1] - 1, +d[0]) : null; return t && !isNaN(t) ? t : null; };
+  H.daysTo = (o) => { const t = H.orderDate(o); if (!t) return null; const n = new Date(); return Math.round((t - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / 864e5); };
+  // Gir { pct, why } eller null når kunden ikke kan avbestille lenger (avtalt dato er passert)
+  H.cancelTerms = (o) => {
+    const days = H.daysTo(o), c = o.contract || {};
+    // Avtaler fra før november 2026 (versjon 1): gratis frem til 7 dager før, ellers 50 %
+    if (+c.v !== 2) return days === null || days > 7 ? { pct: 100, why: 'Du får hele beløpet tilbake.' } : { pct: 50, why: 'Avbestilling nærmere enn 7 dager før gir 50 % tilbake.' };
+    if (days !== null && days < 0) return null;
+    if (c.v === 2 && c.seller !== 'privat' && !c.early && o.created && Date.now() - o.created < H.REGRET_DAYS * 864e5) return { pct: 100, why: 'Du er innenfor angrefristen på 14 dager, så du får hele beløpet tilbake.' };
+    if (days === null) return c.freelancerAt ? { pct: 50, why: 'Oppdraget har ingen fast dato, og frilanseren har godtatt avtalen. Da får du 50 % tilbake.' } : { pct: 100, why: 'Frilanseren har ikke godtatt avtalen ennå, så du får hele beløpet tilbake.' };
+    if (days >= H.CANCEL_FREE) return { pct: 100, why: `Det er ${days} dager til avtalt dato, så du får hele beløpet tilbake.` };
+    if (days >= H.CANCEL_HALF) return { pct: 50, why: `Det er ${days} dager til avtalt dato. Avbestilling fra ${H.CANCEL_FREE - 1} til ${H.CANCEL_HALF} dager før gir 50 % tilbake.` };
+    return { pct: 0, why: `Det er ${days === 0 ? 'i dag' : days + (days === 1 ? ' dag' : ' dager') + ' til'} avtalt dato. Avbestilling senere enn ${H.CANCEL_HALF} dager før gir ingen refusjon.` };
+  };
+  H.cancelRule = `Gratis til og med ${H.CANCEL_FREE} dager før avtalt dato. Fra ${H.CANCEL_FREE - 1} til ${H.CANCEL_HALF} dager før får du 50 % tilbake. Senere enn det får du ikke noe tilbake.`;
+  H.usageTxt = (u) => (u === 'k' ? 'Kommersiell bruk' : 'Privat bruk');
+  H.usageHint = (u) => (u === 'k' ? 'Du kan bruke bildene fritt, også i reklame og annen næringsvirksomhet.' : 'Du kan lagre, skrive ut og dele bildene privat, også i egne sosiale medier. Ikke til reklame eller videresalg.');
+  // Versjon 2 av avtalen (fra november 2026). Bestillinger fra før har versjon 1 og beholder teksten de ble booket med.
   H.contractSections = (c) => {
+    if (+c.v !== 2) return H.contractSectionsV1(c);
+    const e = H.esc, price = +c.price || 0, fee = Math.round(price * H.FEE), dd = +c.delD;
+    const fn = e(c.freelancerName || 'Frilanseren'), cn = e(c.customerName || 'Kunden');
+    const seller = c.seller === 'naering' ? `${fn} er næringsdrivende${c.orgnr ? ' (org.nr. ' + e(c.orgnr) + ')' : ''}${c.mva ? ' og registrert i Merverdiavgiftsregisteret' : ''}.` : c.seller === 'privat' ? `${fn} selger som privatperson. Da gjelder ikke forbrukerlovene, som angrerettloven, for denne avtalen.` : `${fn} har ikke oppgitt om hen er næringsdrivende eller privatperson.`;
+    const consumer = c.seller !== 'privat';
+    return [
+      ['1. Parter', `Avtalen gjelder mellom ${cn} (kunden) og ${fn} (frilanseren). ${seller} Freelio formidler oppdraget, men er ikke part i avtalen. Betalingen tas imot og holdes av Freelios betalingspartner på vegne av frilanseren. Freelio holder ikke pengene selv, men gir betalingspartneren beskjed om når de skal betales ut eller tilbake etter denne avtalen.`],
+      ['2. Oppdraget', `${e(c.title)}${c.desc ? ': ' + e(c.desc) : ''}. Dato: ${e(c.date || 'etter avtale')}. Sted: ${e(c.place || 'etter avtale')}. Pris: ${H.kr(price)}. Det er totalprisen${c.mva ? ', inkludert merverdiavgift' : ''}, med alle kostnadene frilanseren har.`],
+      ['3. Betaling og utbetaling', `Kunden betaler hele beløpet ved booking. Beløpet holdes av betalingspartneren og utbetales til frilanseren når kunden har godkjent leveransen. Har kunden verken godkjent eller meldt fra om feil innen ${H.APPROVE_DAYS} dager etter levering, betales beløpet ut. Fristen på ${H.APPROVE_DAYS} dager styrer bare når pengene betales ut. Kunden kan fortsatt reklamere til frilanseren etter vanlige regler etterpå. Frilanseren får ${H.kr(price - fee)} etter Freelios avgift på 5 %. Betaling utenom Freelio er ikke tillatt.`],
+      ['4. Levering', `Frilanseren leverer filene i Freelio${Number.isFinite(dd) ? `, normalt innen ${dd} ${dd === 1 ? 'dag' : 'dager'} etter oppdraget` : ''}. Er leveransen mer enn ${H.LATE_DAYS} dager forsinket uten at partene har avtalt noe annet, kan kunden heve avtalen og få hele beløpet tilbake. Frilanseren tar sikkerhetskopi av opptakene og har ansvaret for dem til leveransen er godkjent. Før godkjenning ser kunden bare forhåndsvisninger med vannmerke. Originalene låses opp når kunden godkjenner, og ligger i Freelio i minst ${H.KEEP_DAYS} dager etter det. Kunden bør laste dem ned og ta egen kopi.`],
+      ['5. Eierskap og rettigheter', `Frilanseren har opphavsretten til materialet fra oppdraget. Frem til kunden har godkjent leveransen, har kunden ikke rett til å bruke, kopiere, dele eller publisere noe av materialet, heller ikke forhåndsvisningene. Når kunden godkjenner, får kunden en tidsubegrenset rett til ${c.usage === 'k' ? 'å bruke, redigere og publisere de leverte filene, også kommersielt' : 'privat bruk av de leverte filene: lagre, skrive ut og dele dem med familie og venner og i egne sosiale medier. Bruk i reklame, videresalg og annen næringsvirksomhet krever egen avtale med frilanseren'}. Frilanseren beholder retten til å bli navngitt der det er naturlig. ${c.portfolio ? 'Kunden har sagt ja til at frilanseren kan vise utvalgte bilder fra oppdraget i porteføljen sin, på Freelio og i egne kanaler. Frilanseren har ansvaret for at personer som kan kjennes igjen på bildene, har samtykket før de vises. Kunden kan trekke samtykket ved å si fra til frilanseren.' : 'Frilanseren kan ikke vise materialet i portefølje eller markedsføring uten skriftlig samtykke fra kunden.'}`],
+      ['6. Feil og retting', `Er leveransen ikke som avtalt, melder kunden fra i Freelio innen ${H.APPROVE_DAYS} dager etter levering og beskriver hva som er feil. Frilanseren har da ${H.FIX_DAYS} dager på å rette opp og levere på nytt. Leverer ikke frilanseren innen fristen, eller er kunden fortsatt ikke fornøyd etter ${H.MAX_DISPUTES} runder, kan saken sendes til Freelio. Frilanseren kan også sende saken til Freelio hvis hen mener leveransen er som avtalt. Da stopper all utbetaling. Freelio ser på avtalen, leveransen og meldingene i Freelio, hører begge parter og avgjør normalt innen ${H.CASE_DAYS} dager hvordan beløpet som holdes, skal fordeles. Avgjørelsen gjelder bare beløpet som holdes, og hindrer ingen av partene i å gå videre etter punkt 10.${consumer ? ' Kundens rett til å reklamere etter loven gjelder uansett.' : ''}`],
+      ['7. Avbestilling og avlysning', `Kunden kan avbestille før leveransen er sendt og før avtalt dato: gratis til og med ${H.CANCEL_FREE} dager før avtalt dato, med 50 % tilbake fra ${H.CANCEL_FREE - 1} til ${H.CANCEL_HALF} dager før, og uten refusjon senere enn det. Etter avtalt dato kan oppdraget ikke avbestilles. Har oppdraget ingen fast dato, er avbestilling gratis til frilanseren har godtatt avtalen, og gir 50 % tilbake etter det. ${consumer ? `Er kunden forbruker, har kunden i tillegg ${H.REGRET_DAYS} dagers angrerett fra booking, se brukervilkårene. ${c.early ? 'Kunden har bedt om at oppdraget kan starte før angrefristen er ute. Angreretten faller da bort når oppdraget er fullført. Angrer kunden før det, betaler kunden for den delen som er utført.' : 'Innenfor angrefristen får kunden hele beløpet tilbake.'} ` : ''}Avlyser frilanseren, får kunden hele beløpet tilbake. Frilanseren skal si fra så tidlig som mulig og hjelpe kunden med å finne en erstatter. Skyldes avlysningen sykdom eller forhold frilanseren ikke rår over, har kunden ikke krav på mer enn refusjonen. Avlyser frilanseren uten slik grunn, kan kunden kreve erstatning for dokumenterte merkostnader etter vanlige regler.`],
+      ['8. Tilleggsvilkår', `${c.fTerms ? `Frilanserens egne vilkår:<blockquote>${e(c.fTerms)}</blockquote>` : 'Frilanseren har ingen egne vilkår. '}${c.cTerms ? `Kundens tillegg:<blockquote>${e(c.cTerms)}</blockquote>` : 'Kunden har ikke lagt til noe. '}Tilleggsvilkårene gjelder i tillegg til denne avtalen. Ved motstrid gjelder denne avtalen for betaling, utbetaling, avbestilling, reklamasjon og rettigheter.`],
+      ['9. Når avtalen gjelder', 'Kunden godtar avtalen ved booking. Frilanseren godtar den før arbeidet leveres, og kan ikke sende leveransen uten å ha godtatt. Avtalen, datoen og stedet kan ikke endres etter booking. Freelio lagrer når hver av partene godtok. Begge finner avtalen under bestillingen og kan lagre den som PDF.'],
+      ['10. Uenighet', 'Partene skal først prøve å løse uenighet i meldingene i Freelio. Forbrukere kan få hjelp til mekling hos Forbrukerrådet. Norsk lov gjelder. En forbruker kan alltid reise sak ved domstolen der hen bor.']
+    ];
+  };
+  H.contractSectionsV1 = (c) => {
     const e = H.esc, price = +c.price || 0, fee = Math.round(price * H.FEE), dd = +c.delD;
     const fn = e(c.freelancerName || 'Frilanseren'), cn = e(c.customerName || 'Kunden');
     return [
@@ -573,7 +621,7 @@
     const auto = !f.customer && f.demo !== false;
     const t = text.toLowerCase(); let reply;
     if (/\d{3}\s?\d{2}\s?\d{3}|@|kontonummer|vipps meg/.test(t)) {
-      S.threads[fid].push({ who: 'sys', text: 'Det ser ut som du deler kontaktinfo eller vil betale utenfor Freelio. Da er ikke betalingen beskyttet, og du mister retten til refusjon.', at: Date.now() });
+      S.threads[fid].push({ who: 'sys', text: 'Det ser ut som du deler kontaktinfo eller vil betale utenfor Freelio. Oppdrag som er startet i Freelio, skal betales i Freelio. Betaler du utenom, holdes ikke pengene tilbake til leveransen er godkjent.', at: Date.now() });
       reply = 'Vi tar gjerne alt her i appen, så er vi begge trygge.';
     } else if (/pris|koster|kost|tilbud/.test(t)) reply = f.pk.map((p) => p[0] + ': ' + H.kr(p[1])).join('\n') + '\n\nDu kan booke en pakke direkte fra profilen min.';
     else if (/ledig|dato|når/.test(t)) reply = f.free ? 'Jeg har ledige datoer i november og desember. Hvilken dato tenker du på?' : 'Jeg er ganske booket fremover, men har ledig fra midten av desember.';
@@ -586,10 +634,19 @@
   /* ---------- assistent ---------- */
   H.ANSWERS = {
     'Hva bør jeg se etter i en fotograf?': { text: 'Se etter dette:\n\n1. Hele serier, ikke bare de beste bildene. Be om et fullt galleri fra en lignende jobb.\n2. Bilder i samme lys som ditt oppdrag. Vinterstid betyr lite dagslys.\n3. Lik stil i redigeringen gjennom hele serien.\n4. Hvor mye du får levert, og når.\n5. Hvem som eier rettighetene til bildene.\n\nI Sammenlign ser du leveringstid, svartid og pris side om side.', act: ['sammenlign.html', 'Åpne sammenligning'] },
-    'Hva er en vanlig pris?': { text: 'Blant frilanserne på Freelio i Bærum og Asker:\n\nBryllupsfotograf, halv dag: 8 000 til 9 500 kr\nBryllupsfilm, halv dag: rundt 18 000 kr\nPortrett i studio: rundt 2 500 kr\nBoligbilder: 2 900 til 4 200 kr\nKort reklamefilm: rundt 12 000 kr\n\nSett maks budsjett litt over det du helst vil betale. Da får du flere tilbud å velge mellom.' },
+    // Prisene regnes ut fra pakkene til frilanserne som ligger på Freelio nå
+    get 'Hva er en vanlig pris?'() { return { text: H.priceAnswer() }; },
     'Hva bør jeg spørre om før jeg booker?': { text: 'Gode spørsmål:\n\n· Har du reserveutstyr?\n· Hva skjer hvis du blir syk?\n· Kan jeg se en hel jobb du har gjort?\n· Er reise inkludert?\n· Hvor mange runder med endringer får jeg?' },
-    'Hvordan fungerer trygg betaling?': { text: 'Du betaler når du booker. Pengene holdes av betalingspartneren vår, og frilanseren får dem først når du har godkjent leveransen.\n\nDu har 5 dager på å se over. Er noe feil, melder du fra, og pengene holdes til saken er løst. Svarer du ikke, godkjennes leveransen automatisk.\n\nFreelio tar 5 % av beløpet fra frilanseren.', act: ['slik-fungerer-det.html#betaling', 'Les mer om betaling'] },
+    'Hvordan fungerer trygg betaling?': { text: 'Du betaler når du booker. Pengene holdes av betalingspartneren vår, og frilanseren får dem først når du har godkjent leveransen.\n\nDu har 5 dager på å se over. Er noe feil, melder du fra, og pengene holdes til saken er løst. Svarer du ikke, betales pengene ut. Du kan fortsatt reklamere til frilanseren etter vanlige regler.\n\nFreelio tar 5 % av beløpet fra frilanseren.', act: ['slik-fungerer-det.html#betaling', 'Les mer om betaling'] },
     'Skriv annonsen for meg': { text: 'Her er et forslag for et bryllup i Bærum. Du kan endre alt før du publiserer.', act: ['ny-annonse.html?eksempel=1', 'Åpne utfylt annonse'] }
+  };
+  H.priceAnswer = () => {
+    const rows = HDATA.CATS.map((c) => {
+      const prices = H.all().filter((f) => f.demo === false && H.inCat(f, c.id)).map((f) => +f.from).filter((n) => n > 0);
+      return prices.length ? `${c.name}: fra ${H.kr(Math.min(...prices))}${prices.length > 1 ? ' til ' + H.kr(Math.max(...prices)) : ''} (${prices.length} ${prices.length === 1 ? 'frilanser' : 'frilansere'})` : '';
+    }).filter(Boolean);
+    const tip = 'Sett maks budsjett litt over det du helst vil betale. Da får du flere tilbud å velge mellom.';
+    return rows.length ? 'Laveste pakkepris hos frilanserne på Freelio akkurat nå:\n\n' + rows.join('\n') + '\n\nPrisen avhenger av hvor lenge oppdraget varer og hva som er med. ' + tip : 'Det er for få frilansere på Freelio ennå til å si hva som er vanlig pris. Legg ut oppdraget med et maks budsjett, så ser du hva du får av tilbud.\n\n' + tip;
   };
   H.answer = (q) => {
     if (H.ANSWERS[q]) return H.ANSWERS[q];
@@ -663,6 +720,7 @@
   // Admin (database/admin.sql). cloud.js spør databasen. Uten database er ingen admin.
   H.isAdmin = () => false;
   H.adminDeleteJob = async () => { throw new Error('Krever innlogging.'); };
+  H.adminCases = async () => []; H.adminCaseMessages = async () => []; H.adminResolveCase = async () => { throw new Error('Krever innlogging.'); };
 
   /* ---------- meld feil (midlertidig, meld-feil.html) ----------
      Stripen øverst og lenkene i menyen og bunnteksten vises så lenge H.BUGS er true. Sett den til false når testfasen er over. */
@@ -677,6 +735,8 @@
   addEventListener('unhandledrejection', (e) => { if (!(e.reason && e.reason.name === 'AbortError')) jsErr(e.reason && (e.reason.message || e.reason), 'promise'); });
   H.jsErrors = () => { try { return JSON.parse(sessionStorage.getItem(JSERR) || '[]'); } catch (e) { return []; } };
   // Uten database lagres feilmeldingen bare i denne nettleseren. cloud.js sender den til Supabase (database/feil.sql).
+  // Lenke til «Meld bilde»: et bilde av deg uten samtykke, eller et bilde som er tatt fra noen andre
+  H.reportImageLink = (from) => 'meld-feil.html?bilde=1&fra=' + encodeURIComponent(from || ((location.pathname.split('/').pop() || 'index.html') + location.search));
   H.reportBug = async (r) => { try { const k = 'freelio:feil', l = JSON.parse(localStorage.getItem(k) || '[]'); l.push(Object.assign({ at: Date.now() }, r)); localStorage.setItem(k, JSON.stringify(l.slice(-20))); } catch (e) {} };
   H.bugReports = async () => [];
   H.setBugStatus = async () => {};
@@ -868,6 +928,7 @@
             <hr>
             <button role="menuitem" data-a="theme">${H.icon(dark ? 'sun' : 'moon', 18)}${dark ? 'Lys modus' : 'Mørk modus'}</button>
             <a role="menuitem" href="hjelp.html">${H.icon('shield', 18)}Hjelp og kontakt</a>
+            ${H.isAdmin() ? `<a role="menuitem" href="saker.html">${H.icon('shield', 18)}Saker (admin)</a>` : ''}
             ${H.BUGS ? `<a role="menuitem" href="${H.bugLink()}">${H.icon('bug', 18)}Meld feil</a>` : ''}
             <button role="menuitem" data-a="logout">${H.icon('logout', 18)}Logg ut</button>
           </div></div>`
@@ -949,7 +1010,7 @@
   };
   H.mountFooter = () => {
     const el = document.getElementById('site-footer'); if (!el) return;
-    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp']].concat(H.BUGS ? [[H.bugLink(), 'Meld feil']] : [], [['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['personvern.html', 'Personvern'], ['cookies.html', 'Cookies']]);
+    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp']].concat(H.BUGS ? [[H.bugLink(), 'Meld feil']] : [], [['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['frilansvilkar.html', 'Frilansvilkår'], ['personvern.html', 'Personvern'], ['cookies.html', 'Cookies']]);
     el.innerHTML = `<footer class="foot"><div class="wrap">
       <div class="foot-in">
         <div class="stack" style="gap:14px;max-width:300px"><a class="logo" href="index.html" aria-label="Freelio">${H.logo()}</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
