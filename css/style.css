@@ -834,3 +834,28 @@ html,body{overflow-x:clip}
 /* Hvem som har lagt ut oppdraget */
 .poster{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:14px}
 .poster b{font-size:16px}
+
+/* Tid i meldinger: dagsskille, klokkeslett under meldingene og tid i lista over samtaler */
+.mday{align-self:center;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 2px}
+.mtime{font-size:11px;color:var(--muted);margin-top:-4px;padding:0 6px}
+.mtime.me{align-self:flex-end}.mtime.them{align-self:flex-start}
+.thread-btn{position:relative}
+.thread-time{flex:none;align-self:flex-start;margin-top:3px;font-size:12px;color:var(--muted);white-space:nowrap}
+.msgs > .bubble:has(+ .mtime:last-child),.msgs > .bubble:has(+ .mtime + .typing){animation:bubble .3s var(--ease) both}
+
+/* Admin-siden */
+.admin-list{display:flex;flex-direction:column;gap:8px}
+.admin-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.admin-row > b{flex:1;min-width:140px}
+.admin-log{display:flex;flex-direction:column}
+.admin-log > div{padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.admin-log > div:last-child{border-bottom:0}
+@media (hover:hover){.pf-item{cursor:grab}}
+.pf-num{position:absolute;left:6px;top:6px;min-width:22px;height:22px;border-radius:11px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:800;display:grid;place-items:center;padding:0 6px}
+.pf-lifted{opacity:.35}
+.pf-target{outline:3px solid var(--accent);outline-offset:-3px}
+.pf-ghost{position:fixed;left:0;top:0;z-index:400;pointer-events:none;box-shadow:var(--shadow);opacity:.9;transform-origin:center}
+.pf-item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.pf-ghost{transition:none}
+.or-line{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}
+.or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}

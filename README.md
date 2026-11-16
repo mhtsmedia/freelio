@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/moderering.sql` lar admin skjule, stenge og slette frilansere og fjerne innlegg, kommentarer og omtaler (admin.html), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
 
 ### Juridisk gjennomgang (november 2026)
 
@@ -57,7 +57,7 @@ Når noen gir tilbud på et oppdrag, eller sender en melding, får mottakeren va
 1. I Supabase: **Edge Functions**, **Deploy a new function**, **Via Editor**. Navn: `varsle`. Lim inn hele `supabase/functions/varsle/index.ts` og trykk **Deploy**.
 2. Slå **av** «Verify JWT» for `varsle` (databasen kaller den). Funksjonen sender bare om tilbud og meldinger som finnes, er nye og ikke er varslet før.
 3. **Edge Functions → Secrets**: legg inn `VAPID_PUBLIC_KEY` og `VAPID_PRIVATE_KEY`. Den offentlige nøkkelen står også i `js/config.js` (`vapidPublicKey`). Den hemmelige skal aldri ligge i koden.
-4. Kjør `database/push.sql` i SQL Editor.
+4. Kjør `database/push.sql` i SQL Editor. Vil du også ha varsel når noen melder en feil (gjelder alle admin), kjør `database/feil-varsel.sql` etterpå.
 5. Test: Min side → Varsler → **Slå på**, så **Send test**.
 
 ## Kjør lokalt
@@ -93,7 +93,7 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 | Bestilling med trygg betaling, avbestilling, feil og omtale | `bestilling.html?id=` | Ja |
 | Meldinger | `meldinger.html?med=` | Ja |
 | Assistent | `assistent.html` | Nei |
-| Logg inn eller lag konto med e-post og passord | `logg-inn.html` | |
+| Logg inn eller lag konto med e-post, Google eller telefonnummer | `logg-inn.html` | |
 | Bli frilanser (lag og rediger profil) | `bli-frilanser.html` | Ja |
 | Min side: oversikt med fliser, og egne visninger for konto, frilanserprofil, varsler og personvern | `min-side.html?vis=` | Ja |
 | Lagret: mapper med frilansere, innlegg og oppdrag | `lagret.html?mappe=` | Nei |
@@ -108,7 +108,8 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 ```
 css/style.css   Design, lys og mørk modus, animasjoner og skeleton
 css/ny.css      Det nye designet oppå style.css. Slås av i js/design.js
-js/design.js    Velger nytt eller forrige design (STANDARD = 'ny' eller 'gammel')
+css/finn.css    FINN-inspirert design oppå ny.css (smal bredde på alle sider, egen forside). Bare med design 'finn'
+js/design.js    Velger design: STANDARD = 'ny', 'finn' eller 'gammel'. Prøv selv med ?design=finn
 img/            Logo (SVG) og favicon
 js/logo.js      Logoen som vektor, følger lys og mørk modus
 js/data.js      Kategorier og farger

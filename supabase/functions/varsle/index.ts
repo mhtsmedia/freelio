@@ -7,7 +7,8 @@
 //
 // Secrets (Edge Functions -> Secrets): VAPID_PUBLIC_KEY og VAPID_PRIVATE_KEY (fra VAPID-nokler.txt).
 // SUPABASE_URL og SUPABASE_SERVICE_ROLE_KEY finnes automatisk i alle Supabase-funksjoner.
-// Databasen kaller funksjonen med { "type": "offer" | "message", "id": "<uuid>" } (database/push.sql).
+// Databasen kaller funksjonen med { "type": "offer" | "message", "id": "<uuid>" } (database/push.sql),
+// og { "type": "bug", "id": <tall> } når noen melder en feil. Det varselet går til alle admin (database/feil-varsel.sql).
 // Nettsiden kan også be om et testvarsel til din egen enhet: { "type": "test" } med innloggingen din.
 //
 // Krypteringen følger standarden for Web Push (RFC 8291, aes128gcm) og VAPID (RFC 8292), og bruker bare
@@ -16,6 +17,22 @@
 const SITE = "https://mhtsmedia.github.io/freelio/";
 const FRESH_MS = 10 * 60 * 1000;
 const env = (k) => ((globalThis.Deno && Deno.env.get(k)) || "");
+// En nøkkel fra Secrets. Tåler at den er limt inn som «NAVN=verdi», også flere linjer på en gang
+// (da plukkes linjen med riktig navn ut), og mellomrom eller anførselstegn rundt.
+export const secret = (k, raw = env(k), others = [env("VAPID_PUBLIC_KEY"), env("VAPID_PRIVATE_KEY")]) => {
+  const pick = (val) => {
+    for (const line of String(val || "").trim().split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*["']?([^"'\s]+)["']?\s*$/);
+      if (m && m[1] === k) return m[2];
+    }
+    return "";
+  };
+  const v = String(raw || "").trim();
+  // Først i sin egen verdi, så i de andre VAPID-verdiene (hvis begge linjene ble limt inn i samme felt)
+  return pick(v) || others.map(pick).find(Boolean) || v.replace(/^["']|["']$/g, "");
+};
+// Formen på en nøkkel til feilsøking: lengde og antall linjer, aldri innholdet
+const shape = (k) => { const v = env(k); return `${k.replace("VAPID_", "").toLowerCase()} ${v.length} tegn/${v ? v.split(/\r?\n/).length : 0} linjer`; };
 
 // ---------- hjelpere ----------
 export const b64u = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -60,10 +77,24 @@ export async function encryptPayload(plain, uaPublic, authSecret, test) {
 }
 
 // ---------- VAPID: viser push-tjenesten at varselet kommer fra Freelio (RFC 8292) ----------
+// Den hemmelige nøkkelen lastes som PKCS8 (standardformatet for en P-256-nøkkel), som alle kjøremotorer
+// leser likt. JWK brukes bare som reserve.
+const PKCS8_HEAD = new Uint8Array([0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b, 0x02, 0x01, 0x01, 0x04, 0x20]);
+const PKCS8_MID = new Uint8Array([0xa1, 0x44, 0x03, 0x42, 0x00]);
+export async function vapidKey(publicKey, privateKey) {
+  const pub = unb64u(publicKey), d = unb64u(privateKey);
+  if (pub.length !== 65 || d.length !== 32) throw new Error(`VAPID-nøklene har feil lengde (${pub.length} og ${d.length} byte; ${shape("VAPID_PUBLIC_KEY")}, ${shape("VAPID_PRIVATE_KEY")}). Sjekk Secrets.`);
+  try {
+    return await crypto.subtle.importKey("pkcs8", cat(PKCS8_HEAD, d, PKCS8_MID, pub), { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  } catch (e) {
+    console.warn("VAPID pkcs8", e && e.message);
+    return await crypto.subtle.importKey("jwk", { ...pubJwk(pub), d: privateKey }, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  }
+}
 export async function vapidAuth(endpoint, publicKey, privateKey, subject) {
   const head = b64u(txt(JSON.stringify({ typ: "JWT", alg: "ES256" })));
   const claims = b64u(txt(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: subject })));
-  const key = await crypto.subtle.importKey("jwk", { ...pubJwk(unb64u(publicKey)), d: privateKey }, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const key = await vapidKey(publicKey, privateKey);
   const sig = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, txt(head + "." + claims)));
   return `vapid t=${head}.${claims}.${b64u(sig)}, k=${publicKey}`;
 }
@@ -77,7 +108,7 @@ async function sendPush(sub, note) {
   const r = await fetch(sub.endpoint, {
     method: "POST",
     headers: {
-      Authorization: await vapidAuth(sub.endpoint, env("VAPID_PUBLIC_KEY"), env("VAPID_PRIVATE_KEY"), env("VAPID_SUBJECT") || SITE),
+      Authorization: await vapidAuth(sub.endpoint, secret("VAPID_PUBLIC_KEY"), secret("VAPID_PRIVATE_KEY"), env("VAPID_SUBJECT") || SITE),
       "Content-Encoding": "aes128gcm",
       "Content-Type": "application/octet-stream",
       TTL: "86400",
@@ -113,8 +144,16 @@ const CORS = {
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Finner mottakeren og teksten i varselet. Gir null hvis det ikke skal varsles.
+// Finner mottakerne og teksten i varselet. Gir null hvis det ikke skal varsles.
 async function build(type, id) {
+  if (type === "bug") {
+    const r = await one(`bug_reports?id=eq.${id}&select=id,kind,what,created_at`);
+    if (!r || !fresh(r.created_at)) return null;
+    const admins = ((await db("admins?select=user_id")) || []).map((a) => a.user_id);
+    if (!admins.length) return null;
+    const label = { liten: "Småting", "virker-ikke": "Virker ikke", stopper: "Stopper" }[r.kind] || "Feil";
+    return { to: admins, note: { title: `Ny feilmelding: ${label}`, body: cut(r.what, 140), url: `${SITE}meld-feil.html#admin`, tag: "feil-" + r.id } };
+  }
   if (type === "offer") {
     const o = await one(`offers?id=eq.${id}&select=id,job_id,freelancer_id,price,created_at`);
     if (!o || !fresh(o.created_at)) return null;
@@ -149,13 +188,15 @@ async function buildTest(req) {
   return { to: u.id, note: { title: "Varsler er på", body: "Slik ser det ut når du får et nytt tilbud eller en ny melding på Freelio.", url: SITE + "min-side.html?vis=varsler", tag: "test" } };
 }
 
-if (globalThis.Deno?.serve) Deno.serve(async (req) => {
+// Selve funksjonen. Eksportert, så den kan testes uten Supabase.
+export async function handle(req) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Bruk POST" }, 405);
   let input;
   try { input = await req.json(); } catch { return json({ error: "Ugyldig JSON" }, 400); }
   const type = input?.type, id = String(input?.id || "");
-  if (!(type === "test" || (["offer", "message"].includes(type) && UUID.test(id)))) return json({ error: "Ugyldig forespørsel" }, 400);
+  const okId = type === "bug" ? /^\d{1,18}$/.test(id) : UUID.test(id);
+  if (!(type === "test" || (["offer", "message", "bug"].includes(type) && okId))) return json({ error: "Ugyldig forespørsel" }, 400);
   try {
     let b;
     if (type === "test") {
@@ -168,7 +209,9 @@ if (globalThis.Deno?.serve) Deno.serve(async (req) => {
       const log = await db("push_log", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ kind: type, ref: id }) });
       if (log && log.conflict) return json({ sent: 0, skipped: "allerede varslet" });
     }
-    const subs = (await db(`push_subscriptions?user_id=eq.${b.to}&select=id,endpoint,p256dh,auth`)) || [];
+    const to = [].concat(b.to).filter((x) => UUID.test(String(x)));
+    if (!to.length) return json({ sent: 0, skipped: "ingen mottaker" });
+    const subs = (await db(`push_subscriptions?user_id=in.(${to.join(",")})&select=id,endpoint,p256dh,auth`)) || [];
     let sent = 0;
     for (const s of subs) {
       try {
@@ -184,4 +227,6 @@ if (globalThis.Deno?.serve) Deno.serve(async (req) => {
     console.error(e);
     return json({ error: "Kunne ikke sende varsel" }, 500);
   }
-});
+}
+
+if (globalThis.Deno?.serve) Deno.serve(handle);

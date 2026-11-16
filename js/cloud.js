@@ -17,7 +17,12 @@
 
   if (!cfg.supabaseUrl || !cfg.supabaseKey || !window.supabase) { H.prune(); runPageScripts(); return; }
 
+  // Lenken fra «Glemt passord»-e-posten. Leses før Supabase rydder adressen.
+  const hashQ = new URLSearchParams(location.hash.replace(/^#/, ''));
+  C.recovery = hashQ.get('type') === 'recovery' || new URLSearchParams(location.search).has('nytt-passord');
+  C.linkError = hashQ.get('error_code') || hashQ.get('error') || '';
   const sb = (C.sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey));
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') C.recovery = true; });
   C.on = true;
   H.LOAD_MS = 0;
 
@@ -30,16 +35,21 @@
   };
   const dateTxt = (iso) => new Date(iso).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const ini = (name) => String(name || '?').split(/\s+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase();
+  // Antall nye feilmeldinger (bare admin får lese tabellen)
+  const countBugs = async () => { const r = await sb.from('bug_reports').select('id', { count: 'exact', head: true }).eq('status', 'ny'); return r.error ? 0 : r.count || 0; };
   const must = (r) => { if (r.error) throw r.error; return r.data; };
   const clone = (x) => JSON.parse(JSON.stringify(x === undefined ? null : x));
   const pick = (o, keys) => { const r = {}; Object.keys(o).forEach((k) => { if (!keys.includes(k)) r[k] = o[k]; }); return r; };
   H.uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16)));
 
   // Innlogget bruker fra lagret økt, så menyen er riktig før dataene er hentet
+  // Hvordan brukeren logget inn, og navnet vi kan vise før profilen er hentet
+  const methodOf = (u) => ({ google: 'Google', phone: 'Telefon' })[(u.app_metadata || {}).provider] || 'E-post';
+  const metaName = (u) => { const m = u.user_metadata || {}; return m.name || m.full_name || (u.email || '').split('@')[0] || 'Ny bruker'; };
   const sess = storedSession();
   if (sess && sess.user) {
     const u = sess.user;
-    S.user = { id: u.id, name: (u.user_metadata && u.user_metadata.name) || (u.email || '').split('@')[0], email: u.email, method: 'E-post', since: dateTxt(u.created_at || Date.now()) };
+    S.user = { id: u.id, name: metaName(u), email: u.email, phone: u.phone, method: methodOf(u), since: dateTxt(u.created_at || Date.now()) };
   } else S.user = null;
 
   /* ---------- mapping mellom databasen og sidene ---------- */
@@ -79,7 +89,7 @@
 
     // Frilansere og omtaler
     S.extraReviews = {};
-    rvRows.forEach((r) => (S.extraReviews[r.freelancer_id] = S.extraReviews[r.freelancer_id] || []).push([r.author_name, r.stars, r.job_label, r.text, r.author_id === C.uid, r.order_id]));
+    rvRows.forEach((r) => (S.extraReviews[r.freelancer_id] = S.extraReviews[r.freelancer_id] || []).push([r.author_name, r.stars, r.job_label, r.text, r.author_id === C.uid, r.order_id, r.id]));
     // Demo-frilansere og demo-oppdrag vises ikke. Bare ekte brukere.
     const all = frRows.filter((r) => !r.demo).map(fromFreelancer).map((f) => {
       if (!f.demo) { const ex = S.extraReviews[f.id] || []; f.reviews = 0; f.rv = []; f.rating = 0; }
@@ -94,7 +104,7 @@
     S.myJobs = myJobRows.reverse().map((r) => Object.assign({}, r.data, { id: r.id, status: r.status, created: Date.parse(r.created_at), postedTxt: dateTxt(r.created_at), offersList: [] }));
 
     S.orders = []; S.threads = {}; S.sentOffers = {}; S.saved = []; S.partners = {};
-    C.admin = false;
+    C.admin = false; D.HIDDEN = [];
     let adopted = [];
     if (C.uid) {
       const [prof, offers, orders, msgs, saved, fo, adm] = await Promise.all([
@@ -108,8 +118,11 @@
         sb.rpc('is_admin')
       ]);
       C.admin = !adm.error && adm.data === true;
+      C.bugsNew = C.admin ? await countBugs() : 0;
+      // Admin får også skjulte profiler fra databasen. De vises ikke i lister, men kan åpnes og vises igjen.
+      D.HIDDEN = C.admin ? all.filter((f) => !f.published && f.id !== C.uid) : [];
       const p = must(prof);
-      S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Bruker', email: session.user.email, method: 'E-post', since: dateTxt((p && p.created_at) || session.user.created_at) });
+      S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Ny bruker', email: session.user.email, phone: session.user.phone, method: methodOf(session.user), since: dateTxt((p && p.created_at) || session.user.created_at) });
       const meta = session.user.user_metadata || {};
       S.user.photoSrc = (S.user.photo && meta.avatar_src) || null; S.user.photoCrop = meta.avatar_crop || null;
 
@@ -266,6 +279,13 @@
   };
   H.flush = () => chain;
   H.isAdmin = () => !!C.admin;
+  // Admin-funksjonene i databasen sjekker selv at du er admin (database/moderering.sql)
+  H.adminDo = async (fn, args) => {
+    const r = await sb.rpc(fn, args || {});
+    if (r.error) throw new Error(/function|schema cache/i.test(r.error.message) ? 'Admin-funksjonene er ikke lagt inn ennå (database/moderering.sql).' : errText(r.error));
+    return r.data;
+  };
+  H.bugsNew = () => C.bugsNew || 0;
   // Fjerner en annonse som admin. Databasen sjekker selv at du er admin, og logger det.
   H.adminDeleteJob = async (id, reason) => {
     const r = await sb.rpc('admin_delete_job', { p_id: id, p_reason: reason || '' });
@@ -293,6 +313,7 @@
   H.setBugStatus = async (id, status) => {
     const res = await sb.from('bug_reports').update({ status }).eq('id', id);
     if (res.error) throw new Error(bugTable(res.error));
+    C.bugsNew = await countBugs();
   };
   // Henter nye tilbud på dine åpne oppdrag, til varslene. Nye tilbud legges også i øyeblikksbildet,
   // så de ikke blir forsøkt lagret på nytt. Gir true hvis det kom noe nytt.
@@ -338,6 +359,9 @@
   };
   H.removePost = async (id) => {
     const p = S.posts.find((x) => x.id === id); if (!p) return;
+    const own = S.profile && p.fid === S.profile.id;
+    // Andres innlegg fjernes som admin (sjekkes og logges i databasen)
+    if (!own && C.admin) { await H.adminDo('admin_delete_post', { p_id: id, p_reason: '' }); S.posts = S.posts.filter((x) => x.id !== id); H.saveLocal(); return; }
     const r = await sb.from('posts').delete().eq('id', id);
     if (r.error) throw new Error(errText(r.error));
     S.posts = S.posts.filter((x) => x.id !== id); H.saveLocal();
@@ -382,7 +406,12 @@
       if (r.error) throw new Error(noTable(r.error) ? 'Kommentarer er ikke slått på ennå. Kjør database/kommentarer.sql i Supabase.' : errText(r.error));
       return { id: r.data.id, name: name || 'Deg', text, at: Date.parse(r.data.created_at), mine: true, canDel: true };
     },
-    uncomment: async (id, cid) => { const r = await sb.from('post_comments').delete().eq('id', cid); if (r.error) throw new Error(errText(r.error)); }
+    uncomment: async (id, cid) => {
+      const r = await sb.from('post_comments').delete().eq('id', cid).select('id');
+      if (r.error) throw new Error(errText(r.error));
+      // Ingenting slettet: kommentaren er en annens. Admin kan fjerne den likevel.
+      if (!(r.data || []).length && C.admin) await H.adminDo('admin_delete_comment', { p_id: cid, p_reason: '' });
+    }
   };
   H.dropImage = async (url) => {
     const m = String(url || '').match(/\/object\/public\/profiles\/(.+)$/);
@@ -397,15 +426,50 @@
     return !!r.data.session;
   };
   C.signIn = async (email, password) => { const r = await sb.auth.signInWithPassword({ email, password }); if (r.error) throw r.error; };
+  // Sender e-post med lenke for å lage nytt passord. Lenken går tilbake til logg-inn.html.
+  C.resetPassword = async (email) => {
+    const back = location.href.replace(/[^/]*$/, '') + 'logg-inn.html?nytt-passord=1';
+    const r = await sb.auth.resetPasswordForEmail(email, { redirectTo: back });
+    if (r.error) throw r.error;
+  };
+  C.setPassword = async (password) => { const r = await sb.auth.updateUser({ password }); if (r.error) throw r.error; C.recovery = false; };
+  // Google: sender brukeren til Google og tilbake til logg-inn.html
+  C.signInGoogle = async (next) => {
+    const back = location.href.replace(/[^/]*$/, '') + 'logg-inn.html?fra=google' + (next ? '&neste=' + encodeURIComponent(next) : '');
+    // Sjekk først at Google er slått på i Supabase. Ellers sender Supabase brukeren til en side med en rå feilmelding.
+    const st = await fetch(cfg.supabaseUrl + '/auth/v1/settings', { headers: { apikey: cfg.supabaseKey } }).then((x) => x.json()).catch(() => null);
+    if (st && st.external && !st.external.google) throw new Error('Unsupported provider: provider is not enabled');
+    const r = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: back, skipBrowserRedirect: true } });
+    if (r.error) throw r.error;
+    location.assign(r.data.url);
+  };
+  // Samme sjekk for telefon, så vi kan si fra før brukeren skriver nummeret
+  C.providers = async () => { const st = await fetch(cfg.supabaseUrl + '/auth/v1/settings', { headers: { apikey: cfg.supabaseKey } }).then((x) => x.json()).catch(() => null); return (st && st.external) || null; };
+  // Telefon: engangskode på SMS
+  C.sendSms = async (phone) => { const r = await sb.auth.signInWithOtp({ phone }); if (r.error) throw r.error; };
+  C.verifySms = async (phone, token) => { const r = await sb.auth.verifyOtp({ phone, token, type: 'sms' }); if (r.error) throw r.error; };
+  // Navn for brukere som logget inn med telefon
+  C.setName = async (name) => {
+    must(await sb.from('profiles').update({ name }).eq('id', C.uid));
+    try { await sb.auth.updateUser({ data: { name } }); } catch (e) {}
+    S.user.name = name; H.saveLocal();
+  };
+  C.needsName = () => !!(S.user && (!S.user.name || S.user.name === 'Ny bruker'));
   C.signOut = async () => { await H.flush(); await sb.auth.signOut(); };
   C.deleteAccount = async () => { await H.flush(); const r = await sb.rpc('delete_my_account'); if (r.error) throw r.error; await sb.auth.signOut(); };
   C.authError = (e) => {
     const m = (e && e.message) || '';
     if (/Invalid login credentials/i.test(m)) return 'Feil e-post eller passord.';
+    if (/provider is not enabled|Unsupported provider/i.test(m)) return 'Denne innloggingen er ikke slått på ennå. (Supabase: slå på leverandøren under Authentication, Sign In / Providers.)';
+    if (/phone provider|sms provider|Unsupported phone|twilio|messagebird|vonage|textlocal/i.test(m)) return 'Innlogging med telefon er ikke satt opp ennå. (Supabase: legg inn en SMS-leverandør under Authentication, Sign In / Providers, Phone.)';
+    if (/token has expired|invalid otp|otp_expired|Token has expired or is invalid/i.test(m)) return 'Feil kode, eller koden er utløpt. Be om en ny kode.';
+    if (/invalid phone|phone number/i.test(m)) return 'Skriv inn et gyldig telefonnummer.';
     if (/already registered|already been registered/i.test(m)) return 'Det finnes allerede en konto med denne e-posten. Logg inn i stedet.';
     if (/Email not confirmed/i.test(m)) return 'Du må bekrefte e-posten din først. Sjekk innboksen.';
     if (/sending (confirmation|magic link|recovery)? ?e-?mail|error sending/i.test(m)) return 'Vi fikk ikke sendt bekreftelses-e-posten. Prøv igjen om litt, eller meld fra til oss.';
+    if (/different from the old|same as the old|same_password/i.test(m)) return 'Det nye passordet må være forskjellig fra det gamle.';
     if (/at least \d+|Password should/i.test(m)) return 'Passordet må ha minst 8 tegn.';
+    if (/session missing|not authenticated|Auth session/i.test(m)) return 'Lenken er ugyldig eller utløpt. Be om en ny lenke.';
     if (/valid email|invalid format/i.test(m)) return 'Skriv inn en gyldig e-postadresse.';
     if (/rate limit|too many/i.test(m)) return 'For mange forsøk. Vent litt og prøv igjen.';
     if (/signups? (are|is) disabled|signups not allowed/i.test(m)) return 'Det er ikke mulig å opprette nye kontoer akkurat nå. (Supabase: e-postinnlogging eller nye registreringer er slått av.)';
