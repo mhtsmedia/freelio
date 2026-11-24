@@ -13,8 +13,8 @@
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="stylesheet" href="css/style.css?v=c2116150">
-<link rel="stylesheet" href="css/ny.css?v=5fc15501" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=ae79baf3">
+<link rel="stylesheet" href="css/ny.css?v=0211b867" id="ny-css">
 <link rel="stylesheet" href="css/finn.css?v=fc051655" id="finn-css">
 <script src="js/design.js?v=e59e37a6"></script>
 </head>
@@ -26,8 +26,8 @@
 <script src="js/data.js?v=d89e1e6a"></script>
 <script src="js/config.js?v=ba80519f"></script>
 <script src="js/vendor/supabase-2.117.3.js"></script>
-<script src="js/app.js?v=16e3794f"></script>
-<script src="js/cloud.js?v=e335954c"></script>
+<script src="js/app.js?v=e8ed8dcc"></script>
+<script src="js/cloud.js?v=316114b2"></script>
 <script type="text/freelio">
 if (H.requireLogin()) {
   const f = H.byId(H.qs('id') || '');
@@ -81,9 +81,10 @@ if (H.requireLogin()) {
             <div class="row">${H.avatar(f, 44)}<div class="stack grow" style="gap:0"><b>${H.esc(f.name)}</b><span class="meta">${H.esc(p[0])}</span></div></div>
             <div class="sum"><div><span>${H.esc(p[0])}${f.mva ? ' (inkl. mva)' : ''}</span><b>${H.kr(p[1])}</b></div><div class="muted"><span>Servicegebyr for deg</span><span>0 kr</span></div><div class="tot"><span>Du betaler</span><span>${H.kr(p[1])}</span></div></div>
             <p class="hint">${H.esc(H.first(f.name))} får ${H.kr(p[1] - fee)} etter at du har godkjent leveransen. Freelio tar ${H.kr(fee)} (5 %).</p>
-            <button class="btn primary block" data-a="pay" ${busy ? 'disabled' : ''}>${busy ? 'Behandler …' : `Book og betal ${H.kr(p[1])}`}</button>
+            ${H.PAY_LIVE ? '' : '<p class="banner warn" style="margin:0">Freelio er i testfase. Betaling er ikke koblet på, så ingen penger trekkes og ingen betalingspartner holder beløpet ennå.</p>'}
+            <button class="btn primary block" data-a="pay" ${busy ? 'disabled' : ''}>${busy ? 'Behandler …' : H.PAY_LIVE ? `Book og betal ${H.kr(p[1])}` : `Book for ${H.kr(p[1])} (ingen betaling ennå)`}</button>
           </div>
-          <div class="banner acc">${H.icon('lock', 20)}<span>Pengene holdes av betalingspartneren til jobben er levert og godkjent. Gratis avbestilling til og med ${H.CANCEL_FREE} dager før.${regret() ? ` ${H.REGRET_DAYS} dagers angrerett.` : ''} Betaling med kort.</span></div>
+          <div class="banner acc">${H.icon('lock', 20)}<span>Pengene holdes av betalingspartneren til jobben er levert og godkjent. Gratis avbestilling til og med ${H.CANCEL_FREE} dager før.${regret() ? ` ${H.REGRET_DAYS} dagers angrerett.` : ''}${H.PAY_LIVE ? ' Betaling med kort.' : ''}</span></div>
         </aside>
       </div></div>`;
     const sync = () => { form.date = document.getElementById('date').value; form.place = document.getElementById('place').value; form.note = document.getElementById('note').value; form.terms = document.getElementById('terms').checked; form.cterms = document.getElementById('cterms').value; form.portfolio = document.getElementById('portfolio').checked; const ea = document.getElementById('early'); form.early = !!(ea && ea.checked); };

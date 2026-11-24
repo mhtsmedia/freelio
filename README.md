@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/moderering.sql` lar admin skjule, stenge og slette frilansere og fjerne innlegg, kommentarer og omtaler (admin.html), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/moderering.sql` lar admin skjule, stenge og slette frilansere og fjerne innlegg, kommentarer og omtaler (admin.html), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), `database/sjekkliste.sql` legger inn indekser, slår av GraphQL, renser navn, begrenser leveransefiler og setter fartsgrense på «Hent fra portefølje» (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
 
 ### Juridisk gjennomgang (november 2026)
 
@@ -31,6 +31,20 @@ Kjør `database/juridisk.sql` i SQL Editor (etter `avtale.sql`, `admin.sql` og `
 - **Skrifter og supabase-js** ligger lokalt i `css/fonts` og `js/vendor`. Ingen kall til Google Fonts eller jsDelivr.
 
 Venter til betaling er koblet på: at bare betalingsleverandøren kan sette en bestilling til betalt, kvitteringer i frilanserens navn, innsamling av opplysninger til Skatteetaten, og fjerning av unntaket for demo-frilansere. Plassholdere i hakeparentes i `vilkar.html`, `frilansvilkar.html` og `personvern.html` fylles inn når selskapet er stiftet.
+
+### Sikkerhetssjekkliste (november 2026)
+
+Kjør `database/sjekkliste.sql` i SQL Editor (eller hele `database/oppdatering.sql`), og legg inn `supabase/functions/hent-portefolje/index.ts` på nytt. Kjør så `database/sjekk-sikkerhet.sql`. `problemer` skal være 0.
+
+- **Indekser** på kolonnene tilgangsreglene, fartsgrensene og listene slår opp i.
+- **GraphQL er av.** Nettsiden bruker bare REST. Går det ikke fra SQL, slå av `pg_graphql` under Database, Extensions.
+- **Navn:** usynlige tegn og tegn som snur teksten fjernes, Unicode gjøres om til én form (NFKC), og ingen kan kalle seg «Freelio», «Admin» eller «Kundeservice», eller blande latinske og kyrilliske bokstaver.
+- **Leveranser:** høyst 50 MB per fil, bare bilder, video og bitene nettsiden deler store filer i.
+- **Hent fra portefølje:** høyst 30 sider og 300 bilder i timen per bruker. Feilmeldinger viser aldri interne detaljer, og sidene leses med avgrensede mønstre (ingen ReDoS).
+- **Nettsiden:** lenken etter innlogging (`?neste=`) kan ikke lenger brukes til å sette inn kode. Ukjente feil fra databasen vises som en vanlig melding, ikke med tabell- og regelnavn. Kartbiblioteket hentes med integritetssjekk (SRI).
+- **18 år og vilkår:** alle bekrefter én gang at de er over 18 år og godtar vilkårene, også med Google og telefon. Bekreftelsen lagres på kontoen (`adult` og `vilkar` i brukerdataene). Eldre kontoer blir spurt neste gang de logger inn.
+- **Cookies:** Freelio setter ingen cookies og bruker ingen statistikk. Cookie-meldingen sier det, og har ingen «Godta alle». Tar dere i bruk statistikk senere, må det spørres om samtykke først.
+- **Betaling:** så lenge `H.PAY_LIVE = false` i `js/app.js`, står det på booking og bestilling at ingen penger trekkes.
 
 ### Meld feil (midlertidig)
 

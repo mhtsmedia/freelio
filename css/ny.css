@@ -236,8 +236,6 @@ body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
 
   /* innhold som glir inn. translate i stedet for transform, så det ikke krangler med hover-effektene */
   .reveal .cards > *,.reveal .stack.list > *,.reveal .feed > *{animation:none}
-  .rv{opacity:0;translate:0 18px;transition:opacity .55s var(--ease),translate .55s var(--ease);transition-delay:var(--rd,0s)}
-  .rv.in{opacity:1;translate:none}
 
   /* bilder tones inn når de er lastet */
   .img-fade .ph img.cover,.img-fade .xtile img,.img-fade .ptile-img img,.img-fade .ftile-img img{transition:opacity .5s var(--ease),transform .4s var(--ease)}
@@ -284,6 +282,5 @@ body[data-page="meldinger"] .convo-h{padding:12px clamp(16px,3vw,48px)}
   .reel-comments{animation:slide-up .25s var(--ease) both}
   .xtile:hover{transform:none;box-shadow:none}
 }
-@media print{.rv{opacity:1!important;translate:none!important}}
 @keyframes reel-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 @keyframes slide-left{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:none}}

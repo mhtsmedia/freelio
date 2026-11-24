@@ -1120,6 +1120,198 @@ revoke all on function public.job_posters() from public;
 grant execute on function public.job_posters() to anon, authenticated;
 
 -- ============================================================
+-- Admin: fjerne frilansere, innlegg, kommentarer og omtaler (samme som database/moderering.sql)
+-- ============================================================
+-- Hver handling sjekker selv at du er admin, og skrives i admin_log (hvem, hva, når og hvorfor).
+-- En frilanser med bestillinger kan bare skjules, ikke slettes, så bestillinger, avtaler og betalinger
+-- blir stående for kundene.
+
+-- Admin kan se skjulte frilanserprofiler (for å kunne vise dem igjen)
+drop policy if exists "frilansere les admin" on public.freelancers;
+create policy "frilansere les admin" on public.freelancers for select to authenticated using (public.is_admin());
+
+-- Hjelpere som bare brukes inne i funksjonene under
+create or replace function public.admin_require()
+returns void language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Bare admin kan gjøre dette.' using errcode = '42501'; end if;
+end $$;
+revoke all on function public.admin_require() from public, anon, authenticated;
+
+create or replace function public.admin_note(p_action text, p_ref text, p_note text)
+returns void language sql security definer set search_path = public as $$
+  insert into public.admin_log (admin_id, action, ref, note) values (auth.uid(), p_action, p_ref, left(coalesce(p_note, ''), 500));
+$$;
+revoke all on function public.admin_note(text, text, text) from public, anon, authenticated;
+
+create or replace function public.admin_why(p_reason text)
+returns text language sql immutable as $$
+  select case when coalesce(trim(p_reason), '') <> '' then ' | Grunn: ' || left(trim(p_reason), 200) else '' end
+$$;
+
+-- ---------- innlegg på Utforsk ----------
+create or replace function public.admin_delete_post(p_id uuid, p_reason text default '')
+returns void language plpgsql security definer set search_path = public as $$
+declare t text;
+begin
+  perform public.admin_require();
+  delete from public.posts where id = p_id returning coalesce(data ->> 'cap', '') into t;
+  if not found then raise exception 'Fant ikke innlegget. Det kan allerede være fjernet.'; end if;
+  perform public.admin_note('fjernet innlegg', p_id::text, left(t, 200) || public.admin_why(p_reason));
+end $$;
+
+-- ---------- kommentarer ----------
+create or replace function public.admin_delete_comment(p_id uuid, p_reason text default '')
+returns void language plpgsql security definer set search_path = public as $$
+declare t text;
+begin
+  perform public.admin_require();
+  delete from public.post_comments where id = p_id returning author_name || ': ' || left(text, 150) into t;
+  if not found then raise exception 'Fant ikke kommentaren. Den kan allerede være fjernet.'; end if;
+  perform public.admin_note('fjernet kommentar', p_id::text, t || public.admin_why(p_reason));
+end $$;
+
+-- ---------- omtaler ----------
+create or replace function public.admin_delete_review(p_id uuid, p_reason text default '')
+returns void language plpgsql security definer set search_path = public as $$
+declare t text;
+begin
+  perform public.admin_require();
+  delete from public.reviews where id = p_id returning author_name || ' (' || stars || ' stjerner): ' || left(text, 150) into t;
+  if not found then raise exception 'Fant ikke omtalen. Den kan allerede være fjernet.'; end if;
+  perform public.admin_note('fjernet omtale', p_id::text, t || public.admin_why(p_reason));
+end $$;
+
+-- ---------- frilansere ----------
+-- Status til admin-kortet på profilen
+create or replace function public.admin_freelancer_info(p_id text)
+returns jsonb language plpgsql stable security definer set search_path = public, auth as $$
+declare r jsonb;
+begin
+  perform public.admin_require();
+  select jsonb_build_object(
+    'hidden', coalesce(f.data ->> 'adminHidden', '') = 'true',
+    'published', f.published,
+    'banned', coalesce(u.banned_until > now(), false),
+    'isAdmin', exists (select 1 from public.admins a where a.user_id = f.user_id),
+    'orders', (select count(*) from public.orders o where o.freelancer_id = f.id),
+    'active', (select count(*) from public.orders o where o.freelancer_id = f.id and o.status in ('paid', 'delivered', 'dispute'))
+  ) into r
+  from public.freelancers f left join auth.users u on u.id = f.user_id
+  where f.id = p_id;
+  if r is null then raise exception 'Fant ikke frilanseren.'; end if;
+  return r;
+end $$;
+
+-- Skjul fra søk, eller vis igjen. Mens profilen er skjult av admin, kan ikke frilanseren publisere den selv.
+create or replace function public.admin_hide_freelancer(p_id text, p_hide boolean, p_reason text default '')
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform public.admin_require();
+  update public.freelancers
+     set published = not p_hide,
+         data = case when p_hide then coalesce(data, '{}'::jsonb) || '{"adminHidden": true}'::jsonb else coalesce(data, '{}'::jsonb) - 'adminHidden' end
+   where id = p_id;
+  if not found then raise exception 'Fant ikke frilanseren.'; end if;
+  perform public.admin_note(case when p_hide then 'skjulte frilanser' else 'viste frilanser igjen' end, p_id, public.admin_why(p_reason));
+end $$;
+
+create or replace function public.guard_admin_hidden()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(old.data ->> 'adminHidden', '') = 'true' and not public.is_admin() then
+    new.published := false;
+    new.data := coalesce(new.data, '{}'::jsonb) || '{"adminHidden": true}'::jsonb;
+  end if;
+  return new;
+end $$;
+drop trigger if exists freelancers_admin_hidden on public.freelancers;
+create trigger freelancers_admin_hidden before update on public.freelancers
+  for each row execute function public.guard_admin_hidden();
+
+-- Steng kontoen (kan ikke logge inn), eller åpne den igjen. Stengt profil skjules også fra søk.
+create or replace function public.admin_ban_freelancer(p_id text, p_ban boolean, p_reason text default '')
+returns void language plpgsql security definer set search_path = public, auth as $$
+declare uid uuid;
+begin
+  perform public.admin_require();
+  select user_id into uid from public.freelancers where id = p_id;
+  if uid is null then raise exception 'Fant ikke kontoen til frilanseren.'; end if;
+  if uid = auth.uid() then raise exception 'Du kan ikke stenge din egen konto.'; end if;
+  if exists (select 1 from public.admins a where a.user_id = uid) then raise exception 'Kontoen er admin og kan ikke stenges her.'; end if;
+  update auth.users set banned_until = case when p_ban then 'infinity'::timestamptz else null end where id = uid;
+  if p_ban then
+    update public.freelancers set published = false, data = coalesce(data, '{}'::jsonb) || '{"adminHidden": true}'::jsonb where id = p_id;
+  end if;
+  perform public.admin_note(case when p_ban then 'stengte konto' else 'åpnet konto' end, p_id, public.admin_why(p_reason));
+end $$;
+
+-- Slett frilanserprofilen for godt. Bare når frilanseren ikke har bestillinger (ellers: skjul).
+-- Tilbud, meldinger, omtaler, innlegg og lagringer hos andre forsvinner sammen med profilen.
+create or replace function public.admin_delete_freelancer(p_id text, p_reason text default '')
+returns void language plpgsql security definer set search_path = public as $$
+declare n text; uid uuid;
+begin
+  perform public.admin_require();
+  select data ->> 'name', user_id into n, uid from public.freelancers where id = p_id;
+  if not found then raise exception 'Fant ikke frilanseren.'; end if;
+  if uid = auth.uid() then raise exception 'Du kan ikke slette din egen profil herfra.'; end if;
+  if exists (select 1 from public.admins a where a.user_id = uid) then raise exception 'Profilen tilhører en admin og kan ikke slettes her.'; end if;
+  if exists (select 1 from public.orders o where o.freelancer_id = p_id) then
+    raise exception 'Frilanseren har bestillinger. Skjul profilen i stedet, så blir bestillingene stående for kundene.';
+  end if;
+  delete from public.freelancers where id = p_id;
+  perform public.admin_note('slettet frilanser', p_id, coalesce(n, '') || public.admin_why(p_reason));
+end $$;
+
+-- ---------- oversikt til admin-siden ----------
+create or replace function public.admin_overview()
+returns jsonb language plpgsql stable security definer set search_path = public, auth as $$
+begin
+  perform public.admin_require();
+  return jsonb_build_object(
+    'hidden', coalesce((select jsonb_agg(jsonb_build_object('id', f.id, 'name', coalesce(f.data ->> 'name', 'Uten navn'), 'banned', coalesce(u.banned_until > now(), false)) order by f.created_at desc)
+      from public.freelancers f left join auth.users u on u.id = f.user_id
+      where not f.demo and (coalesce(f.data ->> 'adminHidden', '') = 'true' or u.banned_until > now())), '[]'::jsonb),
+    'log', coalesce((select jsonb_agg(x order by x.created_at desc) from (
+      select l.action, l.ref, l.note, l.created_at, coalesce(p.name, 'Admin') as admin
+      from public.admin_log l left join public.profiles p on p.id = l.admin_id
+      order by l.created_at desc limit 40) x), '[]'::jsonb),
+    'bugs', (select count(*) from public.bug_reports where status = 'ny')
+  );
+end $$;
+
+-- Funksjonene kan kalles av innloggede (de sjekker selv at du er admin), ikke av uinnloggede
+do $$
+declare f text;
+begin
+  foreach f in array array[
+    'admin_delete_post(uuid, text)', 'admin_delete_comment(uuid, text)', 'admin_delete_review(uuid, text)',
+    'admin_freelancer_info(text)', 'admin_hide_freelancer(text, boolean, text)', 'admin_ban_freelancer(text, boolean, text)',
+    'admin_delete_freelancer(text, text)', 'admin_overview()'
+  ] loop
+    execute format('revoke all on function public.%s from public, anon', f);
+    execute format('grant execute on function public.%s to authenticated', f);
+  end loop;
+end $$;
+
+-- ---------- innlogging med Google og telefon: navn til nye brukere ----------
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, name)
+  values (new.id, left(coalesce(
+    nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
+    nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+    nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+    'Ny bruker'), 60))
+  on conflict (id) do nothing;
+  return new;
+end $$;
+-- ============================================================
+-- Juridisk gjennomgang: pris, låst dato, avbestilling, sak hos Freelio (samme som database/juridisk.sql)
+-- ============================================================
 -- Dette endres:
 --   * prisen på en ny bestilling må være prisen på pakken eller på tilbudet frilanseren ga (S2)
 --   * dato og sted låses ved booking, og refusjon regnes fra den låste datoen (S3)
@@ -1478,194 +1670,173 @@ begin
     alter table public.bug_reports add constraint bug_reports_kind_check
       check (kind in ('liten', 'virker-ikke', 'stopper', 'bilde'));
   end if;
-=======
--- Admin: fjerne frilansere, innlegg, kommentarer og omtaler (samme som database/moderering.sql)
+end $$;
+
 -- ============================================================
--- Hver handling sjekker selv at du er admin, og skrives i admin_log (hvem, hva, når og hvorfor).
--- En frilanser med bestillinger kan bare skjules, ikke slettes, så bestillinger, avtaler og betalinger
--- blir stående for kundene.
+-- Sikkerhetssjekkliste: indekser, GraphQL av, rene navn, leveranser og fartsgrense (samme som database/sjekkliste.sql)
+-- ============================================================
 
--- Admin kan se skjulte frilanserprofiler (for å kunne vise dem igjen)
-drop policy if exists "frilansere les admin" on public.freelancers;
-create policy "frilansere les admin" on public.freelancers for select to authenticated using (public.is_admin());
+-- ============================================================
+-- Sikkerhetssjekkliste (november 2026): det som manglet etter gjennomgangen av vanlige angrep
+-- Kjør denne én gang i SQL Editor, etter de andre filene (eller hele database/oppdatering.sql).
+-- Den kan kjøres flere ganger.
+-- ============================================================
+-- Dette endres:
+--   * indekser på kolonnene som tilgangsreglene, fartsgrensene og listene slår opp i (raskere og billigere spørringer)
+--   * GraphQL slås av. Nettsiden bruker det ikke, og med «aliaser» kan én forespørsel gjøre hundre oppslag
+--   * navn renses: usynlige tegn og tegn som snur teksten fjernes, Unicode gjøres om til én fast form (NFKC),
+--     og ingen kan kalle seg «Freelio», «Admin» eller «Kundeservice», eller blande alfabeter for å etterligne andre
+--   * leveranser: høyst 50 MB per fil (nettsiden deler større filer i biter) og bare bilder, video og biter av dem
+--   * fartsgrense for «Hent fra portefølje»: høyst 30 sider og 300 bilder i timen per bruker
+-- ============================================================
 
--- Hjelpere som bare brukes inne i funksjonene under
-create or replace function public.admin_require()
-returns void language plpgsql stable security definer set search_path = public as $$
-begin
-  if not public.is_admin() then raise exception 'Bare admin kan gjøre dette.' using errcode = '42501'; end if;
-end $$;
-revoke all on function public.admin_require() from public, anon, authenticated;
+-- ---------- indekser ----------
+-- Tilgangsreglene og fartsgrensene (sikkerhet.sql) teller rader per bruker de siste minuttene.
+-- Uten indeks må databasen lese hele tabellen hver gang.
+create index if not exists offers_freelancer_time_idx on public.offers (freelancer_id, created_at);
+create index if not exists orders_job_idx on public.orders (job_id) where job_id is not null;
+create index if not exists orders_status_idx on public.orders (status);
+create index if not exists orders_customer_time_idx on public.orders (customer_id, created_at);
+create index if not exists messages_thread_idx on public.messages (customer_id, freelancer_id, created_at);
+create index if not exists messages_freelancer_time_idx on public.messages (freelancer_id, created_at);
+create index if not exists reviews_freelancer_idx on public.reviews (freelancer_id, created_at desc);
+create index if not exists reviews_author_idx on public.reviews (author_id);
+create index if not exists jobs_status_time_idx on public.jobs (status, created_at desc);
+create index if not exists jobs_owner_time_idx on public.jobs (owner_id, created_at);
+create index if not exists posts_freelancer_idx on public.posts (freelancer_id, created_at desc);
 
-create or replace function public.admin_note(p_action text, p_ref text, p_note text)
-returns void language sql security definer set search_path = public as $$
-  insert into public.admin_log (admin_id, action, ref, note) values (auth.uid(), p_action, p_ref, left(coalesce(p_note, ''), 500));
-$$;
-revoke all on function public.admin_note(text, text, text) from public, anon, authenticated;
-
-create or replace function public.admin_why(p_reason text)
-returns text language sql immutable as $$
-  select case when coalesce(trim(p_reason), '') <> '' then ' | Grunn: ' || left(trim(p_reason), 200) else '' end
-$$;
-
--- ---------- innlegg på Utforsk ----------
-create or replace function public.admin_delete_post(p_id uuid, p_reason text default '')
-returns void language plpgsql security definer set search_path = public as $$
-declare t text;
-begin
-  perform public.admin_require();
-  delete from public.posts where id = p_id returning coalesce(data ->> 'cap', '') into t;
-  if not found then raise exception 'Fant ikke innlegget. Det kan allerede være fjernet.'; end if;
-  perform public.admin_note('fjernet innlegg', p_id::text, left(t, 200) || public.admin_why(p_reason));
-end $$;
-
--- ---------- kommentarer ----------
-create or replace function public.admin_delete_comment(p_id uuid, p_reason text default '')
-returns void language plpgsql security definer set search_path = public as $$
-declare t text;
-begin
-  perform public.admin_require();
-  delete from public.post_comments where id = p_id returning author_name || ': ' || left(text, 150) into t;
-  if not found then raise exception 'Fant ikke kommentaren. Den kan allerede være fjernet.'; end if;
-  perform public.admin_note('fjernet kommentar', p_id::text, t || public.admin_why(p_reason));
-end $$;
-
--- ---------- omtaler ----------
-create or replace function public.admin_delete_review(p_id uuid, p_reason text default '')
-returns void language plpgsql security definer set search_path = public as $$
-declare t text;
-begin
-  perform public.admin_require();
-  delete from public.reviews where id = p_id returning author_name || ' (' || stars || ' stjerner): ' || left(text, 150) into t;
-  if not found then raise exception 'Fant ikke omtalen. Den kan allerede være fjernet.'; end if;
-  perform public.admin_note('fjernet omtale', p_id::text, t || public.admin_why(p_reason));
-end $$;
-
--- ---------- frilansere ----------
--- Status til admin-kortet på profilen
-create or replace function public.admin_freelancer_info(p_id text)
-returns jsonb language plpgsql stable security definer set search_path = public, auth as $$
-declare r jsonb;
-begin
-  perform public.admin_require();
-  select jsonb_build_object(
-    'hidden', coalesce(f.data ->> 'adminHidden', '') = 'true',
-    'published', f.published,
-    'banned', coalesce(u.banned_until > now(), false),
-    'isAdmin', exists (select 1 from public.admins a where a.user_id = f.user_id),
-    'orders', (select count(*) from public.orders o where o.freelancer_id = f.id),
-    'active', (select count(*) from public.orders o where o.freelancer_id = f.id and o.status in ('paid', 'delivered', 'dispute'))
-  ) into r
-  from public.freelancers f left join auth.users u on u.id = f.user_id
-  where f.id = p_id;
-  if r is null then raise exception 'Fant ikke frilanseren.'; end if;
-  return r;
-end $$;
-
--- Skjul fra søk, eller vis igjen. Mens profilen er skjult av admin, kan ikke frilanseren publisere den selv.
-create or replace function public.admin_hide_freelancer(p_id text, p_hide boolean, p_reason text default '')
-returns void language plpgsql security definer set search_path = public as $$
-begin
-  perform public.admin_require();
-  update public.freelancers
-     set published = not p_hide,
-         data = case when p_hide then coalesce(data, '{}'::jsonb) || '{"adminHidden": true}'::jsonb else coalesce(data, '{}'::jsonb) - 'adminHidden' end
-   where id = p_id;
-  if not found then raise exception 'Fant ikke frilanseren.'; end if;
-  perform public.admin_note(case when p_hide then 'skjulte frilanser' else 'viste frilanser igjen' end, p_id, public.admin_why(p_reason));
-end $$;
-
-create or replace function public.guard_admin_hidden()
-returns trigger language plpgsql security definer set search_path = public as $$
-begin
-  if coalesce(old.data ->> 'adminHidden', '') = 'true' and not public.is_admin() then
-    new.published := false;
-    new.data := coalesce(new.data, '{}'::jsonb) || '{"adminHidden": true}'::jsonb;
-  end if;
-  return new;
-end $$;
-drop trigger if exists freelancers_admin_hidden on public.freelancers;
-create trigger freelancers_admin_hidden before update on public.freelancers
-  for each row execute function public.guard_admin_hidden();
-
--- Steng kontoen (kan ikke logge inn), eller åpne den igjen. Stengt profil skjules også fra søk.
-create or replace function public.admin_ban_freelancer(p_id text, p_ban boolean, p_reason text default '')
-returns void language plpgsql security definer set search_path = public, auth as $$
-declare uid uuid;
-begin
-  perform public.admin_require();
-  select user_id into uid from public.freelancers where id = p_id;
-  if uid is null then raise exception 'Fant ikke kontoen til frilanseren.'; end if;
-  if uid = auth.uid() then raise exception 'Du kan ikke stenge din egen konto.'; end if;
-  if exists (select 1 from public.admins a where a.user_id = uid) then raise exception 'Kontoen er admin og kan ikke stenges her.'; end if;
-  update auth.users set banned_until = case when p_ban then 'infinity'::timestamptz else null end where id = uid;
-  if p_ban then
-    update public.freelancers set published = false, data = coalesce(data, '{}'::jsonb) || '{"adminHidden": true}'::jsonb where id = p_id;
-  end if;
-  perform public.admin_note(case when p_ban then 'stengte konto' else 'åpnet konto' end, p_id, public.admin_why(p_reason));
-end $$;
-
--- Slett frilanserprofilen for godt. Bare når frilanseren ikke har bestillinger (ellers: skjul).
--- Tilbud, meldinger, omtaler, innlegg og lagringer hos andre forsvinner sammen med profilen.
-create or replace function public.admin_delete_freelancer(p_id text, p_reason text default '')
-returns void language plpgsql security definer set search_path = public as $$
-declare n text; uid uuid;
-begin
-  perform public.admin_require();
-  select data ->> 'name', user_id into n, uid from public.freelancers where id = p_id;
-  if not found then raise exception 'Fant ikke frilanseren.'; end if;
-  if uid = auth.uid() then raise exception 'Du kan ikke slette din egen profil herfra.'; end if;
-  if exists (select 1 from public.admins a where a.user_id = uid) then raise exception 'Profilen tilhører en admin og kan ikke slettes her.'; end if;
-  if exists (select 1 from public.orders o where o.freelancer_id = p_id) then
-    raise exception 'Frilanseren har bestillinger. Skjul profilen i stedet, så blir bestillingene stående for kundene.';
-  end if;
-  delete from public.freelancers where id = p_id;
-  perform public.admin_note('slettet frilanser', p_id, coalesce(n, '') || public.admin_why(p_reason));
-end $$;
-
--- ---------- oversikt til admin-siden ----------
-create or replace function public.admin_overview()
-returns jsonb language plpgsql stable security definer set search_path = public, auth as $$
-begin
-  perform public.admin_require();
-  return jsonb_build_object(
-    'hidden', coalesce((select jsonb_agg(jsonb_build_object('id', f.id, 'name', coalesce(f.data ->> 'name', 'Uten navn'), 'banned', coalesce(u.banned_until > now(), false)) order by f.created_at desc)
-      from public.freelancers f left join auth.users u on u.id = f.user_id
-      where not f.demo and (coalesce(f.data ->> 'adminHidden', '') = 'true' or u.banned_until > now())), '[]'::jsonb),
-    'log', coalesce((select jsonb_agg(x order by x.created_at desc) from (
-      select l.action, l.ref, l.note, l.created_at, coalesce(p.name, 'Admin') as admin
-      from public.admin_log l left join public.profiles p on p.id = l.admin_id
-      order by l.created_at desc limit 40) x), '[]'::jsonb),
-    'bugs', (select count(*) from public.bug_reports where status = 'ny')
-  );
-end $$;
-
--- Funksjonene kan kalles av innloggede (de sjekker selv at du er admin), ikke av uinnloggede
 do $$
-declare f text;
 begin
-  foreach f in array array[
-    'admin_delete_post(uuid, text)', 'admin_delete_comment(uuid, text)', 'admin_delete_review(uuid, text)',
-    'admin_freelancer_info(text)', 'admin_hide_freelancer(text, boolean, text)', 'admin_ban_freelancer(text, boolean, text)',
-    'admin_delete_freelancer(text, text)', 'admin_overview()'
-  ] loop
-    execute format('revoke all on function public.%s from public, anon', f);
-    execute format('grant execute on function public.%s to authenticated', f);
-  end loop;
+  if to_regclass('public.post_likes') is not null then
+    create index if not exists post_likes_user_time_idx on public.post_likes (user_id, created_at);
+  end if;
+  if to_regclass('public.post_comments') is not null then
+    create index if not exists post_comments_user_time_idx on public.post_comments (user_id, created_at);
+  end if;
+  if to_regclass('public.saved_folders') is not null then
+    create index if not exists saved_folders_user_time_idx on public.saved_folders (user_id, created_at);
+  end if;
+  if to_regclass('public.bug_reports') is not null then
+    create index if not exists bug_reports_user_time_idx on public.bug_reports (user_id, created_at);
+  end if;
 end $$;
 
--- ---------- innlogging med Google og telefon: navn til nye brukere ----------
+-- ---------- GraphQL av ----------
+-- Nettsiden snakker bare med databasen gjennom REST (supabase-js). GraphQL er en ekstra dør inn som ingen bruker.
+-- Tilgangsreglene gjelder der også, men med «aliaser» kan én forespørsel be om det samme hundre ganger.
+-- Går det ikke herfra (mangler rettighet), slå det av under Database -> Extensions -> pg_graphql.
+do $$
+begin
+  drop extension if exists pg_graphql;
+exception when others then
+  begin
+    revoke usage on schema graphql_public from anon, authenticated;
+  exception when others then
+    raise notice 'Fikk ikke slått av GraphQL herfra. Slå av pg_graphql under Database -> Extensions.';
+  end;
+end $$;
 
-create or replace function public.handle_new_user()
+-- ---------- navn: ingen usynlige tegn og ingen etterligning ----------
+-- Spotify (2013): to brukernavn som så like ut, ble til samme konto etter Unicode-omforming.
+-- Her gjøres navnet om til én fast form med en gang det lagres, så det som vises er det som er lagret.
+
+-- Fjerner kontrolltegn, usynlige tegn (zero width) og tegn som snur retningen på teksten, og samler mellomrom
+create or replace function public.clean_name(t text)
+returns text language sql immutable set search_path = public as $$
+  select btrim(regexp_replace(
+    regexp_replace(normalize(coalesce(t, ''), NFKC), '[\u0001-\u001F\u007F-\u009F­͏؜ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁯ㅤ︀-️﻿ﾠ]', '', 'g'),
+    '\s+', ' ', 'g'))
+$$;
+
+-- Sant hvis navnet ser ut som Freelio selv, eller blander latinske og greske eller kyrilliske bokstaver
+-- (for eksempel «Frееlio» med kyrilliske е-er, som ser helt likt ut)
+create or replace function public.bad_name(t text)
+returns boolean language sql immutable set search_path = public as $$
+  with n as (select public.clean_name(t) as v)
+  select
+    (v ~ '[A-Za-z]' and v ~ '[Ͱ-ϿЀ-ԯ]')
+    or regexp_replace(lower(v), '[^a-z0-9æøå]', '', 'g') ~ 'freelio'
+    or regexp_replace(lower(v), '[^a-z0-9æøå]', '', 'g') in
+       ('admin', 'administrator', 'moderator', 'support', 'kundeservice', 'kundestøtte', 'kundestotte', 'hjelp', 'system')
+  from n
+$$;
+
+-- Profiler (navnet kunder og frilansere ser i meldinger, omtaler og kommentarer)
+create or replace function public.guard_profile_name()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, name)
-  values (new.id, left(coalesce(
-    nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
-    nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
-    nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
-    'Ny bruker'), 60))
-  on conflict (id) do nothing;
+  new.name := left(public.clean_name(new.name), 80);
+  if public.bad_name(new.name) and not public.is_admin() then
+    if tg_op = 'INSERT' then
+      -- Ny konto (også med Google eller telefon): kontoen lages, men brukeren blir bedt om å velge et annet navn
+      new.name := 'Ny bruker';
+    else
+      raise exception 'Navnet kan ikke brukes. Velg navnet ditt, uten «Freelio», «Admin» eller tegn fra flere alfabeter.' using errcode = 'P0001';
+    end if;
+  end if;
   return new;
--- Juridisk gjennomgang: pris, låst dato, avbestilling, sak hos Freelio (samme som database/juridisk.sql)
--- =====================================================end $$;
+end $$;
+drop trigger if exists profiles_navn on public.profiles;
+create trigger profiles_navn before insert or update of name on public.profiles
+  for each row execute function public.guard_profile_name();
+
+-- Frilanserprofiler (navnet ligger i data -> name)
+create or replace function public.guard_freelancer_name()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  n text;
+begin
+  if new.data ? 'name' and jsonb_typeof(new.data -> 'name') = 'string' then
+    n := left(public.clean_name(new.data ->> 'name'), 80);
+    if public.bad_name(n) and not new.demo and not public.is_admin()
+       and (tg_op = 'INSERT' or public.clean_name(old.data ->> 'name') is distinct from n) then
+      raise exception 'Navnet kan ikke brukes. Velg navnet ditt, uten «Freelio», «Admin» eller tegn fra flere alfabeter.' using errcode = 'P0001';
+    end if;
+    new.data := jsonb_set(new.data, '{name}', to_jsonb(n));
+  end if;
+  return new;
+end $$;
+drop trigger if exists freelancers_navn on public.freelancers;
+create trigger freelancers_navn before insert or update of data on public.freelancers
+  for each row execute function public.guard_freelancer_name();
+
+-- ---------- leveranser: størrelse og filtyper ----------
+-- Nettsiden laster opp originaler i biter på 45 MB (js/media.js), så ingen fil skal være større enn 50 MB.
+-- Bare bilder og video (og bitene, som er application/octet-stream). Stopper HTML, skript og programfiler.
+update storage.buckets
+  set file_size_limit = 52428800,
+      allowed_mime_types = array['image/*', 'video/*', 'application/octet-stream']
+  where id = 'deliveries';
+
+-- ---------- fartsgrense for «Hent fra portefølje» ----------
+-- Funksjonen supabase/functions/hent-portefolje spør her før den henter noe.
+create table if not exists public.fetch_log (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  kind text not null check (kind in ('side', 'bilde')),
+  created_at timestamptz not null default now()
+);
+create index if not exists fetch_log_user_idx on public.fetch_log (user_id, kind, created_at);
+alter table public.fetch_log enable row level security;
+revoke all on public.fetch_log from anon, authenticated;
+
+create or replace function public.portfolio_fetch_allowed(p_kind text default 'side')
+returns boolean language plpgsql security definer set search_path = public as $$
+declare
+  k text := case when p_kind = 'bilde' then 'bilde' else 'side' end;
+  n integer;
+begin
+  if auth.uid() is null then
+    return false;
+  end if;
+  delete from public.fetch_log where user_id = auth.uid() and created_at < now() - interval '1 day';
+  select count(*) into n from public.fetch_log
+    where user_id = auth.uid() and kind = k and created_at > now() - interval '1 hour';
+  if n >= (case when k = 'bilde' then 300 else 30 end) then
+    return false;
+  end if;
+  insert into public.fetch_log (user_id, kind) values (auth.uid(), k);
+  return true;
+end $$;
+revoke all on function public.portfolio_fetch_allowed(text) from public, anon;
+grant execute on function public.portfolio_fetch_allowed(text) to authenticated;

@@ -176,9 +176,11 @@ filer as (
          else 'ÅPEN' end,
     'ÅPEN betyr at størrelsesgrense eller filtyper mangler. Kjør database/bilder.sql.'
   union all
-  select 'Fillagring', 'deliveries (leveranser): privat',
+  select 'Fillagring', 'deliveries (leveranser): privat, høyst 50 MB, bare bilder og video',
     case when not exists (select 1 from storage.buckets where id = 'deliveries') then 'MANGLER'
-         when exists (select 1 from storage.buckets where id = 'deliveries' and not public) then 'OK' else 'ÅPEN' end, ''
+         when exists (select 1 from storage.buckets where id = 'deliveries' and not public
+                        and file_size_limit <= 52428800 and allowed_mime_types is not null) then 'OK' else 'ÅPEN' end,
+    'ÅPEN betyr at størrelsesgrense eller filtyper mangler. Kjør database/sjekkliste.sql.'
   union all
   select 'Fillagring', 'vedlegg: privat, høyst 25 MB, ingen HTML eller SVG',
     case when not exists (select 1 from storage.buckets where id = 'vedlegg') then 'MANGLER'
@@ -186,6 +188,30 @@ filer as (
                         and allowed_mime_types is not null
                         and not ('text/html' = any (allowed_mime_types)) and not ('image/svg+xml' = any (allowed_mime_types))) then 'OK'
          else 'ÅPEN' end, ''
+),
+
+-- Fra database/sjekkliste.sql
+sjekkliste as (
+  select 'Sjekkliste', 'GraphQL er slått av',
+    case when not exists (select 1 from pg_extension where extname = 'pg_graphql') then 'OK'
+         when to_regnamespace('graphql_public') is null then 'OK'
+         when has_schema_privilege('anon', 'graphql_public', 'USAGE') then 'ÅPEN' else 'OK' end,
+    'Slå av pg_graphql under Database -> Extensions, eller kjør database/sjekkliste.sql.'
+  union all
+  select 'Sjekkliste', 'navn renses (usynlige tegn, «Freelio», blandede alfabeter)',
+    case when exists (select 1 from pg_trigger where tgname = 'profiles_navn' and not tgisinternal)
+          and exists (select 1 from pg_trigger where tgname = 'freelancers_navn' and not tgisinternal) then 'OK' else 'MANGLER' end,
+    'Kjør database/sjekkliste.sql.'
+  union all
+  select 'Sjekkliste', 'fartsgrense for «Hent fra portefølje»',
+    case when to_regprocedure('public.portfolio_fetch_allowed(text)') is null then 'MANGLER'
+         when has_function_privilege('anon', 'public.portfolio_fetch_allowed(text)', 'EXECUTE') then 'ÅPEN' else 'OK' end,
+    'Kjør database/sjekkliste.sql.'
+  union all
+  select 'Sjekkliste', 'indekser for tilgangsregler og fartsgrenser',
+    case when to_regclass('public.offers_freelancer_time_idx') is not null and to_regclass('public.reviews_freelancer_idx') is not null
+          and to_regclass('public.messages_thread_idx') is not null then 'OK' else 'MANGLER' end,
+    'Kjør database/sjekkliste.sql.'
 ),
 
 alle as (
@@ -198,6 +224,7 @@ alle as (
   union all select * from uinnlogget
   union all select * from admin
   union all select * from filer
+  union all select * from sjekkliste
 )
 select
   (select count(*) from alle where status <> 'OK') as problemer,
