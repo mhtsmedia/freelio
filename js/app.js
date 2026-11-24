@@ -110,6 +110,9 @@
   };
   H.first = (name) => String(name).split(' ')[0];
   H.FEE = 0.05;
+  // Betaling er ikke koblet på ennå (testfase). Sett til true når betalingspartneren tar imot ekte betalinger,
+  // så forsvinner testfase-tekstene på booking og bestilling.
+  H.PAY_LIVE = false;
   H.today = () => new Date().toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   /* ---------- lagring ---------- */
@@ -132,7 +135,7 @@
   H.save = H.saveLocal;
   H.flush = () => Promise.resolve();
   H.go = (url) => { location.href = url; };
-  H.uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(36).slice(2));
+  H.uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + crypto.getRandomValues(new Uint32Array(2)).join(''));
   H.reset = () => { mem = DEFAULTS(); H.save(); };
   const S = (H.S = H.load());
 
@@ -1036,7 +1039,7 @@
     el.innerHTML = `<footer class="foot"><div class="wrap">
       <div class="foot-in">
         <div class="stack" style="gap:14px;max-width:300px"><a class="logo" href="index.html" aria-label="Freelio">${H.logo()}</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
-        <nav aria-label="Bunnmeny">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="#" data-a="cookieSettings">Cookie-valg</a></nav>
+        <nav aria-label="Bunnmeny">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="cookies.html">Cookies</a></nav>
       </div>
       <div class="foot-bottom"><span>© 2026 Freelio</span><span>Betaling er ikke koblet på ennå. Ingen penger trekkes.</span></div>
     </div></footer>`;
@@ -1045,8 +1048,10 @@
     if (S.cookie && !force) return;
     let el = document.getElementById('cookie');
     if (!el) { el = document.createElement('div'); el.id = 'cookie'; el.className = 'cookie'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cookies'); document.body.appendChild(el); }
-    el.innerHTML = `<b style="font-size:15px">Cookies</b><p class="small muted">Vi bruker nødvendige cookies for innlogging og betaling. Statistikk og markedsføring bare hvis du sier ja. <a href="cookies.html">Les mer</a></p>
-      <div class="row"><button class="btn soft sm" data-a="cookie" data-v="no">Kun nødvendige</button><button class="btn primary sm" data-a="cookie" data-v="yes">Godta alle</button></div>`;
+    // Freelio bruker bare lagring som trengs for at siden skal virke (innlogging og innstillinger). Det krever ikke samtykke,
+    // så det er ingenting å godta. Kommer det statistikk eller reklame senere, må det spørres om samtykke her først.
+    el.innerHTML = `<b style="font-size:15px">Cookies</b><p class="small muted">Vi lagrer bare det som trengs for at siden skal virke, som innloggingen og innstillingene dine. Ingen statistikk, sporing eller reklame. <a href="cookies.html">Les mer</a></p>
+      <div class="row"><button class="btn primary sm" data-a="cookie" data-v="ok">Greit</button></div>`;
   };
 
   /* ---------- felles handlinger ---------- */
@@ -1084,7 +1089,7 @@
     },
     photoRemove: () => { const old = S.user && S.user.photo; H.dropImage(S.user && S.user.photoSrc); if (S.user) { S.user.photoSrc = null; S.user.photoCrop = null; } if (H.savePhotoMeta) H.savePhotoMeta(null, null); if (S.user) S.user.photo = null; if (S.profile) S.profile.photo = null; H.save(); H.dropImage(old); H.mountHeader(); H.toast('Profilbildet er fjernet'); H.rerender(); },
     cookie: (v) => {
-      S.cookie = v; S.cookies = { analyse: v === 'yes', ads: v === 'yes' }; H.save();
+      S.cookie = v; S.cookies = { analyse: false, ads: false }; H.save();
       const c = document.getElementById('cookie'); if (c) { c.classList.add('out'); setTimeout(() => c.remove(), 300); }
     },
     cookieSettings: () => H.mountCookie(true),
@@ -1154,48 +1159,16 @@
     else go();
   };
 
-  /* ---------- animasjoner: innhold glir inn når det kommer til syne ----------
+  /* ---------- animasjoner: bilder toner inn når de er lastet ----------
      Bare i det nye designet, og ikke for dem som har slått av animasjoner i systemet.
-     Stilene ligger i css/ny.css (rv, in, ld, img-fade og scrolled). */
-  const REVEAL = '.fcard, .xtile, .jrow, .ptile, .ftile, .cat, .mside-menu > a, .card, .section-head, .steps3 > *, .empty';
+     Stilene ligger i css/ny.css (ld, img-fade og scrolled). Innhold som glir inn ved scrolling er tatt bort. */
   const FADE_IMG = '.ph img.cover, .xtile img, .ptile-img img, .ftile-img img';
   (function animate() {
     const root = document.documentElement;
-    if (root.dataset.design === 'gammel' || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (root.dataset.design === 'gammel' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     root.classList.add('img-fade');
-    const t0 = performance.now();
-    const pending = new Set();
-    const show = (el, i) => {
-      io.unobserve(el); pending.delete(el);
-      el.style.setProperty('--rd', Math.min(i * 0.06, 0.36) + 's');
-      el.classList.add('in');
-      setTimeout(() => { el.classList.remove('rv', 'in'); el.style.removeProperty('--rd'); }, 1000);
-    };
-    const io = new IntersectionObserver((entries) => {
-      let i = 0;
-      entries.forEach((e) => { if (e.isIntersecting) show(e.target, i++); });
-    }, { rootMargin: '0px 0px -32px 0px' });
-    // Sikring: noe som er på skjermen men ikke har glidd inn etter et sekund (for eksempel hvis nettleseren
-    // ikke har meldt fra), vises likevel, så innhold aldri blir liggende usynlig
-    setInterval(() => {
-      let i = 0;
-      pending.forEach((el) => {
-        if (!el.isConnected) { pending.delete(el); io.unobserve(el); return; }
-        const r = el.getBoundingClientRect();
-        if (r.top < innerHeight && r.bottom > 0) show(el, i++);
-      });
-    }, 1000);
+    // Bilder som allerede er lastet (fra hurtigbufferen), vises med en gang
     const scan = () => {
-      const main = document.getElementById('main'); if (!main) return;
-      // Det som vises i starten, glir inn. Når en liste tegnes på nytt senere (filter, liker), vises det som
-      // allerede er på skjermen med en gang, så siden ikke blinker. Det som ligger lenger ned, glir inn når du scroller.
-      const early = performance.now() - t0 < 2500;
-      main.querySelectorAll(REVEAL).forEach((el) => {
-        if (el.dataset.rv) return; el.dataset.rv = '1';
-        const r = el.getBoundingClientRect();
-        if (!early && r.top < innerHeight && r.bottom > 0) return;
-        el.classList.add('rv'); pending.add(el); io.observe(el);
-      });
       document.querySelectorAll(FADE_IMG).forEach((img) => { if (!img.classList.contains('ld') && img.complete) img.classList.add('ld'); });
     };
     let queued = false;

@@ -43,7 +43,7 @@ window.Vedlegg = (function () {
     async upload(file, convo) {
       const err = api.check(file); if (err) throw new Error(err);
       const st = api.store(); if (!st || !convo) throw new Error('Logg inn for å sende vedlegg.');
-      const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+      const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + crypto.getRandomValues(new Uint32Array(2)).join('');
       const path = `${convo.cid}/${convo.fid}/${id}`, type = typeOf(file);
       const r = await st.upload(path, file, { contentType: type, upsert: false });
       if (r.error) {
@@ -51,7 +51,7 @@ window.Vedlegg = (function () {
         if (/bucket not found/i.test(m)) throw new Error('Vedlegg er ikke slått på ennå. Kjør database/vedlegg.sql i Supabase.');
         if (/row-level security|policy|unauthorized/i.test(m)) throw new Error('Du kan ikke sende filer i denne samtalen ennå.');
         if (/mime|type/i.test(m)) throw new Error(`${file.name} kan ikke sendes. Send bilder, video, PDF, Office-filer eller zip.`);
-        throw new Error(m);
+        throw new Error(H.errText ? H.errText(r.error) : 'Opplastingen feilet. Prøv igjen.');
       }
       return { n: String(file.name || 'fil').slice(0, 120), t: type, s: file.size, p: path };
     },

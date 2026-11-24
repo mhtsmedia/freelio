@@ -127,13 +127,13 @@ window.Media = (function () {
         stream = file.size <= CHUNK ? file : await H.fitVideo(file, (pc) => say(`Lager forhåndsvisning … ${pc} %`), { max: CHUNK, minBr: 150000 });
       }
     }
-    const id = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const id = 'm' + Date.now().toString(36) + (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : crypto.getRandomValues(new Uint32Array(1))[0].toString(36));
     let parts = 0;
     if (cloud()) {
       const st = Cloud.sb.storage.from(BUCKET);
       const up = async (path, blob) => {
         const r = await st.upload(`${orderId}/${id}/${path}`, blob, { contentType: blob.type || file.type || 'application/octet-stream', upsert: false });
-        if (r.error) throw new Error(r.error.message);
+        if (r.error) throw new Error(H.errText ? H.errText(r.error) : 'Opplastingen feilet. Prøv igjen.');
       };
       await up('thumb', p.thumb); await up('preview', p.preview);
       if (isVideo) { say('Laster opp forhåndsvisning …'); await up('stream', stream); }

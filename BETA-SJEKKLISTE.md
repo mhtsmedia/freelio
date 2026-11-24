@@ -42,3 +42,13 @@ Når dere kjøper domene: bytt til en tjeneste som Resend med avsender på eget 
       Innlogging virker fortsatt for eldre kontoer med kortere passord.
 - [ ] Supabase → **Authentication** → **Sign In / Providers** → **Email** → **Minimum password length**: `8`.
       Uten denne kan noen fortsatt lage korte passord ved å gå rundt nettsiden.
+
+## 4. Fartsgrenser og engangskoder i Supabase Auth
+
+- [ ] Supabase → **Authentication** → **Rate Limits**: sjekk at innlogging, e-post og SMS har grenser
+      (standardverdiene er greie). Det stopper gjetting av passord og engangskoder.
+- [ ] Supabase → **Authentication** → **Sign In / Providers** → **Phone**: engangskoden skal utløpe etter
+      høyst 5 minutter (OTP Expiry: 300).
+- [ ] Supabase → **Authentication** → **Attack Protection**: slå på **Leaked password protection** hvis planen har det.
+- [ ] Kjør `database/sjekkliste.sql` og legg inn `supabase/functions/hent-portefolje/index.ts` på nytt.
+      Kjør så `database/sjekk-sikkerhet.sql` igjen. `problemer` skal være 0.

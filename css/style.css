@@ -8,7 +8,7 @@
    Tema: lys som standard, mørk via systemvalg eller bryteren i toppmenyen (data-theme på <html>). */
 :root{
   --bg:#FFFFFF; --bg2:#FAFAFA; --surface:#F4F4F5; --surface2:#E8E8EB; --line:#EBEBED;
-  --fg:#0A0A0B; --muted:#6B6B74; --faint:#A1A1A9;
+  --fg:#0A0A0B; --muted:#6B6B74; --faint:#70707A;
   --accent:#0E7C57; --accent-hover:#0B6A4A; --accent-ink:#0B6B4A; --accent-soft:#E7F4EE; --on-accent:#FFFFFF;
   --invert:#0A0A0B; --on-invert:#FFFFFF;
   --ok:#1E7A46; --ok-soft:#E7F4EC; --warn:#8A5A00; --warn-soft:#FBF2DC; --bad:#B3261E; --bad-soft:#FBECEA; --like:#E0383E; --star:#0A0A0B;
@@ -21,7 +21,7 @@
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0B0B0C; --bg2:#0F0F11; --surface:#17171A; --surface2:#222226; --line:#1F1F23;
-  --fg:#F5F5F6; --muted:#9B9BA4; --faint:#5E5E66;
+  --fg:#F5F5F6; --muted:#9B9BA4; --faint:#8A8A93;
   --accent:#34C68E; --accent-hover:#4BD49E; --accent-ink:#5ED8A8; --accent-soft:#0F2A1F; --on-accent:#04140D;
   --invert:#F5F5F6; --on-invert:#0B0B0C;
   --ok:#5BC98A; --ok-soft:#14261B; --warn:#E9B949; --warn-soft:#2A2210; --bad:#FF8A80; --bad-soft:#2E1716; --like:#FF5C63; --star:#F5F5F6;
@@ -30,7 +30,7 @@
 }}
 :root[data-theme="dark"]{
   --bg:#0B0B0C; --bg2:#0F0F11; --surface:#17171A; --surface2:#222226; --line:#1F1F23;
-  --fg:#F5F5F6; --muted:#9B9BA4; --faint:#5E5E66;
+  --fg:#F5F5F6; --muted:#9B9BA4; --faint:#8A8A93;
   --accent:#34C68E; --accent-hover:#4BD49E; --accent-ink:#5ED8A8; --accent-soft:#0F2A1F; --on-accent:#04140D;
   --invert:#F5F5F6; --on-invert:#0B0B0C;
   --ok:#5BC98A; --ok-soft:#14261B; --warn:#E9B949; --warn-soft:#2A2210; --bad:#FF8A80; --bad-soft:#2E1716; --like:#FF5C63; --star:#F5F5F6;
@@ -204,7 +204,7 @@ select.inp{padding-right:8px}
 .searchbox{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;background:var(--bg);padding:6px;border-radius:999px;border:1px solid var(--line);box-shadow:var(--shadow);width:100%;max-width:680px;transition:box-shadow .3s}
 .searchbox:focus-within{box-shadow:0 0 0 4px var(--surface),var(--shadow)}
 .searchbox .inp{border:0;background:transparent;border-radius:999px;box-shadow:none;padding-left:18px}
-.searchbox .inp:focus,.searchbox .inp:hover{box-shadow:none;border-color:transparent;outline:none}
+.searchbox .inp:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.searchbox .inp:focus,.searchbox .inp:hover{box-shadow:none;border-color:transparent}
 .searchbox input.inp:nth-of-type(2){border-left:1px solid var(--line);border-radius:0}
 .searchbox .btn{height:46px}
 .mosaic{display:none}
@@ -362,7 +362,7 @@ select.inp{padding-right:8px}
 .typing{align-self:flex-start;color:var(--muted);font-size:13px;display:flex;gap:4px;align-items:center}
 .typing::after{content:"";width:28px;height:8px;background:radial-gradient(circle,var(--muted) 2.5px,transparent 3px) 0 50%/9px 8px repeat-x;animation:dots 1s steps(4) infinite}
 .composer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
-.composer input{flex:1;height:44px;border-radius:22px;border:0;background:var(--surface);padding:0 16px;font-size:16px;min-width:0;outline:none}
+.composer input{flex:1;height:44px;border-radius:22px;border:0;background:var(--surface);padding:0 16px;font-size:16px;min-width:0;outline:none}.composer input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .send{width:44px;height:44px;border-radius:22px;border:0;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;flex:none;transition:transform .15s var(--ease)}
 .send:active{transform:scale(.9)}
 @media (max-width:760px){.inbox{grid-template-columns:minmax(0,1fr)}.inbox.has-thread .threads{display:none}.inbox:not(.has-thread) .convo{display:none}}
@@ -731,7 +731,7 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .ctr{display:flex;flex-direction:column;gap:14px}
 .ctr-sec h3{font-size:15px;margin:0 0 4px}
 .ctr-sec p{margin:0;line-height:1.55;color:var(--fg)}
-.ctr-sec blockquote{margin:8px 0;padding:10px 14px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 8px 8px 0;white-space:pre-line}
+.ctr-sec blockquote{margin:8px 0;padding:10px 14px;border:1px solid var(--line);background:var(--surface);border-radius:8px;white-space:pre-line}
 .ctr-more{border:1px solid var(--line);border-radius:10px;padding:0 14px}
 .ctr-more > summary{cursor:pointer;padding:12px 0;font-weight:700;font-size:14px;list-style:none;display:flex;align-items:center;justify-content:space-between}
 .ctr-more > summary::-webkit-details-marker{display:none}

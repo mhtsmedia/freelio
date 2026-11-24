@@ -13,8 +13,8 @@
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B0B0C" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://hweftjtulzjripkkbdeb.supabase.co" crossorigin>
-<link rel="stylesheet" href="css/style.css?v=c2116150">
-<link rel="stylesheet" href="css/ny.css?v=5fc15501" id="ny-css">
+<link rel="stylesheet" href="css/style.css?v=ae79baf3">
+<link rel="stylesheet" href="css/ny.css?v=0211b867" id="ny-css">
 <link rel="stylesheet" href="css/finn.css?v=fc051655" id="finn-css">
 <script src="js/design.js?v=e59e37a6"></script>
 </head>
@@ -26,26 +26,27 @@
 <script src="js/data.js?v=d89e1e6a"></script>
 <script src="js/config.js?v=ba80519f"></script>
 <script src="js/vendor/supabase-2.117.3.js"></script>
-<script src="js/app.js?v=16e3794f"></script>
-<script src="js/cloud.js?v=e335954c"></script>
+<script src="js/app.js?v=e8ed8dcc"></script>
+<script src="js/cloud.js?v=316114b2"></script>
 <script type="text/freelio">
 const next = H.qs('neste') || 'index.html';
-const safeNext = /^[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'index.html';
+// Bare egne sider, og bare trygge tegn i adressen (ingen anførselstegn eller <>), så lenken ikke kan brukes til å sette inn kode
+const safeNext = /^[a-z0-9-]+\.html(\?[a-z0-9_.~%=&+:-]*)?$/i.test(next) ? next : 'index.html';
 let busy = null, step = 'start', name = '';
 function render() {
   const box = document.getElementById('box');
   if (window.Cloud && Cloud.on) return renderCloud(box);
-  if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, logget inn med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
+  if (H.S.user && step === 'start') { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)}, logget inn med ${H.esc(H.S.user.method)}.</p><a class="btn primary" href="${H.esc(safeNext)}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (step === 'name') {
     box.innerHTML = `<h1>Velkommen!</h1><p class="muted">Hvilket navn vil du vise til frilanserne?</p>
       <form class="stack" id="nform"><label class="field"><span class="label">Visningsnavn</span><input class="inp" id="name" maxlength="60" value="${H.esc(name)}" autocomplete="name"></label>
-      <label class="check"><input type="checkbox" id="terms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
+      <label class="check"><input type="checkbox" id="terms"> <span>Jeg er over 18 år, godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
       <span class="err-text" id="err"></span><button class="btn primary" type="submit">Opprett konto</button></form>`;
     document.getElementById('nform').addEventListener('submit', (e) => {
       e.preventDefault();
       const n = document.getElementById('name').value.trim();
       if (!n) { document.getElementById('err').textContent = 'Skriv inn et navn.'; return; }
-      if (!document.getElementById('terms').checked) { document.getElementById('err').textContent = 'Du må godta vilkårene for å fortsette.'; return; }
+      if (!document.getElementById('terms').checked) { document.getElementById('err').textContent = 'Du må være over 18 år og godta vilkårene for å fortsette.'; return; }
       H.S.user = { name: n, method: busy, since: H.today() }; H.save();
       H.flash(`Logget inn som ${n}.`); location.href = safeNext;
     });
@@ -64,11 +65,13 @@ function renderCloud(box) {
   if (Cloud.recovery && !H.S.user && !cmsg && mode !== 'forgot') { box.innerHTML = `<h1>Lenken virker ikke</h1><p class="muted">Vi fant ingen gyldig innlogging i lenken. Den kan være utløpt. Be om en ny.</p><button class="btn primary" data-a="mode" data-v="forgot">Send ny lenke</button>`; return; }
   if (mode === 'forgot' && !cmsg) return renderForgot(box);
   if (mode === 'phone' && !H.S.user) return renderPhone(box);
+  // Ikke bekreftet alder og vilkår ennå (Google, telefon eller eldre konto): spør før vi går videre
+  if (H.S.user && Cloud.needsTerms() && !cmsg) return renderTerms(box);
   // Logget inn med telefon (eller uten navn): spør om navnet før vi går videre
   if (H.S.user && Cloud.needsName() && !cmsg) return renderName(box);
   // Kom tilbake fra Google: gå rett videre
   if (H.S.user && H.qs('fra') === 'google' && !cmsg) { H.flash(`Logget inn som ${H.S.user.name}.`); location.replace(safeNext); return; }
-  if (H.S.user && !cmsg) { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)} (${H.esc(H.S.user.email || '')}).</p><a class="btn primary" href="${safeNext}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
+  if (H.S.user && !cmsg) { box.innerHTML = `<h1>Du er logget inn</h1><p class="muted">Som ${H.esc(H.S.user.name)} (${H.esc(H.S.user.email || '')}).</p><a class="btn primary" href="${H.esc(safeNext)}">Fortsett</a><a class="btn soft" href="min-side.html">Min side</a>`; return; }
   if (cmsg) { box.innerHTML = `<h1>Sjekk e-posten din</h1><p class="muted">${H.esc(cmsg)}</p><button class="btn soft" data-a="mode" data-v="in">Til innlogging</button>`; return; }
   const up = mode === 'up';
   box.innerHTML = `<h1>${up ? 'Opprett konto' : 'Logg inn'}</h1>
@@ -78,7 +81,7 @@ function renderCloud(box) {
       <label class="field"><span class="label">E-post</span><input class="inp" id="aemail" type="email" maxlength="254" autocomplete="email" required></label>
       <label class="field"><span class="label">Passord</span><input class="inp" id="apass" type="password" maxlength="72" autocomplete="${up ? 'new-password' : 'current-password'}" ${up ? 'minlength="8" ' : ''}required>${up ? '<span class="hint">Minst 8 tegn.</span>' : ''}</label>
       ${up ? '' : '<button type="button" class="btn link small" style="align-self:flex-start;margin-top:-6px" data-a="mode" data-v="forgot">Glemt passordet?</button>'}
-      ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
+      ${up ? `<label class="check"><input type="checkbox" id="aterms"> <span>Jeg er over 18 år, godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>` : ''}
       <span class="err-text" id="aerr" role="alert">${H.esc(cerr)}</span>
       <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Vent litt …' : up ? 'Opprett konto' : 'Logg inn'}</button>
     </form>
@@ -87,7 +90,7 @@ function renderCloud(box) {
       <button type="button" class="btn ghost block" data-a="google">${GOOGLE} Fortsett med Google</button>
       <button type="button" class="btn ghost block" data-a="mode" data-v="phone">${H.icon('phone', 18)} Fortsett med telefonnummer</button>
     </div>
-    <p class="hint">Med Google eller telefon godtar du <a href="vilkar.html" target="_blank">brukervilkårene</a> og <a href="personvern.html" target="_blank">personvernerklæringen</a>. Vi ber aldri om fødselsnummer eller kortnummer når du lager konto.</p>`;
+    <p class="hint">Første gang du logger inn med Google eller telefon, ber vi deg bekrefte at du er over 18 år og godtar vilkårene. Vi ber aldri om fødselsnummer eller kortnummer når du lager konto.</p>`;
   document.getElementById('aform').addEventListener('submit', async (e) => {
     e.preventDefault();
     const val = (id) => (document.getElementById(id) || {}).value || '';
@@ -100,7 +103,7 @@ function renderCloud(box) {
     // så eldre kontoer med kortere passord fortsatt kommer inn.
     if (up && v('apass').length < 8) return err('Passordet må ha minst 8 tegn.');
     if (!up && !v('apass')) return err('Skriv inn passordet ditt.');
-    if (up && !document.getElementById('aterms').checked) return err('Du må godta vilkårene for å opprette konto.');
+    if (up && !document.getElementById('aterms').checked) return err('Du må være over 18 år og godta vilkårene for å opprette konto.');
     cbusy = true; cerr = ''; render();
     try {
       if (up) {
@@ -108,6 +111,7 @@ function renderCloud(box) {
         if (!loggedIn) { cbusy = false; cmsg = `Vi har sendt en lenke til ${v('aemail').trim()}. Trykk på den for å bekrefte kontoen, så kan du logge inn.`; render(); return; }
       } else await Cloud.signIn(v('aemail').trim(), v('apass'));
       await Cloud.pull();
+      if (Cloud.needsTerms()) { cbusy = false; render(); return; }
       H.flash(`Logget inn som ${H.S.user.name}.`);
       location.href = safeNext;
     } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
@@ -130,7 +134,7 @@ function renderPhone(box) {
       ${smsSent ? '<button type="button" class="btn link small" style="align-self:flex-start" data-a="smsAgain">Fikk ingen kode? Send på nytt</button>' : ''}
       <button type="button" class="btn link small" style="align-self:flex-start" data-a="mode" data-v="in">Tilbake</button>
     </form>
-    <p class="hint">Med telefon godtar du <a href="vilkar.html" target="_blank">brukervilkårene</a> og <a href="personvern.html" target="_blank">personvernerklæringen</a>.</p>`;
+    <p class="hint">Første gang ber vi deg bekrefte at du er over 18 år og godtar <a href="vilkar.html" target="_blank">brukervilkårene</a>.</p>`;
   document.getElementById('phform').addEventListener('submit', async (e) => {
     e.preventDefault();
     const err = (t) => { cerr = t; document.getElementById('pherr').textContent = t; };
@@ -146,12 +150,33 @@ function renderPhone(box) {
     cbusy = true; cerr = ''; render();
     try {
       await Cloud.verifySms(phone, code); await Cloud.pull(); cbusy = false;
-      if (Cloud.needsName()) { mode = 'in'; render(); return; }
+      if (Cloud.needsTerms() || Cloud.needsName()) { mode = 'in'; render(); return; }
       H.flash(`Logget inn som ${H.S.user.name}.`); location.href = safeNext;
     } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
   });
 }
 H.actions.smsAgain = () => { smsSent = false; cerr = ''; render(); };
+// Én gang per konto: over 18 år og godtar vilkårene. Lagres på kontoen (Cloud.acceptTerms).
+function renderTerms(box) {
+  box.innerHTML = `<h1>Før du fortsetter</h1><p class="muted">Freelio er for deg som er over 18 år. Bekreft dette og at du godtar vilkårene. Du blir bare spurt én gang.</p>
+    <form class="stack" id="tform" novalidate>
+      <label class="check"><input type="checkbox" id="tterms"> <span>Jeg er over 18 år, godtar <a href="vilkar.html" target="_blank">brukervilkårene</a> og har lest <a href="personvern.html" target="_blank">personvernerklæringen</a>.</span></label>
+      <span class="err-text" id="terr" role="alert">${H.esc(cerr)}</span>
+      <button class="btn primary" type="submit" ${cbusy ? 'disabled' : ''}>${cbusy ? 'Lagrer …' : 'Fortsett'}</button>
+      <button type="button" class="btn link small" style="align-self:flex-start" data-a="logoutTerms">Jeg er under 18 år eller godtar ikke. Logg ut</button>
+    </form>`;
+  document.getElementById('tform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!document.getElementById('tterms').checked) { cerr = 'Kryss av for å fortsette.'; document.getElementById('terr').textContent = cerr; return; }
+    cbusy = true; cerr = ''; render();
+    try {
+      await Cloud.acceptTerms(); cbusy = false;
+      if (Cloud.needsName()) { render(); return; }
+      H.flash(`Logget inn som ${H.S.user.name}.`); location.href = safeNext;
+    } catch (ex) { cbusy = false; cerr = Cloud.authError(ex); render(); }
+  });
+}
+H.actions.logoutTerms = async () => { try { await Cloud.signOut(); } catch (e) {} H.S.user = null; H.saveLocal(); location.replace('index.html'); };
 // Første gang med telefon: be om navnet
 function renderName(box) {
   box.innerHTML = `<h1>Hva heter du?</h1><p class="muted">Navnet vises for frilansere og kunder du har kontakt med.</p>

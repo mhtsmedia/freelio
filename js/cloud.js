@@ -40,7 +40,7 @@
   const must = (r) => { if (r.error) throw r.error; return r.data; };
   const clone = (x) => JSON.parse(JSON.stringify(x === undefined ? null : x));
   const pick = (o, keys) => { const r = {}; Object.keys(o).forEach((k) => { if (!keys.includes(k)) r[k] = o[k]; }); return r; };
-  H.uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => ((Math.random() * 16) | 0).toString(16)));
+  H.uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (crypto.getRandomValues(new Uint8Array(1))[0] & 15).toString(16)));
 
   // Innlogget bruker fra lagret økt, så menyen er riktig før dataene er hentet
   // Hvordan brukeren logget inn, og navnet vi kan vise før profilen er hentet
@@ -49,7 +49,7 @@
   const sess = storedSession();
   if (sess && sess.user) {
     const u = sess.user;
-    S.user = { id: u.id, name: metaName(u), email: u.email, phone: u.phone, method: methodOf(u), since: dateTxt(u.created_at || Date.now()) };
+    S.user = { id: u.id, name: metaName(u), email: u.email, phone: u.phone, method: methodOf(u), since: dateTxt(u.created_at || Date.now()), adult: !!(u.user_metadata || {}).adult };
   } else S.user = null;
 
   /* ---------- mapping mellom databasen og sidene ---------- */
@@ -125,6 +125,8 @@
       S.user = Object.assign({}, S.user || {}, { id: C.uid, photo: (p && p.avatar_url) || null, name: (p && p.name) || (S.user && S.user.name) || 'Ny bruker', email: session.user.email, phone: session.user.phone, method: methodOf(session.user), since: dateTxt((p && p.created_at) || session.user.created_at) });
       const meta = session.user.user_metadata || {};
       S.user.photoSrc = (S.user.photo && meta.avatar_src) || null; S.user.photoCrop = meta.avatar_crop || null;
+      // Bekreftet at brukeren er over 18 år og godtar vilkårene (lagres på kontoen, se C.acceptTerms)
+      S.user.adult = !!meta.adult;
 
       must(offers).forEach((o) => {
         const job = S.myJobs.find((j) => j.id === o.job_id);
@@ -265,13 +267,23 @@
   }
 
   let chain = Promise.resolve();
+  // Gjør om feil fra databasen til en melding brukeren forstår. Rå feiltekst (tabellnavn, regler, kolonner,
+  // interne adresser) vises aldri på siden. Den skrives til konsollen, så «Meld feil» får den med.
   const errText = (e) => {
     const m = (e && (e.message || e.error_description)) || String(e);
+    const code = (e && e.code) || '';
     if (/row-level security/i.test(m)) return 'Du har ikke tilgang til å gjøre dette.';
     if (/check constraint|value too long/i.test(m)) return 'Teksten er for lang, eller noe i den er ikke tillatt.';
-    if (/Failed to fetch|NetworkError/i.test(m)) return 'Fikk ikke kontakt med serveren. Sjekk nettet og prøv igjen.';
-    return m;
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Fikk ikke kontakt med serveren. Sjekk nettet og prøv igjen.';
+    if (/duplicate key|already exists/i.test(m)) return 'Dette finnes allerede.';
+    // Våre egne feilmeldinger fra databasen (raise exception i SQL-filene) er skrevet for brukerne
+    // og det samme gjelder feilmeldinger på norsk fra nettsiden selv (new Error('…')).
+    const norsk = /[æøåÆØÅ]|\b(ikke|du|deg|og|må|Logg|Prøv|Vent)\b/.test(m) && !/relation|column|schema|syntax|violates|constraint|undefined|TypeError|_/i.test(m);
+    if ((!code || code === 'P0001' || code === '42501') && norsk) return m;
+    console.error('Feil fra serveren:', e);
+    return 'Noe gikk galt. Prøv igjen om litt, eller trykk «Meld feil» hvis det fortsetter.';
   };
+  H.errText = errText;
   H.save = () => {
     H.saveLocal();
     if (!C.ready) return;
@@ -342,10 +354,10 @@
   H.storeImage = async (kind, blob) => {
     if (!C.uid) throw new Error('Du må være logget inn for å laste opp bilder.');
     const ext = { 'image/webp': 'webp', 'image/png': 'png', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' }[blob.type] || 'jpg';
-    const path = `${C.uid}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const path = `${C.uid}/${kind}-${Date.now()}-${H.uid().slice(0, 13)}.${ext}`;
     const r = await sb.storage.from('profiles').upload(path, blob, { contentType: blob.type, upsert: false });
     if (r.error) throw new Error(/bucket not found/i.test(r.error.message) ? 'Bildelagringen er ikke satt opp. Kjør database/bilder.sql i Supabase.'
-      : /mime|size|exceeded|too large/i.test(r.error.message) && /^video/.test(blob.type) ? 'Videolagring er ikke slått på ennå. Kjør database/video.sql i Supabase.' : r.error.message);
+      : /mime|size|exceeded|too large/i.test(r.error.message) && /^video/.test(blob.type) ? 'Videolagring er ikke slått på ennå. Kjør database/video.sql i Supabase.' : errText(r.error));
     return sb.storage.from('profiles').getPublicUrl(path).data.publicUrl;
   };
   // Originalen og utsnittet av profilbildet lagres på kontoen, så bildet kan justeres senere
@@ -421,7 +433,7 @@
   /* ---------- innlogging ---------- */
   C.signUp = async (name, email, password) => {
     const back = location.href.replace(/[^/]*$/, '') + 'logg-inn.html';
-    const r = await sb.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: back } });
+    const r = await sb.auth.signUp({ email, password, options: { data: { name, adult: true, vilkar: C.TERMS }, emailRedirectTo: back } });
     if (r.error) throw r.error;
     return !!r.data.session;
   };
@@ -455,6 +467,15 @@
     S.user.name = name; H.saveLocal();
   };
   C.needsName = () => !!(S.user && (!S.user.name || S.user.name === 'Ny bruker'));
+  // Versjonen av brukervilkårene brukeren har godtatt. Øk den når vilkårene endres vesentlig.
+  C.TERMS = '2026-11';
+  // Alle må bekrefte at de er over 18 år og godta vilkårene én gang, også de som logger inn med Google eller telefon
+  C.needsTerms = () => !!(S.user && !S.user.adult);
+  C.acceptTerms = async () => {
+    const r = await sb.auth.updateUser({ data: { adult: true, vilkar: C.TERMS, vilkarAt: new Date().toISOString() } });
+    if (r.error) throw r.error;
+    S.user.adult = true; H.saveLocal();
+  };
   C.signOut = async () => { await H.flush(); await sb.auth.signOut(); };
   C.deleteAccount = async () => { await H.flush(); const r = await sb.rpc('delete_my_account'); if (r.error) throw r.error; await sb.auth.signOut(); };
   C.authError = (e) => {
@@ -479,8 +500,15 @@
   /* ---------- oppstart ---------- */
   H.mountHeader(); H.mountFooter();
   document.querySelectorAll('[data-skel]').forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); });
+  const OPEN_PAGES = ['logg-inn', 'vilkar', 'frilansvilkar', 'personvern', 'cookies', 'om', 'hjelp', 'meld-feil', 'slik-fungerer-det', '404'];
   C.pull()
-    .then(() => { C.ready = true; if (C.dirty) { C.dirty = false; H.save(); } })
+    .then(() => {
+      C.ready = true; if (C.dirty) { C.dirty = false; H.save(); }
+      if (C.needsTerms() && !OPEN_PAGES.includes(document.body.dataset.page)) {
+        const here = (location.pathname.split('/').pop() || 'index.html') + location.search;
+        location.replace('logg-inn.html?neste=' + encodeURIComponent(here));
+      }
+    })
     .catch((e) => {
       console.error(e);
       const missing = /does not exist|schema cache|PGRST205|42P01/i.test((e && (e.message || e.code)) || '');
