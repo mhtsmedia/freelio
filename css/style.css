@@ -729,7 +729,7 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 
 /* Oppdragsavtale (booking, tilbud, bestilling og avtale.html) */
 .ctr{display:flex;flex-direction:column;gap:14px}
-.ctr-sec h3{font-size:15px;margin:0 0 4px}
+.ctr-sec h2,.ctr-sec h3{font-size:15px;margin:0 0 4px}
 .ctr-sec p{margin:0;line-height:1.55;color:var(--fg)}
 .ctr-sec blockquote{margin:8px 0;padding:10px 14px;border:1px solid var(--line);background:var(--surface);border-radius:8px;white-space:pre-line}
 .ctr-more{border:1px solid var(--line);border-radius:10px;padding:0 14px}
@@ -743,7 +743,7 @@ body[data-page="utforsk"] .feed-compose{max-width:640px}
 .ctr-status > span svg{flex:none;color:var(--accent-ink)}
 .ctr-status > a{font-weight:700;font-size:13px}
 .ctr-sign{margin:4px 0 8px}
-.ctr-doc .ctr-sec h3{font-size:17px}
+.ctr-doc .ctr-sec h2,.ctr-doc .ctr-sec h3{font-size:17px}
 @media print{
   #site-header,#site-footer,.tabbar,.no-print,.cookie,.toast{display:none!important}
   body{padding:0!important;background:#fff!important;color:#000!important}

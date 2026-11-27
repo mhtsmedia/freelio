@@ -2,6 +2,9 @@
    Tilgangsreglene i databasen (supabase/schema.sql) bestemmer hva hver bruker får lese og endre.
    Sett supabaseUrl til '' for å kjøre siden i demo-modus uten database. */
 window.FREELIO_CONFIG = {
+  // Adressen nettsiden ligger på. Brukes i canonical, Open Graph og sitemap (tools/seo.py leser den herfra).
+  // Bytt til eget domene, for eksempel 'https://freelio.no/', når dere har det.
+  siteUrl: 'https://mhtsmedia.github.io/freelio/',
   supabaseUrl: 'https://hweftjtulzjripkkbdeb.supabase.co',
   supabaseKey: 'sb_publishable_E2sPGFAsmJ4sY8mY-UqgVA_krXARNal',
   // Kart-siden bruker OpenStreetMap. Lim inn en nøkkel fra Google Cloud (Maps JavaScript API) for å bruke Google Maps i stedet.

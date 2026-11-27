@@ -1,0 +1,8 @@
+# Freelio: alle søkemotorer og AI-tjenester (også GPTBot, ClaudeBot, PerplexityBot og Google-Extended) er velkomne.
+# Sider som krever innlogging har <meta name="robots" content="noindex"> i stedet for å stenges her,
+# så søkemotorene ser at de ikke skal i søkeresultatene.
+# Merk: robots.txt leses bare fra roten av domenet. På github.io/freelio/ virker den først med eget domene.
+User-agent: *
+Allow: /
+
+Sitemap: https://mhtsmedia.github.io/freelio/sitemap.xml
