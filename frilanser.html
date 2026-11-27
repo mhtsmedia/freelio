@@ -84,8 +84,8 @@ function seoProfil(f) {
     ld['@graph'].push(biz);
   }
   H.seo({
-    title: `${f.name}, ${role} i ${f.area} | Freelio`,
-    desc: `${f.name} er ${role.toLowerCase()} i ${f.area}${f.from ? ', med pakker fra ' + H.kr(f.from) : ''}. ${f.bio || ''} Se portefølje, priser og omtaler, og book trygt på Freelio.`,
+    title: `${f.name}, ${role}${f.area ? ' i ' + f.area : ''} | Freelio`,
+    desc: `${f.name} er ${role.toLowerCase()}${f.area ? ' i ' + f.area : ''}${f.from ? ', med pakker fra ' + H.kr(f.from) : ''}. ${f.bio || ''} Se portefølje, priser og omtaler, og book trygt på Freelio.`,
     path, image: pic, data: ld
   });
 }

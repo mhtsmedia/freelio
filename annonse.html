@@ -80,8 +80,8 @@ function render() {
   const main = document.getElementById('main');
   if (!j) { main.innerHTML = `<div class="wrap section"><h1 class="sr">Fant ikke oppdraget</h1><div class="empty">Fant ikke oppdraget. Det kan være slettet. <a class="btn primary sm" href="oppdrag.html">Se andre oppdrag</a></div></div>`; return; }
   H.seo({
-    title: `${j.title}: ${H.cat(j.cat).name.toLowerCase()} i ${j.area} | Freelio`,
-    desc: `Oppdrag i ${j.area}${j.budget ? ', budsjett inntil ' + H.kr(j.budget) : ''}. ${j.desc || ''} Er du frilanser, kan du sende tilbud på Freelio.`,
+    title: `${j.title}: ${H.cat(j.cat).name.toLowerCase()}${j.area ? ' i ' + j.area : ''} | Freelio`,
+    desc: `Oppdrag${j.area ? ' i ' + j.area : ''}${j.budget ? ', budsjett inntil ' + H.kr(j.budget) : ''}. ${j.desc || ''} Er du frilanser, kan du sende tilbud på Freelio.`,
     path: 'annonse.html?id=' + encodeURIComponent(j.id),
     data: { '@context': 'https://schema.org', ...H.crumbsLd([['Forside', 'index.html'], ['Ledige oppdrag', 'oppdrag.html'], [j.title]]) }
   });
