@@ -215,7 +215,8 @@ def write(path, text):
 
 
 def main():
-    pages = sorted(glob.glob('*.html'))
+    # Bekreftelsesfilen fra Google Search Console (google<kode>.html) skal stå urørt
+    pages = sorted(p for p in glob.glob('*.html') if not re.fullmatch(r'google[0-9a-f]+\.html', p))
     unknown = [p for p in pages if p not in SIDER]
     if unknown:
         sys.exit('Mangler SEO-tekster i tools/seo.py for: ' + ', '.join(unknown))
