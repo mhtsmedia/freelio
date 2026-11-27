@@ -183,14 +183,49 @@
   // Bilde fra porteføljen hvis frilanseren har lastet opp, ellers plassholder
   // i = 'cover' gir bakgrunnsbildet (eller første bilde i porteføljen)
   // i = 'card' gir bildet på kortet i søket: eget kortbilde, ellers bakgrunnsbildet, ellers første bilde i porteføljen
+  // Beskrivende alt-tekst på bilder fra porteføljen (for skjermlesere og bildesøk)
+  H.altFor = (f, x) => `${x && x.type === 'video' ? 'Video' : 'Bilde'} fra ${f.name}${f.role ? ' (' + f.role + ')' : ''}${x && x.cap ? ': ' + String(x.cap).slice(0, 100) : ''}`;
   H.ph = (f, i = 0, cls = '', tag = 'span', attrs = '', inner = '', big = false) => {
     const isCover = i === 'cover', isCard = i === 'card'; if (isCover || isCard) i = 0;
     const own = (isCard && (f.cardImg || f.coverImg)) || (isCover && f.coverImg) || null;
     const img = own || (f.portfolio || [])[i];
     const vid = img && img.type === 'video';
-    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="" loading="lazy">${vid && !own ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
+    if (img) return `<${tag} class="ph has-img ${cls}" ${attrs}><img class="cover" src="${H.esc(vid ? img.thumb : big ? img.url : img.thumb || img.url)}" alt="${H.esc(H.altFor(f, img))}"${big ? ' fetchpriority="high"' : ' loading="lazy"'}>${vid && !own ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}${inner}</${tag}>`;
     return `<${tag} class="ph ${cls}" style="${H.phStyle((f.pal || 0) + i)}" ${attrs}>${inner}</${tag}>`;
   };
+
+  /* ---------- SEO for sider med innhold fra databasen (frilanser og oppdrag) ----------
+     Setter tittel, beskrivelse, canonical, Open Graph og strukturert data (JSON-LD) når innholdet er lastet.
+     Google kjører JavaScript og leser dette. Faste sider får det samme fra tools/seo.py.
+     Adressen til nettsiden står i js/config.js (siteUrl). */
+  H.SITE = (window.FREELIO_CONFIG || {}).siteUrl || new URL('./', location.href).href;
+  const setMeta = (attr, key, val) => {
+    let m = document.head.querySelector(`meta[${attr}="${key}"]`);
+    if (!m) { m = document.createElement('meta'); m.setAttribute(attr, key); document.head.appendChild(m); }
+    m.setAttribute('content', val);
+  };
+  H.seo = ({ title, desc, path, image, data } = {}) => {
+    if (title) { document.title = title; setMeta('property', 'og:title', title); }
+    if (desc) {
+      const d = String(desc).replace(/\s+/g, ' ').trim();
+      const t = d.length > 158 ? d.slice(0, 155).replace(/\s+\S*$/, '') + ' …' : d;
+      setMeta('name', 'description', t); setMeta('property', 'og:description', t);
+    }
+    if (path) {
+      const url = new URL(path, H.SITE).href;
+      let l = document.head.querySelector('link[rel="canonical"]');
+      if (!l) { l = document.createElement('link'); l.rel = 'canonical'; document.head.appendChild(l); }
+      l.href = url; setMeta('property', 'og:url', url);
+    }
+    if (image && /^https:\/\//.test(image)) setMeta('property', 'og:image', image);
+    if (data) {
+      let el = document.getElementById('ld-side');
+      if (!el) { el = document.createElement('script'); el.type = 'application/ld+json'; el.id = 'ld-side'; document.head.appendChild(el); }
+      el.textContent = JSON.stringify(data).replace(/</g, '\\u003c');
+    }
+  };
+  // Brødsmuler som strukturert data: [['Forside', 'index.html'], ['Søk', 'sok.html'], ['Navn']]
+  H.crumbsLd = (list) => ({ '@type': 'BreadcrumbList', itemListElement: list.map(([name, href], i) => Object.assign({ '@type': 'ListItem', position: i + 1, name }, href ? { item: href === 'index.html' ? H.SITE : new URL(href, H.SITE).href } : {})) });
 
   /* ---------- bilder (profil og portefølje) ---------- */
   H.resizeImage = async (file, max, square = false, q = 0.82) => {
@@ -435,7 +470,7 @@
     const imgs = (inCat.length ? inCat : [].concat(lead ? [lead] : [], pfl)).slice(0, 8);
     if (!imgs.length || (imgs.length < 2 && !inCat.length)) return '';
     return `<div class="fc-car">
-      <a class="fc-track" href="frilanser.html?id=${f.id}${inCat.length ? '&kat=' + cat : ''}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}. ${imgs.length} bilder">${imgs.map((x) => `<span class="fc-slide"><img src="${H.esc(x.thumb || x.url)}" alt="" loading="lazy" draggable="false">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</span>`).join('')}</a>
+      <a class="fc-track" href="frilanser.html?id=${f.id}${inCat.length ? '&kat=' + cat : ''}" aria-label="${H.esc(f.name)}, ${H.esc(f.role)}. ${imgs.length} bilder">${imgs.map((x) => `<span class="fc-slide"><img src="${H.esc(x.thumb || x.url)}" alt="${H.esc(H.altFor(f, x))}" loading="lazy" draggable="false">${x.type === 'video' ? `<span class="play-badge">${H.icon('play', 16, 2, 'currentColor')}</span>` : ''}</span>`).join('')}</a>
       ${imgs.length > 1 ? `<button class="fc-nav prev" data-a="car" data-v="-1" aria-label="Forrige bilde" hidden>${H.icon('back', 16, 2.2)}</button>
       <button class="fc-nav next" data-a="car" data-v="1" aria-label="Neste bilde">${H.icon('back', 16, 2.2)}</button>
       <span class="fc-dots" aria-hidden="true">${imgs.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</span>` : ''}</div>`;
@@ -605,7 +640,8 @@
       ['10. Uenighet', 'Partene skal først prøve å løse uenighet i meldingene i Freelio. Partene kan i tillegg bruke Forbrukerrådet eller domstolene. Norsk lov gjelder.']
     ];
   };
-  H.contractHTML = (c) => H.contractSections(c).map(([t, b]) => `<section class="ctr-sec"><h3>${t}</h3><p>${b}</p></section>`).join('');
+  // lvl: overskriftsnivå. avtale.html viser avtalen rett under sidens H1 og bruker 2, ellers ligger den under en H2 og bruker 3.
+  H.contractHTML = (c, lvl = 3) => H.contractSections(c).map(([t, b]) => `<section class="ctr-sec"><h${lvl}>${t}</h${lvl}><p>${b}</p></section>`).join('');
   H.when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' kl.'); };
   // Har bestillingen en avtale som frilanseren ikke har godtatt ennå? (Bestillinger fra før avtalen fantes, har ingen.)
   H.needsAccept = (o) => !!(o && o.contract && typeof o.contract === 'object' && !o.contract.freelancerAt && ['paid', 'dispute'].includes(o.status));
@@ -1035,11 +1071,11 @@
   };
   H.mountFooter = () => {
     const el = document.getElementById('site-footer'); if (!el) return;
-    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp']].concat(H.BUGS ? [[H.bugLink(), 'Meld feil']] : [], [['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['frilansvilkar.html', 'Frilansvilkår'], ['personvern.html', 'Personvern'], ['cookies.html', 'Cookies']]);
+    const links = [['sok.html', 'Finn frilanser'], ['oppdrag.html', 'Oppdrag'], ['kart.html', 'Kart'], ['bli-frilanser.html', 'Bli frilanser'], ['slik-fungerer-det.html', 'Slik fungerer det'], ['slik-fungerer-det.html#priser', 'Priser'], ['hjelp.html', 'Hjelp']].concat(H.BUGS ? [[H.bugLink(), 'Meld feil']] : [], [['om.html', 'Om oss'], ['vilkar.html', 'Vilkår'], ['frilansvilkar.html', 'Frilansvilkår'], ['personvern.html', 'Personvern'], ['opphavsrett.html', 'Opphavsrett'], ['cookies.html', 'Cookies']]);
     el.innerHTML = `<footer class="foot"><div class="wrap">
       <div class="foot-in">
         <div class="stack" style="gap:14px;max-width:300px"><a class="logo" href="index.html" aria-label="Freelio">${H.logo()}</a><p class="small muted">Finn, sammenlign og lei lokale frilansere. Pengene utbetales først når jobben er levert.</p></div>
-        <nav aria-label="Bunnmeny">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}<a href="cookies.html">Cookies</a></nav>
+        <nav aria-label="Bunnmeny">${links.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}</nav>
       </div>
       <div class="foot-bottom"><span>© 2026 Freelio</span><span>Betaling er ikke koblet på ennå. Ingen penger trekkes.</span></div>
     </div></footer>`;
@@ -1059,10 +1095,26 @@
   const closeProf = () => document.querySelectorAll('.prof-menu:not([hidden])').forEach((m) => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
   document.addEventListener('click', (e) => { if (!e.target.closest('.prof')) closeProf(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeProf(); });
+  /* Logg ut for alvor: økten avsluttes hos Supabase (refresh-tokenet blir ugyldig på serveren), push-abonnementet
+     fjernes, og alt som er mellomlagret om brukeren i denne nettleseren slettes. Bare tema, design og cookie-svaret
+     beholdes. Siden byttes med location.replace, så Tilbake-knappen ikke viser innlogget innhold. */
+  const KEEP = ['freelio:theme', 'freelio:design'];
+  H.logout = async () => {
+    try { await H.push.forget(); } catch (e) { /* ingen push på denne enheten */ }
+    try { if (window.Cloud && Cloud.on) await Cloud.signOut(); } catch (e) { /* tokenet slettes uansett under */ }
+    const keep = { cookie: S.cookie, cookies: S.cookies };
+    try {
+      Object.keys(localStorage).filter((k) => (k.startsWith('freelio:') && !KEEP.includes(k)) || /^sb-.+-auth-token/.test(k)).forEach((k) => localStorage.removeItem(k));
+      sessionStorage.clear();
+    } catch (e) { /* privat modus */ }
+    Object.assign(S, DEFAULTS(), keep); H.saveLocal();
+    H.flash('Du er logget ut.');
+    location.replace('index.html');
+  };
   H.actions = {
     menu: (v, el) => { const top = el.closest('.top'); const o = top.classList.toggle('open'); el.setAttribute('aria-expanded', o); el.innerHTML = H.icon(o ? 'close' : 'menu', 20); },
     profMenu: (v, el) => { const m = el.nextElementSibling; const open = m.hidden; m.hidden = !open; el.setAttribute('aria-expanded', open); if (open) { const f = m.querySelector('a,button'); if (f) f.focus(); } },
-    logout: async () => { await H.push.forget(); S.user = null; H.save(); H.flash('Du er logget ut.'); H.go('index.html'); },
+    logout: () => H.logout(),
     pushOn: async () => { try { await H.push.enable(); H.toast('Varsler er på. Du får beskjed om nye tilbud og meldinger.'); } catch (e) { H.toast(e.message); } H.pushFill(); },
     pushOff: async () => { await H.push.disable(); H.toast('Varsler er slått av for denne enheten.'); H.pushFill(); },
     pushTest: async () => {

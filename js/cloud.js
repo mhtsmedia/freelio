@@ -485,7 +485,8 @@
     if (/phone provider|sms provider|Unsupported phone|twilio|messagebird|vonage|textlocal/i.test(m)) return 'Innlogging med telefon er ikke satt opp ennå. (Supabase: legg inn en SMS-leverandør under Authentication, Sign In / Providers, Phone.)';
     if (/token has expired|invalid otp|otp_expired|Token has expired or is invalid/i.test(m)) return 'Feil kode, eller koden er utløpt. Be om en ny kode.';
     if (/invalid phone|phone number/i.test(m)) return 'Skriv inn et gyldig telefonnummer.';
-    if (/already registered|already been registered/i.test(m)) return 'Det finnes allerede en konto med denne e-posten. Logg inn i stedet.';
+    // Røper ikke om e-posten har konto (logg-inn.html viser samme svar som ved ny konto)
+    if (/already registered|already been registered|user already exists/i.test(m)) return 'Fikk ikke opprettet kontoen. Prøv å logge inn, eller bruk «Glemt passordet?».';
     if (/Email not confirmed/i.test(m)) return 'Du må bekrefte e-posten din først. Sjekk innboksen.';
     if (/sending (confirmation|magic link|recovery)? ?e-?mail|error sending/i.test(m)) return 'Vi fikk ikke sendt bekreftelses-e-posten. Prøv igjen om litt, eller meld fra til oss.';
     if (/different from the old|same as the old|same_password/i.test(m)) return 'Det nye passordet må være forskjellig fra det gamle.';
@@ -500,7 +501,7 @@
   /* ---------- oppstart ---------- */
   H.mountHeader(); H.mountFooter();
   document.querySelectorAll('[data-skel]').forEach((n) => { n.setAttribute('aria-busy', 'true'); n.innerHTML = H.skel(n.dataset.skel); });
-  const OPEN_PAGES = ['logg-inn', 'vilkar', 'frilansvilkar', 'personvern', 'cookies', 'om', 'hjelp', 'meld-feil', 'slik-fungerer-det', '404'];
+  const OPEN_PAGES = ['logg-inn', 'vilkar', 'frilansvilkar', 'personvern', 'cookies', 'om', 'hjelp', 'meld-feil', 'slik-fungerer-det', 'opphavsrett', 'avtale', '404'];
   C.pull()
     .then(() => {
       C.ready = true; if (C.dirty) { C.dirty = false; H.save(); }

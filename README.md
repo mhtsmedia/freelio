@@ -17,7 +17,7 @@ Nettsiden bruker Supabase til kontoer, frilanserprofiler, oppdrag, tilbud, besti
 
 Adressen og den offentlige nøkkelen ligger i `js/config.js`. Den hemmelige nøkkelen (secret / service_role) skal aldri inn i koden.
 
-Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/moderering.sql` lar admin skjule, stenge og slette frilansere og fjerne innlegg, kommentarer og omtaler (admin.html), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), `database/sjekkliste.sql` legger inn indekser, slår av GraphQL, renser navn, begrenser leveransefiler og setter fartsgrense på «Hent fra portefølje» (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
+Filer: `database/schema.sql` er tabeller og regler, `database/bilder.sql` er lagring av profil- og porteføljebilder, `database/fjern-demo.sql` sletter gamle demo-frilansere og demo-oppdrag, `database/video.sql` slår på video i porteføljen, `database/meldinger.sql` lar samtaler stå når en kunde sletter kontoen, `database/innlegg.sql` slår på innlegg på Utforsk, `database/mapper.sql` slår på mapper for lagrede frilansere, innlegg og oppdrag, `database/kommentarer.sql` slår på liker og kommentarer på innlegg, `database/oppdragsgiver.sql` viser hvem som har lagt ut et oppdrag (navn og bilde fra profilen), `database/moderering.sql` lar admin skjule, stenge og slette frilansere og fjerne innlegg, kommentarer og omtaler (admin.html), `database/admin.sql` lar admin fjerne andres annonser (legg inn deg selv nederst i filen), `database/grenser.sql` setter makspris (1 000 000 kr) og lengde på tekst, `database/push.sql` slår på push-varsler (se under), `database/vedlegg.sql` slår på vedlegg (bilder og filer) i meldinger, `database/sikkerhet.sql` legger inn grenser og regler som nettsiden ikke kan omgå (lengder, egne bilder, rekkefølge på bestillinger og fartsgrenser), `database/feil.sql` slår på «Meld feil» (se under), `database/juridisk.sql` tetter smutthullene fra den juridiske gjennomgangen (se under), `database/sjekkliste.sql` legger inn indekser, slår av GraphQL, renser navn, begrenser leveransefiler og setter fartsgrense på «Hent fra portefølje» (se under), `database/herding.sql` strammer inn funksjoner etter Security Advisor (se under), og `database/oppsett.sql` er alt samlet. Har du allerede kjørt et eldre `oppsett.sql`, kjør `database/oppdatering.sql`. Den har alle endringene samlet.
 
 ### Juridisk gjennomgang (november 2026)
 
@@ -45,6 +45,23 @@ Kjør `database/sjekkliste.sql` i SQL Editor (eller hele `database/oppdatering.s
 - **18 år og vilkår:** alle bekrefter én gang at de er over 18 år og godtar vilkårene, også med Google og telefon. Bekreftelsen lagres på kontoen (`adult` og `vilkar` i brukerdataene). Eldre kontoer blir spurt neste gang de logger inn.
 - **Cookies:** Freelio setter ingen cookies og bruker ingen statistikk. Cookie-meldingen sier det, og har ingen «Godta alle». Tar dere i bruk statistikk senere, må det spørres om samtykke først.
 - **Betaling:** så lenge `H.PAY_LIVE = false` i `js/app.js`, står det på booking og bestilling at ingen penger trekkes.
+
+### SEO, deling og herding (november 2026)
+
+Kjør `python3 tools/seo.py` før hver push (sammen med `tools/versjon.py`, se under). Den gjør dette:
+
+- **Hver side** får tittel, beskrivelse, `robots`, canonical, Open Graph (delingsbilde `img/og-freelio.png`), favicon i PNG og strukturert data (JSON-LD). Tekstene står i `SIDER` øverst i `tools/seo.py`. Sider som krever innlogging får `noindex`.
+- **Frilanserprofiler og oppdrag** får egen tittel, beskrivelse, canonical og strukturert data fra `H.seo` i `js/app.js` når innholdet er lastet. Bare ekte omtaler telles, og demo-profiler får ikke strukturert data.
+- **sitemap.xml** med faste sider og alle publiserte frilansere fra Supabase, **robots.txt** (alle søkemotorer og AI-tjenester er velkomne) og **llms.txt** (kort beskrivelse av Freelio for språkmodeller).
+- **Bunnmenyen** ligger også rett i HTML-en, så lenkene finnes uten JavaScript. **404.html** får `<base>`, så den virker på alle adresser.
+- Adressen til nettsiden står i `js/config.js` (`siteUrl`). Bytt den når dere får eget domene, og kjør `tools/seo.py` på nytt. Delingsbildet lages på nytt med `python3 tools/seo.py --bilde` (fra `tools/og/og.html`).
+- **robots.txt og eget domene:** søkemotorene leser bare robots.txt fra roten av domenet, ikke fra `/freelio/`. Til dere har eget domene, sendes sitemap inn i Google Search Console.
+
+**Opphavsrett:** `opphavsrett.html` beskriver hvordan rettighetshavere melder fra (også DMCA-varsler), hva som skjer, klage fra den som lastet opp, og at kontoer med gjentatte brudd stenges. Lenken ligger i bunnmenyen og i brukervilkårene, punkt 9.
+
+**Innlogging:** «Logg ut» avslutter økten hos Supabase, fjerner push-abonnementet og sletter alt som er mellomlagret om brukeren i nettleseren (bare tema, design og cookie-svaret beholdes). «Opprett konto» gir samme svar om e-posten har konto fra før eller ikke. I Supabase er «Confirm email», minst 8 tegn og «Secure password change» på.
+
+**Herding:** `database/herding.sql` (også i `oppdatering.sql` og `oppsett.sql`) setter fast `search_path` på fire funksjoner, gjør at ingen kan kalle triggerfunksjonene direkte, og at hjelpefunksjonene med SECURITY DEFINER bare kan kalles av innloggede (unntak: `job_posters`, som forsiden trenger). `test-tilgang.sql` gir fortsatt 0 problemer. Gjenstår i Security Advisor: `pg_net` ligger i `public` (kan ikke flyttes uten å installere den på nytt), og «Leaked password protection» krever Pro-planen.
 
 ### Meld feil (midlertidig)
 
@@ -84,7 +101,7 @@ python3 -m http.server 8000
 
 ## Publiser med GitHub Pages
 
-Kjør `python3 tools/versjon.py` før hver push. Den gir CSS- og JS-filene et nytt versjonsnummer, så nettleseren ikke bruker en gammel kopi.
+Kjør `python3 tools/seo.py && python3 tools/versjon.py` før hver push. `seo.py` oppdaterer metadata, sitemap og llms.txt (se over). `versjon.py` gir CSS- og JS-filene et nytt versjonsnummer, så nettleseren ikke bruker en gammel kopi.
 
 
 Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på et privat repo krever et betalt GitHub-abonnement. Ellers må repoet være offentlig.
@@ -114,7 +131,7 @@ Settings → Pages → Deploy from a branch → `main` / root. GitHub Pages på 
 | Slik fungerer det, trygg betaling og priser | `slik-fungerer-det.html` | Nei |
 | Hjelpesenter med FAQ og kontaktskjema | `hjelp.html` | Nei |
 | Meld feil (midlertidig, mens Freelio testes). Admin ser innsendte feil nederst | `meld-feil.html?fra=` | Nei |
-| Om, vilkår, frilansvilkår, personvern, cookies, 404 | `om.html`, `vilkar.html`, `frilansvilkar.html`, `personvern.html`, `cookies.html`, `404.html` | Nei |
+| Om, vilkår, frilansvilkår, personvern, opphavsrett, cookies, 404 | `om.html`, `vilkar.html`, `frilansvilkar.html`, `personvern.html`, `opphavsrett.html`, `cookies.html`, `404.html` | Nei |
 | Saker hos Freelio (bare admin) | `saker.html` | Ja |
 
 ## Struktur
